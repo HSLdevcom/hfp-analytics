@@ -4,14 +4,15 @@ set -euo pipefail
 
 if [[ -e .env ]]; then
   read -p ".env already exists, overwrite? [y/n] " answer
-  if [[ "$answer" != "y" ]]; then
-    echo "Exiting"
-    exit 0
+  if [[ "$answer" == "y" ]]; then
+    echo "Overwriting .env"
+    cp .env.test .env
   fi
+else
+  cp .env.test .env
+  echo ".env created from .env.test; adjust to your needs"
 fi
 
-cp .env.test .env
-echo ".env created with default values; adjust to your needs"
 mkdir -p data
 mkdir -p data/import
 docker network rm stopcorr_nw || true > /dev/null 2>&1
