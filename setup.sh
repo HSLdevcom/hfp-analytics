@@ -12,5 +12,7 @@ fi
 
 cp .env.test .env
 echo ".env created with default values; adjust to your needs"
+mkdir -p data
+mkdir -p data/import
 docker network rm stopcorr_nw || true > /dev/null 2>&1
 docker network create --attachable stopcorr_nw
