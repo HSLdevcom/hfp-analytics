@@ -12,7 +12,7 @@ The stop-HFP correspondence analysis is a one-off task run a few times per year 
 
 ### Deployment
 
-The tool requires [docker-compose](https://docs.docker.com/compose/) is run with two files: one with continuous services (database, QGIS map server and report file server) and another that will run the one-off tasks required for an analysis (HFP & Digitransit integrations, creating the pptx file).
+The tool requires [docker-compose](https://docs.docker.com/compose/) and is run with two files: one with continuous services (database, QGIS map server and report file server) and another that will run the one-off tasks required for an analysis (HFP & Digitransit integrations, creating the pptx file).
 
 Clone this project, and navigate to the project root. Copy the `.env.test` file into `.env`, and update the environment variables such as ports and the database password as you wish. Update the environment variables for your session, and start the database & server stack:
 
@@ -34,7 +34,7 @@ It is recommended to select the HFP events as follows:
 The csv file should look like this:
 
 ```
-tst,event_type,oper,veh,route,dir,oday,start,stop,long,lat
+tst,event,oper,veh,route,dir,oday,start,stop_id,long,lat
 # TODO: Example values
 ```
 
