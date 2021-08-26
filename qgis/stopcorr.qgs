@@ -1,5 +1,5 @@
 <!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>
-<qgis version="3.16.3-Hannover" projectname="" saveDateTime="2021-08-26T12:44:41" saveUserFull="Arttu Kosonen" saveUser="keripukki">
+<qgis saveUserFull="Arttu Kosonen" saveDateTime="2021-08-26T18:41:54" saveUser="keripukki" projectname="" version="3.16.3-Hannover">
   <homePath path=""/>
   <title></title>
   <autotransaction active="0"/>
@@ -20,24 +20,30 @@
   </projectCrs>
   <layer-tree-group>
     <customproperties/>
-    <layer-tree-layer legend_split_behavior="0" name="CartoDB light_all" source="type=xyz&amp;url=https://a.basemaps.cartocdn.com/light_all/%7Bz%7D/%7Bx%7D/%7By%7D.png&amp;zmax=18&amp;zmin=0" legend_exp="" checked="Qt::Checked" patch_size="-1,-1" providerKey="wms" id="CartoDB_light_all_39304fdb_701b_40e2_81e3_25c6e9899d57" expanded="1">
+    <layer-tree-layer patch_size="-1,-1" id="observation_10027d31_2189_436d_b340_ea1ab132b491" legend_exp="" providerKey="postgres" legend_split_behavior="0" source="dbname='stopcorr' host=localhost port=5432 user='qgis_ro' sslmode=disable key='tst,event,oper,veh' srid=3067 type=Point checkPrimaryKeyUnicity='1' table=&quot;public&quot;.&quot;observation&quot; (geom)" expanded="1" checked="Qt::Checked" name="observation">
+      <customproperties/>
+    </layer-tree-layer>
+    <layer-tree-layer patch_size="-1,-1" id="CartoDB_light_all_39304fdb_701b_40e2_81e3_25c6e9899d57" legend_exp="" providerKey="wms" legend_split_behavior="0" source="crs=EPSG:3857&amp;format&amp;type=xyz&amp;url=https://a.basemaps.cartocdn.com/light_all/%7Bz%7D/%7Bx%7D/%7By%7D.png&amp;zmax=18&amp;zmin=0" expanded="0" checked="Qt::Checked" name="cartodb">
       <customproperties/>
     </layer-tree-layer>
     <custom-order enabled="0">
       <item>CartoDB_light_all_39304fdb_701b_40e2_81e3_25c6e9899d57</item>
+      <item>observation_10027d31_2189_436d_b340_ea1ab132b491</item>
     </custom-order>
   </layer-tree-group>
-  <snapping-settings type="1" scaleDependencyMode="0" tolerance="12" unit="1" maxScale="0" self-snapping="0" enabled="0" mode="2" minScale="0" intersection-snapping="0">
-    <individual-layer-settings/>
+  <snapping-settings tolerance="12" intersection-snapping="0" enabled="0" maxScale="0" mode="2" type="1" self-snapping="0" scaleDependencyMode="0" unit="1" minScale="0">
+    <individual-layer-settings>
+      <layer-setting tolerance="12" enabled="0" id="observation_10027d31_2189_436d_b340_ea1ab132b491" maxScale="0" units="1" type="1" minScale="0"/>
+    </individual-layer-settings>
   </snapping-settings>
   <relations/>
-  <mapcanvas name="theMapCanvas" annotationsVisible="1">
+  <mapcanvas annotationsVisible="1" name="theMapCanvas">
     <units>meters</units>
     <extent>
-      <xmin>2766605.43642835784703493</xmin>
-      <ymin>8426952.09312674775719643</ymin>
-      <xmax>2786124.39597126096487045</xmax>
-      <ymax>8448806.03464306518435478</ymax>
+      <xmin>2758919.23368186550214887</xmin>
+      <ymin>8423214.85557102784514427</ymin>
+      <xmax>2797957.15276767360046506</xmax>
+      <ymax>8466922.73860366269946098</ymax>
     </extent>
     <rotation>0</rotation>
     <destinationsrs>
@@ -58,15 +64,20 @@
   </mapcanvas>
   <projectModels/>
   <legend updateDrawingOrder="true">
-    <legendlayer name="CartoDB light_all" showFeatureCount="0" drawingOrder="-1" checked="Qt::Checked" open="true">
-      <filegroup hidden="false" open="true">
-        <legendlayerfile isInOverview="0" layerid="CartoDB_light_all_39304fdb_701b_40e2_81e3_25c6e9899d57" visible="1"/>
+    <legendlayer showFeatureCount="0" drawingOrder="-1" open="true" checked="Qt::Checked" name="observation">
+      <filegroup open="true" hidden="false">
+        <legendlayerfile layerid="observation_10027d31_2189_436d_b340_ea1ab132b491" visible="1" isInOverview="0"/>
+      </filegroup>
+    </legendlayer>
+    <legendlayer showFeatureCount="0" drawingOrder="-1" open="false" checked="Qt::Checked" name="cartodb">
+      <filegroup open="false" hidden="false">
+        <legendlayerfile layerid="CartoDB_light_all_39304fdb_701b_40e2_81e3_25c6e9899d57" visible="1" isInOverview="0"/>
       </filegroup>
     </legendlayer>
   </legend>
   <mapViewDocks/>
   <mapViewDocks3D/>
-  <main-annotation-layer type="annotation" autoRefreshTime="0" autoRefreshEnabled="0" refreshOnNotifyMessage="" refreshOnNotifyEnabled="0">
+  <main-annotation-layer refreshOnNotifyEnabled="0" autoRefreshEnabled="0" refreshOnNotifyMessage="" type="annotation" autoRefreshTime="0">
     <id>Annotations_28e93034_b39c_4a16_bf9b_7ddeb6a49d46</id>
     <datasource></datasource>
     <keywordList>
@@ -115,7 +126,7 @@
     <layerOpacity>1</layerOpacity>
   </main-annotation-layer>
   <projectlayers>
-    <maplayer type="raster" autoRefreshTime="0" autoRefreshEnabled="0" maxScale="0" refreshOnNotifyMessage="" refreshOnNotifyEnabled="0" styleCategories="AllStyleCategories" hasScaleBasedVisibilityFlag="0" minScale="1e+8">
+    <maplayer refreshOnNotifyEnabled="0" autoRefreshEnabled="0" hasScaleBasedVisibilityFlag="0" refreshOnNotifyMessage="" maxScale="0" type="raster" autoRefreshTime="0" styleCategories="AllStyleCategories" minScale="1e+8">
       <extent>
         <xmin>-20037508.34278924390673637</xmin>
         <ymin>-20037508.34278925508260727</ymin>
@@ -123,11 +134,11 @@
         <ymax>20037508.34278924390673637</ymax>
       </extent>
       <id>CartoDB_light_all_39304fdb_701b_40e2_81e3_25c6e9899d57</id>
-      <datasource>type=xyz&amp;url=https://a.basemaps.cartocdn.com/light_all/%7Bz%7D/%7Bx%7D/%7By%7D.png&amp;zmax=18&amp;zmin=0</datasource>
+      <datasource>crs=EPSG:3857&amp;format&amp;type=xyz&amp;url=https://a.basemaps.cartocdn.com/light_all/%7Bz%7D/%7Bx%7D/%7By%7D.png&amp;zmax=18&amp;zmin=0</datasource>
       <keywordList>
         <value></value>
       </keywordList>
-      <layername>CartoDB light_all</layername>
+      <layername>cartodb</layername>
       <srs>
         <spatialrefsys>
           <wkt>PROJCS["WGS 84 / Pseudo-Mercator",GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4326"]],PROJECTION["Mercator_1SP"],PARAMETER["central_meridian",0],PARAMETER["scale_factor",1],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["X",EAST],AXIS["Y",NORTH],EXTENSION["PROJ4","+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs"],AUTHORITY["EPSG","3857"]]</wkt>
@@ -189,9 +200,9 @@
       </customproperties>
       <pipe>
         <provider>
-          <resampling zoomedOutResamplingMethod="nearestNeighbour" enabled="false" zoomedInResamplingMethod="nearestNeighbour" maxOversampling="2"/>
+          <resampling enabled="false" maxOversampling="2" zoomedInResamplingMethod="nearestNeighbour" zoomedOutResamplingMethod="nearestNeighbour"/>
         </provider>
-        <rasterrenderer alphaBand="-1" type="singlebandcolordata" nodataColor="" opacity="1" band="1">
+        <rasterrenderer alphaBand="-1" opacity="1" nodataColor="" type="singlebandcolordata" band="1">
           <rasterTransparency/>
           <minMaxOrigin>
             <limits>None</limits>
@@ -202,16 +213,319 @@
             <stdDevFactor>2</stdDevFactor>
           </minMaxOrigin>
         </rasterrenderer>
-        <brightnesscontrast brightness="0" gamma="1" contrast="0"/>
-        <huesaturation saturation="0" colorizeBlue="128" grayscaleMode="0" colorizeGreen="128" colorizeStrength="100" colorizeOn="0" colorizeRed="255"/>
+        <brightnesscontrast contrast="0" brightness="0" gamma="1"/>
+        <huesaturation grayscaleMode="0" saturation="0" colorizeRed="255" colorizeOn="0" colorizeGreen="128" colorizeBlue="128" colorizeStrength="100"/>
         <rasterresampler maxOversampling="2"/>
         <resamplingStage>resamplingFilter</resamplingStage>
       </pipe>
       <blendMode>0</blendMode>
     </maplayer>
+    <maplayer refreshOnNotifyEnabled="0" geometry="Point" autoRefreshTime="0" refreshOnNotifyMessage="" hasScaleBasedVisibilityFlag="0" styleCategories="AllStyleCategories" type="vector" maxScale="0" simplifyAlgorithm="0" readOnly="0" minScale="100000000" simplifyLocal="1" autoRefreshEnabled="0" wkbType="Point" simplifyMaxScale="1" labelsEnabled="0" simplifyDrawingHints="1" simplifyDrawingTol="1">
+      <id>observation_10027d31_2189_436d_b340_ea1ab132b491</id>
+      <datasource>dbname='stopcorr' host=db port=5432 user='qgis_ro' password='qgis_ro' sslmode=disable key='tst,event,oper,veh' srid=3067 type=Point checkPrimaryKeyUnicity='1' table="public"."observation" (geom)</datasource>
+      <keywordList>
+        <value></value>
+      </keywordList>
+      <layername>observation</layername>
+      <srs>
+        <spatialrefsys>
+          <wkt>PROJCS["ETRS89 / TM35FIN(E,N)",GEOGCS["ETRS89",DATUM["European_Terrestrial_Reference_System_1989",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6258"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4258"]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",27],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],AUTHORITY["EPSG","3067"]]</wkt>
+          <proj4>+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs</proj4>
+          <srsid>1030</srsid>
+          <srid>3067</srid>
+          <authid>EPSG:3067</authid>
+          <description>ETRS89 / TM35FIN(E,N)</description>
+          <projectionacronym>utm</projectionacronym>
+          <ellipsoidacronym>GRS80</ellipsoidacronym>
+          <geographicflag>false</geographicflag>
+        </spatialrefsys>
+      </srs>
+      <resourceMetadata>
+        <identifier></identifier>
+        <parentidentifier></parentidentifier>
+        <language></language>
+        <type>dataset</type>
+        <title></title>
+        <abstract>DOO and DOC events imported from HFP. See Digitransit doc for the first columns.</abstract>
+        <links/>
+        <fees></fees>
+        <encoding></encoding>
+        <crs>
+          <spatialrefsys>
+            <wkt>PROJCS["ETRS89 / TM35FIN(E,N)",GEOGCS["ETRS89",DATUM["European_Terrestrial_Reference_System_1989",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6258"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4258"]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",27],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],AUTHORITY["EPSG","3067"]]</wkt>
+            <proj4>+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs</proj4>
+            <srsid>1030</srsid>
+            <srid>3067</srid>
+            <authid>EPSG:3067</authid>
+            <description>ETRS89 / TM35FIN(E,N)</description>
+            <projectionacronym>utm</projectionacronym>
+            <ellipsoidacronym>GRS80</ellipsoidacronym>
+            <geographicflag>false</geographicflag>
+          </spatialrefsys>
+        </crs>
+        <extent/>
+      </resourceMetadata>
+      <provider encoding="">postgres</provider>
+      <vectorjoins/>
+      <layerDependencies/>
+      <dataDependencies/>
+      <expressionfields/>
+      <map-layer-style-manager current="default">
+        <map-layer-style name="default"/>
+      </map-layer-style-manager>
+      <auxiliaryLayer/>
+      <flags>
+        <Identifiable>1</Identifiable>
+        <Removable>1</Removable>
+        <Searchable>1</Searchable>
+      </flags>
+      <temporal durationField="" durationUnit="min" fixedDuration="0" startField="" endExpression="" enabled="0" endField="" mode="0" accumulate="0" startExpression="">
+        <fixedRange>
+          <start></start>
+          <end></end>
+        </fixedRange>
+      </temporal>
+      <renderer-v2 enableorderby="0" symbollevels="0" forceraster="0" type="singleSymbol">
+        <symbols>
+          <symbol clip_to_extent="1" force_rhr="0" type="marker" alpha="1" name="0">
+            <layer class="SimpleMarker" pass="0" enabled="1" locked="0">
+              <prop v="0" k="angle"/>
+              <prop v="255,158,23,255" k="color"/>
+              <prop v="1" k="horizontal_anchor_point"/>
+              <prop v="bevel" k="joinstyle"/>
+              <prop v="circle" k="name"/>
+              <prop v="0,0" k="offset"/>
+              <prop v="3x:0,0,0,0,0,0" k="offset_map_unit_scale"/>
+              <prop v="MM" k="offset_unit"/>
+              <prop v="35,35,35,255" k="outline_color"/>
+              <prop v="solid" k="outline_style"/>
+              <prop v="0" k="outline_width"/>
+              <prop v="3x:0,0,0,0,0,0" k="outline_width_map_unit_scale"/>
+              <prop v="MM" k="outline_width_unit"/>
+              <prop v="diameter" k="scale_method"/>
+              <prop v="2" k="size"/>
+              <prop v="3x:0,0,0,0,0,0" k="size_map_unit_scale"/>
+              <prop v="MM" k="size_unit"/>
+              <prop v="1" k="vertical_anchor_point"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </symbols>
+        <rotation/>
+        <sizescale/>
+      </renderer-v2>
+      <customproperties/>
+      <blendMode>0</blendMode>
+      <featureBlendMode>0</featureBlendMode>
+      <layerOpacity>1</layerOpacity>
+      <geometryOptions geometryPrecision="0" removeDuplicateNodes="0">
+        <activeChecks type="StringList">
+          <Option type="QString" value=""/>
+        </activeChecks>
+        <checkConfiguration/>
+      </geometryOptions>
+      <legend type="default-vector"/>
+      <referencedLayers/>
+      <fieldConfiguration>
+        <field configurationFlags="None" name="tst">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field configurationFlags="None" name="event">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field configurationFlags="None" name="oper">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field configurationFlags="None" name="veh">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field configurationFlags="None" name="route">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field configurationFlags="None" name="dir">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field configurationFlags="None" name="oday">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field configurationFlags="None" name="start">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field configurationFlags="None" name="stop_id">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field configurationFlags="None" name="stop_id_guessed">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field configurationFlags="None" name="dist_to_jore_point_m">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field configurationFlags="None" name="dist_to_median_point_m">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field configurationFlags="None" name="long">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field configurationFlags="None" name="lat">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+      </fieldConfiguration>
+      <aliases>
+        <alias field="tst" index="0" name=""/>
+        <alias field="event" index="1" name=""/>
+        <alias field="oper" index="2" name=""/>
+        <alias field="veh" index="3" name=""/>
+        <alias field="route" index="4" name=""/>
+        <alias field="dir" index="5" name=""/>
+        <alias field="oday" index="6" name=""/>
+        <alias field="start" index="7" name=""/>
+        <alias field="stop_id" index="8" name=""/>
+        <alias field="stop_id_guessed" index="9" name=""/>
+        <alias field="dist_to_jore_point_m" index="10" name=""/>
+        <alias field="dist_to_median_point_m" index="11" name=""/>
+        <alias field="long" index="12" name=""/>
+        <alias field="lat" index="13" name=""/>
+      </aliases>
+      <defaults>
+        <default field="tst" expression="" applyOnUpdate="0"/>
+        <default field="event" expression="" applyOnUpdate="0"/>
+        <default field="oper" expression="" applyOnUpdate="0"/>
+        <default field="veh" expression="" applyOnUpdate="0"/>
+        <default field="route" expression="" applyOnUpdate="0"/>
+        <default field="dir" expression="" applyOnUpdate="0"/>
+        <default field="oday" expression="" applyOnUpdate="0"/>
+        <default field="start" expression="" applyOnUpdate="0"/>
+        <default field="stop_id" expression="" applyOnUpdate="0"/>
+        <default field="stop_id_guessed" expression="" applyOnUpdate="0"/>
+        <default field="dist_to_jore_point_m" expression="" applyOnUpdate="0"/>
+        <default field="dist_to_median_point_m" expression="" applyOnUpdate="0"/>
+        <default field="long" expression="" applyOnUpdate="0"/>
+        <default field="lat" expression="" applyOnUpdate="0"/>
+      </defaults>
+      <constraints>
+        <constraint field="tst" unique_strength="0" notnull_strength="1" constraints="1" exp_strength="0"/>
+        <constraint field="event" unique_strength="0" notnull_strength="1" constraints="1" exp_strength="0"/>
+        <constraint field="oper" unique_strength="0" notnull_strength="1" constraints="1" exp_strength="0"/>
+        <constraint field="veh" unique_strength="0" notnull_strength="1" constraints="1" exp_strength="0"/>
+        <constraint field="route" unique_strength="0" notnull_strength="0" constraints="0" exp_strength="0"/>
+        <constraint field="dir" unique_strength="0" notnull_strength="0" constraints="0" exp_strength="0"/>
+        <constraint field="oday" unique_strength="0" notnull_strength="0" constraints="0" exp_strength="0"/>
+        <constraint field="start" unique_strength="0" notnull_strength="0" constraints="0" exp_strength="0"/>
+        <constraint field="stop_id" unique_strength="0" notnull_strength="0" constraints="0" exp_strength="0"/>
+        <constraint field="stop_id_guessed" unique_strength="0" notnull_strength="0" constraints="0" exp_strength="0"/>
+        <constraint field="dist_to_jore_point_m" unique_strength="0" notnull_strength="0" constraints="0" exp_strength="0"/>
+        <constraint field="dist_to_median_point_m" unique_strength="0" notnull_strength="0" constraints="0" exp_strength="0"/>
+        <constraint field="long" unique_strength="0" notnull_strength="0" constraints="0" exp_strength="0"/>
+        <constraint field="lat" unique_strength="0" notnull_strength="0" constraints="0" exp_strength="0"/>
+      </constraints>
+      <constraintExpressions>
+        <constraint field="tst" exp="" desc=""/>
+        <constraint field="event" exp="" desc=""/>
+        <constraint field="oper" exp="" desc=""/>
+        <constraint field="veh" exp="" desc=""/>
+        <constraint field="route" exp="" desc=""/>
+        <constraint field="dir" exp="" desc=""/>
+        <constraint field="oday" exp="" desc=""/>
+        <constraint field="start" exp="" desc=""/>
+        <constraint field="stop_id" exp="" desc=""/>
+        <constraint field="stop_id_guessed" exp="" desc=""/>
+        <constraint field="dist_to_jore_point_m" exp="" desc=""/>
+        <constraint field="dist_to_median_point_m" exp="" desc=""/>
+        <constraint field="long" exp="" desc=""/>
+        <constraint field="lat" exp="" desc=""/>
+      </constraintExpressions>
+      <expressionfields/>
+      <attributeactions>
+        <defaultAction key="Canvas" value="{00000000-0000-0000-0000-000000000000}"/>
+      </attributeactions>
+      <attributetableconfig actionWidgetStyle="dropDown" sortExpression="" sortOrder="0">
+        <columns/>
+      </attributetableconfig>
+      <conditionalstyles>
+        <rowstyles/>
+        <fieldstyles/>
+      </conditionalstyles>
+      <storedexpressions/>
+      <editform tolerant="1"></editform>
+      <editforminit/>
+      <editforminitcodesource>0</editforminitcodesource>
+      <editforminitfilepath></editforminitfilepath>
+      <editforminitcode><![CDATA[]]></editforminitcode>
+      <featformsuppress>0</featformsuppress>
+      <editorlayout>generatedlayout</editorlayout>
+      <editable/>
+      <labelOnTop/>
+      <dataDefinedFieldProperties/>
+      <widgets/>
+      <previewExpression></previewExpression>
+      <mapTip></mapTip>
+    </maplayer>
   </projectlayers>
   <layerorder>
     <layer id="CartoDB_light_all_39304fdb_701b_40e2_81e3_25c6e9899d57"/>
+    <layer id="observation_10027d31_2189_436d_b340_ea1ab132b491"/>
   </layerorder>
   <properties>
     <DefaultStyles>
@@ -328,16 +642,16 @@
   </properties>
   <dataDefinedServerProperties>
     <Option type="Map">
-      <Option value="" name="name" type="QString"/>
+      <Option type="QString" value="" name="name"/>
       <Option name="properties"/>
-      <Option value="collection" name="type" type="QString"/>
+      <Option type="QString" value="collection" name="type"/>
     </Option>
   </dataDefinedServerProperties>
   <visibility-presets/>
   <transformContext>
-    <srcDest destTransform="" source="EPSG:3067" dest="EPSG:3857" sourceTransform="+towgs84=0,0,0"/>
-    <srcDest destTransform="" source="EPSG:3067" dest="EPSG:4326" sourceTransform="+towgs84=0,0,0"/>
-    <srcDest destTransform="+towgs84=0,0,0" source="EPSG:3857" dest="EPSG:3067" sourceTransform=""/>
+    <srcDest sourceTransform="+towgs84=0,0,0" source="EPSG:3067" destTransform="" dest="EPSG:3857"/>
+    <srcDest sourceTransform="+towgs84=0,0,0" source="EPSG:3067" destTransform="" dest="EPSG:4326"/>
+    <srcDest sourceTransform="" source="EPSG:3857" destTransform="+towgs84=0,0,0" dest="EPSG:3067"/>
   </transformContext>
   <projectMetadata>
     <identifier></identifier>
@@ -364,7 +678,7 @@
   <Bookmarks/>
   <ProjectViewSettings UseProjectScales="0">
     <Scales/>
-    <DefaultViewExtent xmin="2758473.13040261762216687" ymin="8426952.09312674775719643" xmax="2794256.70199700118973851" ymax="8448806.03464306518435478">
+    <DefaultViewExtent ymax="8466922.73860366269946098" xmin="2737720.10023671248927712" xmax="2819156.2862128266133368" ymin="8423214.85557102784514427">
       <spatialrefsys>
         <wkt>PROJCS["WGS 84 / Pseudo-Mercator",GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4326"]],PROJECTION["Mercator_1SP"],PARAMETER["central_meridian",0],PARAMETER["scale_factor",1],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["X",EAST],AXIS["Y",NORTH],EXTENSION["PROJ4","+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs"],AUTHORITY["EPSG","3857"]]</wkt>
         <proj4>+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs</proj4>
@@ -378,18 +692,18 @@
       </spatialrefsys>
     </DefaultViewExtent>
   </ProjectViewSettings>
-  <ProjectTimeSettings timeStep="1" cumulativeTemporalRange="0" frameRate="1" timeStepUnit="h"/>
+  <ProjectTimeSettings timeStep="1" frameRate="1" timeStepUnit="h" cumulativeTemporalRange="0"/>
   <ProjectDisplaySettings>
     <BearingFormat id="bearing">
       <Option type="Map">
-        <Option value="" name="decimal_separator" type="QChar"/>
-        <Option value="6" name="decimals" type="int"/>
-        <Option value="0" name="direction_format" type="int"/>
-        <Option value="0" name="rounding_type" type="int"/>
-        <Option value="false" name="show_plus" type="bool"/>
-        <Option value="true" name="show_thousand_separator" type="bool"/>
-        <Option value="false" name="show_trailing_zeros" type="bool"/>
-        <Option value="" name="thousand_separator" type="QChar"/>
+        <Option type="QChar" value="" name="decimal_separator"/>
+        <Option type="int" value="6" name="decimals"/>
+        <Option type="int" value="0" name="direction_format"/>
+        <Option type="int" value="0" name="rounding_type"/>
+        <Option type="bool" value="false" name="show_plus"/>
+        <Option type="bool" value="true" name="show_thousand_separator"/>
+        <Option type="bool" value="false" name="show_trailing_zeros"/>
+        <Option type="QChar" value="" name="thousand_separator"/>
       </Option>
     </BearingFormat>
   </ProjectDisplaySettings>
