@@ -82,6 +82,8 @@ Adjusting the basemap and vector layers and their styles is done in the `qgis/st
 For this you will need QGIS Desktop >= 3.16.
 Note that the vector layers are configured to use the database connection parameters within the container network and will therefore not work directly when you open the project on your host machine.
 
+**NOTE:** The Postgres connection credentials are currently saved to the QGIS project file, which is unsafe and NOT recommended at least if the database is made available outside the host machine in any way. 
+
 ### Adjusting the PowerPoint report
 
 The PowerPoint report is created using the `pptx/template.pptx` template.
