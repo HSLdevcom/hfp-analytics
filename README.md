@@ -14,7 +14,15 @@ The stop-HFP correspondence analysis is a one-off task run a few times per year 
 
 The tool requires [docker-compose](https://docs.docker.com/compose/) and is run with two files: one with continuous services (database, QGIS map server and report file server) and another that will run the one-off tasks required for an analysis (HFP & Digitransit integrations, creating the pptx file).
 
-Clone this project, and navigate to the project root. Copy the `.env.test` file into `.env`, and update the environment variables such as ports and the database password as you wish. Update the environment variables for your session, and start the database & server stack:
+Clone this project, and navigate to the project root. Copy the `.env.test` file into `.env`, and update the environment variables such as ports and the database password as you wish.
+
+Create a common network for the docker-compose services:
+
+```
+docker network create --attachable stopcorr_nw
+```
+
+Update the environment variables for your session, and start the database & server stack:
 
 ```
 source .env && docker-compose -f docker-compose.server.yml up -d
