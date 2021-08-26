@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 function cleanup {
   docker-compose -f docker-compose.test.server.yml down
 }
