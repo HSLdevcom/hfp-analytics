@@ -1,0 +1,16 @@
+---
+# TEST compose file for one-off services.
+version: "3.8"
+services:
+  python:
+    build: ./python
+    restart: "no"
+    env_file: .env
+    volumes:
+      - ./python/src:/code:ro
+    command: python hfp_import.py
+
+networks:
+  default:
+    external: true
+    name: stopcorr_nw
