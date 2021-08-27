@@ -43,7 +43,9 @@ The csv file should look like this:
 
 ```
 tst,event,oper,veh,route,dir,oday,start,stop_id,long,lat
-# TODO: Example values
+2021-08-18 02:00:04.362+03,DOC,17,32,1090N,1,2021-08-17,01:39:00,1452104,25.0968,60.2081
+2021-08-18 02:00:04.87+03,DOC,30,48,1073N,1,2021-08-17,01:50:00,1220105,24.96206,60.19835
+2021-08-18 02:00:17.711+03,DOO,30,10,1074N,1,2021-08-17,01:40:00,1381101,25.00939,60.24996
 ```
 
 Gzip it and save as `data/db_import/hfp.csv.gz` (relative to the project root), so the database will be able to read it through a mapped volume.
@@ -82,7 +84,7 @@ Adjusting the basemap and vector layers and their styles is done in the `qgis/st
 For this you will need QGIS Desktop >= 3.16.
 Note that the vector layers are configured to use the database connection parameters within the container network and will therefore not work directly when you open the project on your host machine.
 
-**NOTE:** The Postgres connection credentials are currently saved to the QGIS project file, which is unsafe and NOT recommended at least if the database is made available outside the host machine in any way. 
+**NOTE:** The Postgres connection credentials are currently saved to the QGIS project file, which is unsafe and NOT recommended at least if the database is made available outside the host machine in any way.
 
 ### Adjusting the PowerPoint report
 
