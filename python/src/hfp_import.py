@@ -1,22 +1,14 @@
 # Call db server-side COPY to import HFP events from csv.
 
 import psycopg2
-import os
 from datetime import datetime
+from stopcorr.utils import get_conn_params
 
 def main():
     starttime = datetime.now()
     print(f'[{starttime}] Importing HFP events to database')
 
-    conn_params = dict(
-        dbname = os.getenv('POSTGRES_DB'),
-        user = os.getenv('POSTGRES_USER'),
-        password = os.getenv('POSTGRES_PASSWORD'),
-        host = 'db',
-        port = 5432
-    )
-
-    conn = psycopg2.connect(**conn_params)
+    conn = psycopg2.connect(**get_conn_params())
 
     try:
         with conn:
