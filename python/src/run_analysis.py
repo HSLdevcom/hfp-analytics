@@ -28,6 +28,9 @@ def main():
                 elif n_stops > 0:
                     stops_str = ', '.join(res)
                     print(f'stop_id values in "observation" not found in "jore_stop": {stops_str}')
+
+                cur.execute('SELECT * FROM calculate_jore_distances()')
+                print(f'{cur.fetchone()[0]} observations updated with dist_to_jore_point_m')
     finally:
         conn.close()
 
