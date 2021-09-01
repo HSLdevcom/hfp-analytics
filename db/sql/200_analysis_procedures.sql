@@ -19,8 +19,6 @@
 -- assigned a guessed stop_id.
 --
 
-BEGIN;
-
 CREATE FUNCTION guess_missing_stop_ids(stop_near_limit_m double precision)
 RETURNS bigint
 VOLATILE
