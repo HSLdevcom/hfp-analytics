@@ -99,3 +99,74 @@ $func$;
 COMMENT ON FUNCTION calculate_jore_distances IS
 'Populates observation.dist_to_jore_point_m with the distance from observation
 to jore_stop by stop_id.';
+
+CREATE FUNCTION calculate_medians(
+  min_observations_per_stop integer,
+  max_null_stop_dist_m      double precision
+) RETURNS bigint
+VOLATILE
+LANGUAGE SQL
+AS $func$
+WITH
+  medians AS (
+    SELECT
+      stop_id,
+      (min(tst) AT TIME ZONE 'Europe/Helsinki')::date               AS from_date,
+      (max(tst) AT TIME ZONE 'Europe/Helsinki')::date               AS to_date,
+      count(*) filter(WHERE stop_id_guessed IS false)               AS n_stop_known,
+      count(*) filter(WHERE stop_id_guessed IS true)                AS n_stop_guessed,
+      array_agg(
+        DISTINCT (route || '-' || dir) ORDER BY (route || '-' || dir)
+        )                                                           AS observation_route_dirs,
+      ST_GeometricMedian( ST_Union(geom) )                          AS geom
+    FROM observation
+    WHERE stop_id IS NOT NULL
+      AND geom IS NOT NULL
+    GROUP BY stop_id
+    HAVING count(*) >= $1
+  ),
+  near_nulls_by_median AS (
+    SELECT
+      m.stop_id,
+      count(*) AS n_stop_null_near
+    FROM medians AS m
+    INNER JOIN observation AS o
+      ON ST_DWithin(m.geom, o.geom, $2)
+    WHERE o.stop_id IS NULL
+    GROUP BY m.stop_id
+  ),
+  inserted AS (
+    INSERT INTO stop_median (
+      stop_id,
+      from_date,
+      to_date,
+      n_stop_known,
+      n_stop_guessed,
+      n_stop_null_near,
+      dist_to_jore_point_m,
+      observation_route_dirs,
+      geom
+    )
+    SELECT
+      md.stop_id,
+      md.from_date,
+      md.to_date,
+      md.n_stop_known,
+      md.n_stop_guessed,
+      nn.n_stop_null_near,
+      ST_Distance(md.geom, js.geom),
+      md.observation_route_dirs,
+      md.geom
+    FROM medians AS md
+    LEFT JOIN jore_stop AS js
+      ON (md.stop_id = js.stop_id)
+    LEFT JOIN near_nulls_by_median AS nn
+      ON (md.stop_id = nn.stop_id)
+    RETURNING 1
+  )
+SELECT count(*) FROM inserted;
+$func$;
+
+COMMENT ON FUNCTION calculate_medians IS
+'Populates stop_median with ST_GeometricMedian and related aggregates from each
+stop_id that has at least "min_observations_per_stop" rows in "observation".';
