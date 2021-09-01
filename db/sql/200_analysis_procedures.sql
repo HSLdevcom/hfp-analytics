@@ -76,3 +76,22 @@ CREATE VIEW observed_stop_not_in_jore_stop AS (
 
 COMMENT ON VIEW observed_stop_not_in_jore_stop IS
 'Returns unique stop_id values from "observation" that are not found in "jore_stop".';
+
+--
+-- Calculate distances between observations (with stop_id) and Jore stops.
+--
+
+CREATE FUNCTION calculate_jore_distances()
+RETURNS bigint
+VOLATILE
+LANGUAGE SQL
+AS $func$
+  WITH updated AS (
+    UPDATE observation AS ob
+    SET dist_to_jore_point_m = ST_Distance(ob.geom, js.geom)
+    FROM jore_stop AS js
+    WHERE ob.stop_id = js.stop_id
+    RETURNING 1
+  )
+  SELECT count(*) FROM updated;
+$func$;
