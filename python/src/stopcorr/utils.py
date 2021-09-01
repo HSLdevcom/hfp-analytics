@@ -8,3 +8,10 @@ def get_conn_params():
         host = 'db',
         port = 5432
     )
+
+def env_with_default(var_name, default_value):
+    res = os.getenv(var_name)
+    if res is None:
+        res = default_value
+        print(f'{var_name} not set, falling back to default value {default_value}')
+    return res
