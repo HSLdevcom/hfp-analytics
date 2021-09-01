@@ -8,7 +8,7 @@ services:
     env_file: .env
     volumes:
       - ./python/src:/code:ro
-    command: python hfp_import.py
+    command: python digitransit_import.py
 
 networks:
   default:
