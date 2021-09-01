@@ -1,8 +1,11 @@
 # Import current stops, stations and route-direction combos using them from Digitransit.
 
+import psycopg2
 import requests
-import json
+import csv
 from datetime import date
+from psycopg2 import sql
+from stopcorr.utils import get_conn_params
 
 GRAPHQL_URL = 'https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql'
 
@@ -71,18 +74,42 @@ def flatten_result(res):
     rows = list(res['data'].values())[0]
     return list(map(make_flat_row, rows))
 
-def main():
-    query = create_query('stops')
-    res = get_query(query)
-    res = flatten_result(res)
-    print(res[0:min(len(res)-1, 10)])
-    # TODO: DB insert
+def write_to_file(flat_res, to_file='/tmp/tmp.csv'):
+    assert len(flat_res) > 0
+    assert all(map(lambda x: isinstance(x, dict), flat_res))
+    assert all(map(lambda x: x.keys() == flat_res[0].keys(), flat_res[1:]))
+    with open(to_file, 'w', newline='') as fobj:
+        fieldnames = list(flat_res[0].keys())
+        writer = csv.DictWriter(fobj, fieldnames=fieldnames, delimiter='\t')
+        # NOTE: We are NOT writing headers since copy_from reads without them.
+        writer.writerows(flat_res)
 
-    query = create_query('stations')
+def copy_from_file_to_db(conn, to_table, from_file='/tmp/tmp.csv'):
+    with open(from_file, mode='r') as fobj:
+        with conn.cursor() as cur:
+            cur.execute(sql.SQL('WITH deleted AS (DELETE FROM {} RETURNING 1)\
+                                SELECT count(*) FROM deleted').format(sql.Identifier(to_table)))
+            print(f'{cur.fetchone()[0]} rows deleted from "{to_table}"')
+            cur.copy_from(file=fobj, table=to_table, sep='\t', null='')
+            cur.execute(sql.SQL('SELECT count(*) FROM {}').format(sql.Identifier(to_table)))
+            print(f'{cur.fetchone()[0]} rows inserted into "{to_table}"')
+
+def import_dataset(query_type, to_table, conn):
+    query = create_query(query_type)
+    print(f'Fetching {query_type} ...')
     res = get_query(query)
     res = flatten_result(res)
-    print(res[0:min(len(res)-1, 10)])
-    # TODO: DB insert
+    write_to_file(res)
+    copy_from_file_to_db(conn, to_table)
+    print(f'{query_type} done')
+
+def main():
+    try:
+        with psycopg2.connect(**get_conn_params()) as conn:
+            import_dataset(query_type='stations', to_table='jore_station', conn=conn)
+            import_dataset(query_type='stops', to_table='jore_stop', conn=conn)
+    finally:
+        conn.close()
 
 if __name__ == '__main__':
     main()
