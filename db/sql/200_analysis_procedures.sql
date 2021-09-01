@@ -95,3 +95,7 @@ AS $func$
   )
   SELECT count(*) FROM updated;
 $func$;
+
+COMMENT ON FUNCTION calculate_jore_distances IS
+'Populates observation.dist_to_jore_point_m with the distance from observation
+to jore_stop by stop_id.';
