@@ -7,6 +7,8 @@ from stopcorr.utils import env_with_default
 
 def main():
     stop_near_limit_m = env_with_default('STOP_NEAR_LIMIT_M', 50.0)
+    min_observations_per_stop = env_with_default('MIN_OBSERVATIONS_PER_STOP', 10)
+    max_null_stop_dist_m = env_with_default('MAX_NULL_STOP_DIST_M', 100.0)
 
     conn = psycopg2.connect(**get_conn_params())
 
@@ -28,6 +30,14 @@ def main():
 
                 cur.execute('SELECT * FROM calculate_jore_distances()')
                 print(f'{cur.fetchone()[0]} observations updated with dist_to_jore_point_m')
+
+                cur.execute('WITH deleted AS (DELETE FROM stop_median RETURNING 1)\
+                            SELECT count(*) FROM deleted')
+                print(f'{cur.fetchone()[0]} rows deleted from "stop_median"')
+
+                cur.execute('SELECT * FROM calculate_medians(%s, %s)',
+                            (min_observations_per_stop, max_null_stop_dist_m))
+                print(f'{cur.fetchone()[0]} rows inserted into "stop_median"')
     finally:
         conn.close()
 
