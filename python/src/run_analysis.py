@@ -1,15 +1,12 @@
 # Call analysis functions in the db.
 
 import psycopg2
-import os
 from psycopg2 import sql
 from stopcorr.utils import get_conn_params
+from stopcorr.utils import env_with_default
 
 def main():
-    stop_near_limit_m = os.getenv('STOP_NEAR_LIMIT_M')
-    if stop_near_limit_m is None:
-        stop_near_limit_m = 50.0
-        print(f'STOP_NEAR_LIMIT_M not set, falling back to default value {stop_near_limit_m}')
+    stop_near_limit_m = env_with_default('STOP_NEAR_LIMIT_M', 50.0)
 
     conn = psycopg2.connect(**get_conn_params())
 
