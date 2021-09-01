@@ -111,7 +111,8 @@ COMMENT ON TABLE jore_station IS
 
 CREATE TABLE stop_median (
   stop_id integer PRIMARY KEY,
-  observation_date_range daterange,
+  from_date date,
+  to_date date,
   n_stop_known integer,
   n_stop_guessed integer,
   n_stop_null_near integer,
@@ -128,8 +129,10 @@ CREATE INDEX ON stop_median USING GIST (geom);
 
 COMMENT ON TABLE stop_median IS
 'Median points of DOO / DOC point clusters by stop_id with materialized aggregate values.';
-COMMENT ON COLUMN stop_median.observation_date_range IS
-'Min and max date (Finnish time) of the observations of the stop used in analysis.';
+COMMENT ON COLUMN stop_median.from_date IS
+'Min date (Finnish time) of the observations of the stop used in analysis.';
+COMMENT ON COLUMN stop_median.to_date IS
+'Max date (Finnish time) of the observations of the stop used in analysis.';
 COMMENT ON COLUMN stop_median.n_stop_known IS
 'N observations with stop_id from HFP/LIJ.';
 COMMENT ON COLUMN stop_median.n_stop_guessed IS
