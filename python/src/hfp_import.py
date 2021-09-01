@@ -26,10 +26,15 @@ def main():
                 cur.execute("SELECT count(1) FROM _import")
                 print(f'{cur.fetchone()[0]} events read')
                 cur.execute(
+                    "UPDATE _import\
+                    SET stop_id_guessed = false\
+                    WHERE stop_id IS NOT NULL"
+                )
+                cur.execute(
                     "WITH inserted AS ( \
                     INSERT INTO observation ( \
-                    tst,event,oper,veh,route,dir,oday,start,stop_id,long,lat) \
-                    SELECT tst,event,oper,veh,route,dir,oday,start,stop_id,long,lat \
+                    tst,event,oper,veh,route,dir,oday,start,stop_id,stop_id_guessed,long,lat) \
+                    SELECT tst,event,oper,veh,route,dir,oday,start,stop_id,stop_id_guessed,long,lat \
                     FROM _import \
                     ON CONFLICT DO NOTHING \
                     RETURNING 1 ) \
