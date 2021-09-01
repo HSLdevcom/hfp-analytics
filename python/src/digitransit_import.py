@@ -45,7 +45,7 @@ def make_route_dir(pattern):
     route = pattern['route']['gtfsId'].split(':')[1].strip()
     # NOTE: Digitransit uses 0/1 directions, while Jore uses 1/2 directions
     dir = str(pattern['directionId'] + 1)
-    return f"'{route}-{dir}'"
+    return f"{route}-{dir}"
 
 def make_flat_row(gql_row):
     parent_station = None
