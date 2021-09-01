@@ -2,13 +2,14 @@
 # TEST compose file for one-off services.
 version: "3.8"
 services:
-  python:
+  importer:
+    image: stopcorr/stopcorr-python:latest
     build: ./python
     restart: "no"
     env_file: .env
     volumes:
       - ./python/src:/code:ro
-    command: python digitransit_import.py
+    command: bash import_all.sh
 
 networks:
   default:
