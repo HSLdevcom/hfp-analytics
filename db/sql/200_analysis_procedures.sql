@@ -61,3 +61,18 @@ COMMENT ON FUNCTION guess_missing_stop_ids IS
 route+dir of the observation and are within the given distance from the observation;
 if found, sets the closest stop as the stop_id and stop_id_guessed to true.
 Returns the number of observations updated.';
+
+--
+-- Report stop_id values that are missing from jore_stop.
+--
+
+CREATE VIEW observed_stop_not_in_jore_stop AS (
+  SELECT DISTINCT stop_id
+  FROM observation
+  WHERE stop_id IS NOT NULL
+    AND stop_id NOT IN (SELECT DISTINCT stop_id FROM jore_stop)
+  ORDER BY stop_id
+);
+
+COMMENT ON VIEW observed_stop_not_in_jore_stop IS
+'Returns unique stop_id values from "observation" that are not found in "jore_stop".';
