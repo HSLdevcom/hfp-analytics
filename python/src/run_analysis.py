@@ -19,6 +19,15 @@ def main():
                 cur.execute('SELECT * FROM guess_missing_stop_ids(%s)',
                             (stop_near_limit_m, ))
                 print(f'{cur.fetchone()[0]} observations updated with guessed stop_id')
+
+                cur.execute('SELECT stop_id FROM observed_stop_not_in_jore_stop')
+                res = [str(x[0]) for x in cur.fetchall()]
+                n_stops = len(res)
+                if n_stops > 10:
+                    print(f'{n_stops} stop_id values in "observation" not found in "jore_stop"')
+                elif n_stops > 0:
+                    stops_str = ', '.join(res)
+                    print(f'stop_id values in "observation" not found in "jore_stop": {stops_str}')
     finally:
         conn.close()
 
