@@ -4,11 +4,14 @@ import psycopg2
 from psycopg2 import sql
 from stopcorr.utils import get_conn_params
 from stopcorr.utils import env_with_default
+from stopcorr.utils import comma_separated_floats_to_list
 
 def main():
     stop_near_limit_m = env_with_default('STOP_NEAR_LIMIT_M', 50.0)
     min_observations_per_stop = env_with_default('MIN_OBSERVATIONS_PER_STOP', 10)
     max_null_stop_dist_m = env_with_default('MAX_NULL_STOP_DIST_M', 100.0)
+    radius_percentiles_str = env_with_default('RADIUS_PERCENTILES', '0.5,0.75,0.9,0.95')
+    radius_percentiles = comma_separated_floats_to_list(radius_percentiles_str)
 
     conn = psycopg2.connect(**get_conn_params())
 
@@ -41,6 +44,10 @@ def main():
 
                 cur.execute('SELECT * FROM calculate_median_distances()')
                 print(f'{cur.fetchone()[0]} observations updated with dist_to_median_point_m')
+
+                cur.execute('SELECT * FROM calculate_percentile_radii(%s)',
+                            (radius_percentiles, ))
+                print(f'{cur.fetchone()[0]} "percentile_radii" created using percentiles {radius_percentiles_str}')
 
     finally:
         conn.close()

@@ -15,3 +15,9 @@ def env_with_default(var_name, default_value):
         res = default_value
         print(f'{var_name} not set, falling back to default value {default_value}')
     return res
+
+def comma_separated_floats_to_list(val_str):
+    res = val_str.split(',')
+    res = [x.strip() for x in res]
+    res = [float(x) for x in res]
+    return res
