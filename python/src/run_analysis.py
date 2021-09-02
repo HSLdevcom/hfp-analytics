@@ -38,6 +38,10 @@ def main():
                 cur.execute('SELECT * FROM calculate_medians(%s, %s)',
                             (min_observations_per_stop, max_null_stop_dist_m))
                 print(f'{cur.fetchone()[0]} rows inserted into "stop_median"')
+
+                cur.execute('SELECT * FROM calculate_median_distances()')
+                print(f'{cur.fetchone()[0]} observations updated with dist_to_median_point_m')
+
     finally:
         conn.close()
 

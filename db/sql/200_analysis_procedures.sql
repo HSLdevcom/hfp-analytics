@@ -174,3 +174,26 @@ $func$;
 COMMENT ON FUNCTION calculate_medians IS
 'Populates stop_median with ST_GeometricMedian and related aggregates from each
 stop_id that has at least "min_observations_per_stop" rows in "observation".';
+
+--
+-- Calculate distances between observations and medians by stop_id.
+--
+
+CREATE FUNCTION calculate_median_distances()
+RETURNS bigint
+VOLATILE
+LANGUAGE SQL
+AS $func$
+  WITH updated AS (
+    UPDATE observation AS ob
+    SET dist_to_median_point_m = ST_Distance(ob.geom, sm.geom)
+    FROM stop_median AS sm
+    WHERE ob.stop_id = sm.stop_id
+    RETURNING 1
+  )
+  SELECT count(*) FROM updated;
+$func$;
+
+COMMENT ON FUNCTION calculate_median_distances IS
+'Populates observation.dist_to_median_point_m with the distance
+from observation to stop_median by stop_id.';
