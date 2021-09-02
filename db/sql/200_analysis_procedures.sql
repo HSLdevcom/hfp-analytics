@@ -100,6 +100,10 @@ COMMENT ON FUNCTION calculate_jore_distances IS
 'Populates observation.dist_to_jore_point_m with the distance from observation
 to jore_stop by stop_id.';
 
+--
+-- Calculate medians of observation clusters by stop_id.
+--
+
 CREATE FUNCTION calculate_medians(
   min_observations_per_stop integer,
   max_null_stop_dist_m      double precision
