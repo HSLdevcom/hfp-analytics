@@ -197,3 +197,53 @@ $func$;
 COMMENT ON FUNCTION calculate_median_distances IS
 'Populates observation.dist_to_median_point_m with the distance
 from observation to stop_median by stop_id.';
+
+--
+-- Calculate percentile radii around the median points.
+--
+
+CREATE FUNCTION calculate_percentile_radii(percentiles real[])
+RETURNS bigint
+VOLATILE
+LANGUAGE SQL
+AS $func$
+  WITH
+    radii AS (
+      SELECT
+        ob.stop_id,
+        pe.pe AS percentile,
+        percentile_cont(pe.pe) WITHIN GROUP (ORDER BY ob.dist_to_median_point_m) AS radius_m
+      FROM observation AS ob
+      INNER JOIN unnest($1) AS pe
+        ON true
+      INNER JOIN stop_median AS sm -- Just to avoid records missing from stop_median
+        ON (ob.stop_id = sm.stop_id)
+      WHERE ob.stop_id IS NOT NULL
+      GROUP BY ob.stop_id, pe.pe
+    ),
+    counts AS (
+      SELECT
+        rd.stop_id,
+        rd.percentile,
+        count(*) FILTER (WHERE ob.dist_to_median_point_m <= rd.radius_m) AS n_observations
+      FROM radii AS rd
+      INNER JOIN observation AS ob
+        ON (rd.stop_id = ob.stop_id)
+      GROUP BY rd.stop_id, rd.percentile
+    ),
+    inserted AS (
+      INSERT INTO percentile_radii (stop_id, percentile, radius_m, n_observations)
+      SELECT rd.stop_id, rd.percentile, rd.radius_m, cn.n_observations
+      FROM radii AS rd
+      INNER JOIN counts AS cn
+        ON (rd.stop_id = cn.stop_id AND rd.percentile = cn.percentile)
+      WHERE rd.radius_m IS NOT NULL
+      ORDER BY stop_id, percentile
+      RETURNING 1
+    )
+  SELECT count(*) FROM inserted;
+$func$;
+
+COMMENT ON FUNCTION calculate_percentile_radii IS
+'Populates "percentile_radii" with radii enclosing "observation" points
+around "stop_median" points at given percentages (from 0.0 to 1.0).';
