@@ -117,7 +117,6 @@ CREATE TABLE stop_median (
   n_stop_guessed integer,
   n_stop_null_near integer,
   dist_to_jore_point_m real,
-  observation_radii jsonb,
   observation_route_dirs text[],
   result_class text,
   recommended_min_radius_m real,
@@ -141,8 +140,6 @@ COMMENT ON COLUMN stop_median.n_stop_null_near IS
 'N observations with NULL stop_id closer than STOP_NEAR_LIMIT_M to the stop.';
 COMMENT ON COLUMN stop_median.dist_to_jore_point_m IS
 'Distance (m) to the corresponding jore_stop(stop_id). ';
-COMMENT ON COLUMN stop_median.observation_radii IS
-'Point cluster quantile radius values (m) around the median as JSON.';
 COMMENT ON COLUMN stop_median.observation_route_dirs IS
 'Route-direction combinations that used the stop, according to observations.';
 COMMENT ON COLUMN stop_median.result_class IS
@@ -153,3 +150,24 @@ COMMENT ON COLUMN stop_median.manual_acceptance_needed IS
 'If true, the reported result needs manual inspection and acceptance.';
 COMMENT ON COLUMN stop_median.geom IS
 'Median POINT geometry in ETRS-TM35 coordinate system, geometric median from observations of the stop.';
+
+CREATE TABLE percentile_radii (
+  stop_id integer NOT NULL REFERENCES stop_median(stop_id) ON DELETE CASCADE,
+  percentile real NOT NULL CHECK (percentile BETWEEN 0.0 AND 1.0),
+  radius_m real,
+  n_observations bigint,
+
+  PRIMARY KEY (stop_id, percentile)
+);
+
+COMMENT ON TABLE percentile_radii IS
+'Radii around "stop_median" containing a given percentage of "observation"
+values ordered by their "dist_to_median_point_m".';
+COMMENT ON COLUMN percentile_radii.stop_id IS
+'Same as "stop_median"."stop_id".';
+COMMENT ON COLUMN percentile_radii.percentile IS
+'0.0 to 1.0, percentage of observations that the radius encloses.';
+COMMENT ON COLUMN percentile_radii.radius_m IS
+'Radius size in meters.';
+COMMENT ON COLUMN percentile_radii.n_observations IS
+'Number of observations that the radius encloses.';
