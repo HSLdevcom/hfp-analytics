@@ -21,3 +21,9 @@ def comma_separated_floats_to_list(val_str):
     res = [x.strip() for x in res]
     res = [float(x) for x in res]
     return res
+
+def comma_separated_integers_to_list(val_str):
+    res = val_str.split(',')
+    res = [x.strip() for x in res]
+    res = [int(x) for x in res]
+    return res

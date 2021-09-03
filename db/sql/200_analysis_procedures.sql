@@ -254,12 +254,17 @@ around "stop_median" points at given percentages (from 0.0 to 1.0).';
 -- Note that the classes are not exclusive, however only the class applied last
 -- will remain valid.
 --
--- TODO: Classification might need to be controlled from within the caller script
--- with arguments or env variables, if we want to change parameters flexibly
--- in the future.
---
 
-CREATE PROCEDURE classify_medians()
+CREATE PROCEDURE classify_medians(
+  min_radius_percentiles_to_sum real[],
+  default_min_radius_m real,
+  manual_acceptance_min_radius_m real,
+  large_scatter_percentile real,
+  large_scatter_radius_m real,
+  large_jore_dist_m real,
+  stop_guessed_percentage real,
+  terminal_ids integer[]
+)
 LANGUAGE PLPGSQL
 AS $proc$
 BEGIN
@@ -271,36 +276,36 @@ BEGIN
 
   UPDATE stop_median AS sm
   SET
-    recommended_min_radius_m = greatest(rd.selected_radius_sum, 20),
-    manual_acceptance_needed = (rd.selected_radius_sum > 40.0)
+    recommended_min_radius_m = greatest(rd.selected_radius_sum, default_min_radius_m),
+    manual_acceptance_needed = (rd.selected_radius_sum > manual_acceptance_min_radius_m)
   FROM (
       SELECT stop_id, sum(radius_m) AS selected_radius_sum
       FROM percentile_radii
-      WHERE percentile IN (0.5, 0.95)
+      WHERE percentile = ANY (min_radius_percentiles_to_sum)
       GROUP BY stop_id
     ) AS rd
   WHERE sm.stop_id = rd.stop_id;
 
   UPDATE stop_median AS sm
   SET result_class = 'Korjaa säde / sijainti'
-  FROM (SELECT stop_id, radius_m FROM percentile_radii WHERE percentile = 0.9) AS rd
+  FROM (SELECT stop_id, radius_m FROM percentile_radii WHERE percentile = large_scatter_percentile) AS rd
   WHERE sm.stop_id = rd.stop_id
-    AND sm.dist_to_jore_point_m >= 25.0
-    AND rd.radius_m <= 10.0;
+    AND sm.dist_to_jore_point_m >= large_jore_dist_m
+    AND rd.radius_m <= large_scatter_radius_m;
 
   UPDATE stop_median AS sm
   SET result_class = 'Tarkista (suuri hajonta)'
-  FROM (SELECT stop_id, radius_m FROM percentile_radii WHERE percentile = 0.9) AS rd
+  FROM (SELECT stop_id, radius_m FROM percentile_radii WHERE percentile = large_scatter_percentile) AS rd
   WHERE sm.stop_id = rd.stop_id
-    AND rd.radius_m > 10.0;
+    AND rd.radius_m > large_scatter_radius_m;
 
   UPDATE stop_median SET result_class = 'Tarkista (paljon jälkikohdistettuja)'
-  WHERE (n_stop_guessed::real / (n_stop_known+n_stop_guessed)::real > 0.05);
+  WHERE (n_stop_guessed::real / (n_stop_known+n_stop_guessed)::real > stop_guessed_percentage);
 
   UPDATE stop_median SET result_class = 'Tarkista (terminaali)'
   WHERE stop_id IN (
       SELECT stop_id FROM jore_stop
-      WHERE parent_station IN (1000001, 1000015, 2000002, 2000003, 2000212, 4000011)
+      WHERE parent_station = ANY (terminal_ids)
     );
 
   UPDATE stop_median SET result_class = 'Tarkista (ratikka)'
