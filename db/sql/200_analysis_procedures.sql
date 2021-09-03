@@ -247,3 +247,71 @@ $func$;
 COMMENT ON FUNCTION calculate_percentile_radii IS
 'Populates "percentile_radii" with radii enclosing "observation" points
 around "stop_median" points at given percentages (from 0.0 to 1.0).';
+
+--
+-- Classification of medians.
+--
+-- Note that the classes are not exclusive, however only the class applied last
+-- will remain valid.
+--
+-- TODO: Classification might need to be controlled from within the caller script
+-- with arguments or env variables, if we want to change parameters flexibly
+-- in the future.
+--
+
+CREATE PROCEDURE classify_medians()
+LANGUAGE PLPGSQL
+AS $proc$
+BEGIN
+
+  UPDATE stop_median AS sm SET
+    result_class = NULL,
+    recommended_min_radius_m = NULL,
+    manual_acceptance_needed = NULL;
+
+  UPDATE stop_median AS sm
+  SET
+    recommended_min_radius_m = greatest(rd.selected_radius_sum, 20),
+    manual_acceptance_needed = (rd.selected_radius_sum > 40.0)
+  FROM (
+      SELECT stop_id, sum(radius_m) AS selected_radius_sum
+      FROM percentile_radii
+      WHERE percentile IN (0.5, 0.95)
+      GROUP BY stop_id
+    ) AS rd
+  WHERE sm.stop_id = rd.stop_id;
+
+  UPDATE stop_median AS sm
+  SET result_class = 'Korjaa säde / sijainti'
+  FROM (SELECT stop_id, radius_m FROM percentile_radii WHERE percentile = 0.9) AS rd
+  WHERE sm.stop_id = rd.stop_id
+    AND sm.dist_to_jore_point_m >= 25.0
+    AND rd.radius_m <= 10.0;
+
+  UPDATE stop_median AS sm
+  SET result_class = 'Tarkista (suuri hajonta)'
+  FROM (SELECT stop_id, radius_m FROM percentile_radii WHERE percentile = 0.9) AS rd
+  WHERE sm.stop_id = rd.stop_id
+    AND rd.radius_m > 10.0;
+
+  UPDATE stop_median SET result_class = 'Tarkista (paljon jälkikohdistettuja)'
+  WHERE (n_stop_guessed::real / (n_stop_known+n_stop_guessed)::real > 0.05);
+
+  UPDATE stop_median SET result_class = 'Tarkista (terminaali)'
+  WHERE stop_id IN (
+      SELECT stop_id FROM jore_stop
+      WHERE parent_station IN (1000001, 1000015, 2000002, 2000003, 2000212, 4000011)
+    );
+
+  UPDATE stop_median SET result_class = 'Tarkista (ratikka)'
+  WHERE stop_id IN (SELECT stop_id FROM jore_stop WHERE stop_mode = 'TRAM');
+
+  UPDATE stop_median SET result_class = 'Jore-pysäkki puuttuu'
+  WHERE stop_id NOT IN (SELECT stop_id FROM jore_stop);
+
+END;
+$proc$;
+
+COMMENT ON PROCEDURE classify_medians IS
+'Updates result_class, recommended_min_radius_m and manual_acceptance_needed
+for "stop_median".';
