@@ -49,6 +49,10 @@ def main():
                             (radius_percentiles, ))
                 print(f'{cur.fetchone()[0]} "percentile_radii" created using percentiles {radius_percentiles_str}')
 
+                cur.execute('CALL classify_medians()')
+                cur.execute('SELECT count(*) FROM stop_median WHERE result_class IS NOT NULL')
+                print(f'{cur.fetchone()[0]} "stop_median" updated with "result_class", "recommended_min_radius_m" and "manual_acceptance_needed"')
+
     finally:
         conn.close()
 
