@@ -56,3 +56,29 @@ CREATE VIEW view_percentile_circle AS (
 
 COMMENT ON VIEW view_percentile_circle IS
 'Percentile circles with "radius_m" radii around "stop_median" points.';
+
+CREATE VIEW view_report_viewport AS (
+  WITH
+    max_percentile_radii AS (
+      SELECT stop_id, max(radius_m) AS radius_m
+      FROM percentile_radii
+      GROUP BY stop_id
+    )
+  SELECT
+    sm.stop_id,
+    ST_Envelope(
+      ST_Transform(
+        ST_Buffer(
+          sm.geom,
+          greatest(42.0, sm.dist_to_jore_point_m, mpr.radius_m) + 10.0
+        ),
+      4326)
+    ) AS geom
+  FROM stop_median AS sm
+  INNER JOIN max_percentile_radii AS mpr
+    ON (sm.stop_id = mpr.stop_id)
+);
+
+COMMENT ON VIEW view_report_viewport IS
+'Viewports for reporting stop medians, containing the median and Jore stop point
+and the highest available percentile of observations around the stop.';
