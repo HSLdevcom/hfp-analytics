@@ -19,17 +19,6 @@ services:
       start_period: 5s
       timeout: 20s
       retries: 3
-  qgis:
-    image: camptocamp/qgis-server:3.16
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-    env_file: .env
-    ports:
-      - 127.0.0.1:${QGIS_HOST_PORT}:80
-    volumes:
-      - ./qgis:/qgis:ro
 
 networks:
   default:
