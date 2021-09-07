@@ -42,19 +42,19 @@ CREATE VIEW view_median_report_fields AS (
 COMMENT ON VIEW view_median_report_fields IS
 'Text field contents by "stop_median"."stop_id" for report slides.';
 
-CREATE VIEW view_percentile_circle AS (
+CREATE VIEW view_percentile_circles AS (
   SELECT
     pr.stop_id,
     pr.percentile,
     pr.radius_m,
     pr.n_observations,
-    ST_Buffer(sm.geom, pr.radius_m) AS geom
+    ST_Buffer(sm.geom, pr.radius_m, 'quad_segs=16') AS geom
   FROM percentile_radii AS pr
   INNER JOIN stop_median AS sm
     ON (pr.stop_id = sm.stop_id)
 );
 
-COMMENT ON VIEW view_percentile_circle IS
+COMMENT ON VIEW view_percentile_circles IS
 'Percentile circles with "radius_m" radii around "stop_median" points.';
 
 CREATE VIEW view_report_viewport AS (
@@ -70,7 +70,7 @@ CREATE VIEW view_report_viewport AS (
       ST_Transform(
         ST_Buffer(
           sm.geom,
-          greatest(42.0, sm.dist_to_jore_point_m, mpr.radius_m) + 10.0
+          greatest(50.0, sm.dist_to_jore_point_m, mpr.radius_m) + 10.0
         ),
       4326)
     ) AS geom
