@@ -88,8 +88,10 @@ Note that the vector layers are configured to use the database connection parame
 
 ### Adjusting the PowerPoint report
 
-The PowerPoint report is created using the `pptx/template.pptx` template.
-There you can adjust placeholder sizes, font styles etc., however be careful not to delete any placeholders needed to create and populate the actual slides.
+The PowerPoint report is created using the `python/src/pptx_template.pptx` file.
+There you can adjust placeholder sizes, font styles etc. by editing the master slide template.
+Note that each placeholder has an index that has been hard-coded to the `make_report.py` script;
+if you add or remove placeholders, run `analyze_pptx()` from `stopcorr.utils` to check the new index numbers and update the script accordingly.
 
 ## Roadmap
 
