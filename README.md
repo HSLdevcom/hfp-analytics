@@ -57,6 +57,11 @@ Start the data import and analysis stack:
 docker-compose -f docker-compose.analysis.yml up
 ```
 
+Next you have to do some manual work.
+Open the `qgis/stopcorr.qgs` project, and adjust the Postgres connection parameters, if needed, so the layers can connect to the database.
+Export two sets of Atlas png images to `qgis/out/`: one using the `main` print layout, and another using the `index` print layout.
+The files must be named like `main_<stop_id>.png` and `index_<stop_id>.png` so the `make_report.py` script finds them from the mapped volume with correct names.
+
 Watch the log messages - the data import, analysis as well as building the report will all take some time.
 After all the services have exited successfully, you should be able to download the PowerPoint report named after the `ANALYSIS_NAME` env variable, e.g.:
 

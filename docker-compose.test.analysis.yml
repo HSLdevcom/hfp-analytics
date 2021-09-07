@@ -9,6 +9,7 @@ services:
     env_file: .env
     volumes:
       - ./python/src:/code:ro
+      - ./qgis/out:/qgis/out:ro
       - ./results:/results
     command: bash import_all.sh
 

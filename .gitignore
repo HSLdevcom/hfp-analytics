@@ -5,3 +5,4 @@ env/
 __pycache__/
 temp/
 out/
+qgis/out/
