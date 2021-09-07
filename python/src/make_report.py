@@ -4,8 +4,12 @@ import pptx
 import psycopg2
 from datetime import date
 from stopcorr.utils import get_conn_params
+from stopcorr.utils import env_with_default
 
 def main():
+    min_observations_per_stop = env_with_default('MIN_OBSERVATIONS_PER_STOP', 100)
+    large_jore_dist_m = env_with_default('LARGE_JORE_DIST_M', 25.0)
+
     conn = psycopg2.connect(**get_conn_params())
 
     try:
@@ -13,9 +17,11 @@ def main():
             with conn.cursor() as cur:
             cur.execute('SELECT vmrf.* FROM view_median_report_fields AS vmrf \
                          INNER JOIN stop_median AS sm ON (vmrf.stop_id = sm.stop_id)\
-                         WHERE (sm.n_stop_known + sm.n_stop_guessed) >= 100\
-                           AND sm.dist_to_jore_point_m >= 25\
-                            OR sm.dist_to_jore_point_m IS NULL')
+                         WHERE (sm.n_stop_known + sm.n_stop_guessed) >= %s\
+                           AND sm.dist_to_jore_point_m >= %s\
+                            OR sm.dist_to_jore_point_m IS NULL',
+                        (min_observations_per_stop,
+                         large_jore_dist_m))
             colnames = [desc[0] for desc in cur.description]
             res = [{col: row[idx] for idx, col in enumerate(colnames)} for row in cur.fetchall()]
     finally:
