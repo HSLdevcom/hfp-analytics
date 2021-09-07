@@ -2,6 +2,7 @@
 
 import pptx
 import psycopg2
+from datetime import date
 from stopcorr.utils import get_conn_params
 
 def main():
@@ -32,7 +33,7 @@ def main():
         slide = prs.slides.add_slide(layout)
         for k, v in slide_texts[stop_id].items():
             slide.placeholders[k].text = v or ''
-    prs.save('test_out.pptx')
+    prs.save(f'stopcorr_{date.today().strftime('%Y-%m-%d')}.pptx')
 
 if __name__ == '__main__':
     main()
