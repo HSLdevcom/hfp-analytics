@@ -9,6 +9,7 @@ services:
     env_file: .env
     volumes:
       - ./python/src:/code:ro
+      - ./results:/results
     command: bash import_all.sh
 
 networks:
