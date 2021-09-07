@@ -21,19 +21,12 @@ services:
       start_period: 5s
       timeout: 20s
       retries: 3
-  fileserver:
-    image: stopcorr/stopcorr-python:latest
-    build: ./python
-    restart: unless-stopped
-    env_file: .env
-    ports:
-      - ${FILESERVER_HOST_PORT}:8080
-    volumes:
-      - ./results:/results:ro
-    command: python -m http.server 8080 --directory /results
   worker:
     image: stopcorr/stopcorr-python:latest
     build: ./python
+    depends_on:
+      db:
+        condition: service_healthy
     restart: "no"
     env_file: .env
     volumes:
@@ -41,6 +34,15 @@ services:
       - ./qgis/out:/qgis/out:ro
       - ./results:/results
     command: python -c "print('worker OK')"
+  fileserver:
+    image: stopcorr/stopcorr-python:latest
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - ${FILESERVER_HOST_PORT}:8080
+    volumes:
+      - ./results:/results:ro
+    command: python -m http.server 8080 --directory /results
 
 networks:
   default:
