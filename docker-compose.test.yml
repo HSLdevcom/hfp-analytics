@@ -21,6 +21,16 @@ services:
       start_period: 5s
       timeout: 20s
       retries: 3
+  fileserver:
+    image: stopcorr/stopcorr-python:latest
+    build: ./python
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - ${FILESERVER_HOST_PORT}:8080
+    volumes:
+      - ./results:/results:ro
+    command: python -m http.server 8080 --directory /results
   worker:
     image: stopcorr/stopcorr-python:latest
     build: ./python
