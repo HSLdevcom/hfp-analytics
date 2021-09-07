@@ -6,31 +6,34 @@ By using the report, HSL personnel can adjust the coordinates and parameters of 
 The analysis is made with the current stop data from Jore (via Digitransit; the same data as what's used in Reittiopas) and a sample of HFP events.
 Results are combined into a PowerPoint file that can be further distributed, modified and commented on.
 
-The stop-HFP correspondence analysis is a one-off task run a few times per year and requires some effort every time.
+The stop-HFP correspondence analysis is a one-off task run a few times per year and requires some manual effort every time.
 
 ## Usage & development
 
+### Requirements
+
+The tool is created using PostgreSQL 13 & PostGIS 3.0, Python 3.7, QGIS 3.16 and docker-compose 1.29.0.
+Docker and docker-compose should be enough to run the whole process, but you for the time being you will need local QGIS installation to produce the map images.
+
+### Testing
+
+Run `./test-run.sh`: this should start the docker-compose services using `docker-compose.test.yml` and example data in `testdata/import`.
+In the prompt you should see the db startup, data import, analysis and reporting steps the same way they are meant to work in production.
+However the test run does not produce or use map images since they have to be created manually from QGIS Atlas.
+
 ### Deployment
 
-The tool requires [docker-compose](https://docs.docker.com/compose/) and is run with two files: one with continuous services (database, QGIS map server and report file server) and another that will run the one-off tasks required for an analysis (HFP & Digitransit integrations, creating the pptx file).
-
-Clone this project, and navigate to the project root. Copy the `.env.test` file into `.env`, and update the environment variables such as ports and the database password as you wish.
-
-Create a common network for the docker-compose services:
+Clone this project, and navigate to the project root.
+Run the setup script that will create required directories, `.env` and `docker-compose.yml` files, build the Python Docker image with required packages, and create a common Docker network for the compose services:
 
 ```
-docker network create --attachable stopcorr_nw
+./setup.sh
 ```
 
-Update the environment variables for your session, and start the database & server stack:
-
-```
-source .env && docker-compose -f docker-compose.server.yml up -d
-```
-
-Now you should be able to connect to the (empty) file server at `http://localhost:8080/` (or whichever `FILESERVER_HOST_PORT` you set).
+Modify `.env` and `docker-compose.yml` according to your local environment.
 
 Next you will need the HFP events in a compressed csv file.
+Review `testdata/import/hfp.csv.gz` for the expected format.
 For the time being you have to prepare this data manually, since the tool does not yet include a direct integration to any HFP storage.
 It is recommended to select the HFP events as follows:
 
@@ -39,22 +42,15 @@ It is recommended to select the HFP events as follows:
 - Events from at least a week, or even a longer period, so stops with just a few daily trips get a decent sample size too.
 - If you wish to analyse only a subset of stops, routes or areas, you can do it here by filtering the HFP input accordingly.
 
-The csv file should look like this:
+Gzip the csv file and save as `data/import/hfp.csv.gz` (relative to the project root), so the database will be able to read it through a mapped volume.
+If there are rows already in the database conflicting with `(tst, event_type, oper, veh)`, they will be simply ignored from the csv import.
+
+Now start the service stack, and once it is running successfully, invoke the data import and analysis scripts:
 
 ```
-tst,event,oper,veh,route,dir,oday,start,stop_id,long,lat
-2021-08-18 02:00:04.362+03,DOC,17,32,1090N,1,2021-08-17,01:39:00,1452104,25.0968,60.2081
-2021-08-18 02:00:04.87+03,DOC,30,48,1073N,1,2021-08-17,01:50:00,1220105,24.96206,60.19835
-2021-08-18 02:00:17.711+03,DOO,30,10,1074N,1,2021-08-17,01:40:00,1381101,25.00939,60.24996
-```
-
-Gzip it and save as `data/db_import/hfp.csv.gz` (relative to the project root), so the database will be able to read it through a mapped volume.
-If there are values already in the database conflicting with `(tst, event_type, oper, veh)`, they will be simply ignored from the csv import.
-
-Start the data import and analysis stack:
-
-```
-docker-compose -f docker-compose.analysis.yml up
+docker-compose up -d
+docker-compose -f docker-compose.test.yml run --rm worker bash import_all.sh
+docker-compose -f docker-compose.test.yml run --rm worker python run_analysis.py
 ```
 
 Next you have to do some manual work.
@@ -62,16 +58,17 @@ Open the `qgis/stopcorr.qgs` project, and adjust the Postgres connection paramet
 Export two sets of Atlas png images to `qgis/out/`: one using the `main` print layout, and another using the `index` print layout.
 The files must be named like `main_<stop_id>.png` and `index_<stop_id>.png` so the `make_report.py` script finds them from the mapped volume with correct names.
 
-Watch the log messages - the data import, analysis as well as building the report will all take some time.
-After all the services have exited successfully, you should be able to download the PowerPoint report named after the `ANALYSIS_NAME` env variable, e.g.:
+Once ready with the main and index map images, run the reporter script:
 
 ```
-http://localhost:8080/test_analysis.pptx
+docker-compose -f docker-compose.test.yml run --rm worker python make_report.py
 ```
 
-### Development
+Once the script has completed, you should find the result pptx file from the Python file server (change the port according to your `FILESERVER_HOST_PORT`):
 
-The tool is created using PostgreSQL 13 & PostGIS 3.0, Python 3.7, QGIS 3.16 and docker-compose 1.29.0.
+```
+http://localhost:8080/
+```
 
 ### Database
 
@@ -102,11 +99,17 @@ if you add or remove placeholders, run `analyze_pptx()` from `stopcorr.utils` to
 
 Planned until the end of 2021 (along with another analysis round):
 
+- Remove the blank first slide from the result pptx
 - Filtering of stops, terminals, routes and areas to analyse
-- Adjusting parameters, such as minimum sample size per stop, outside the source code, e.g. in `.env`
+- Create / amend an analysis for one or multiple selected stops
+- Create a report from selected stops
+- Automate main and index map using e.g. QGIS Server & Atlas plugin or Geopandas & map plotting libs
 
 Planned during 2022:
 
+- Serve per-stop results through an API
+- Access per-stop maps interactively from the browser
+- Adjust analysis parameters and re-run the analysis for a selected stop from the browser
 - Direct import of HFP events at a date range from HSL-DW (when HFP available there)
 - Transfer deployment & maintenance of the tool from LAR-datatiimi to TRO
 - Direct import of stops from Jore4, possibility to select a stop snapshot from a date in the past, rather than the current situation
