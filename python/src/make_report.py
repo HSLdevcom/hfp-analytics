@@ -13,8 +13,8 @@ def main():
             cur.execute('SELECT vmrf.* FROM view_median_report_fields AS vmrf \
                          INNER JOIN stop_median AS sm ON (vmrf.stop_id = sm.stop_id)\
                          WHERE (sm.n_stop_known + sm.n_stop_guessed) >= 100\
-                            AND (sm.dist_to_jore_point_m >= 25\
-                              OR sm.manual_acceptance_needed IS true)')
+                           AND sm.dist_to_jore_point_m >= 25\
+                            OR sm.dist_to_jore_point_m IS NULL')
             colnames = [desc[0] for desc in cur.description]
             res = [{col: row[idx] for idx, col in enumerate(colnames)} for row in cur.fetchall()]
     finally:
