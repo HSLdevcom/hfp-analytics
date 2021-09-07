@@ -6,3 +6,4 @@ __pycache__/
 temp/
 out/
 qgis/out/
+docker-compose.yml
