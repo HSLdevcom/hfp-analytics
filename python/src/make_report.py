@@ -64,6 +64,8 @@ def main():
             hlink.address = v
         else:
             slide.placeholders[k].text = v or ''
+        pic = slide.placeholders[phi['main_map']].insert_picture(f'/qgis/out/main_{stop_id}.png')
+        pic = slide.placeholders[phi['index_map']].insert_picture(f'/qgis/out/index_{stop_id}.png')
     prs.save(f'/results/stopcorr_{date.today().strftime('%Y-%m-%d')}.pptx')
 
 if __name__ == '__main__':
