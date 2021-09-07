@@ -82,3 +82,15 @@ CREATE VIEW view_report_viewport AS (
 COMMENT ON VIEW view_report_viewport IS
 'Viewports for reporting stop medians, containing the median and Jore stop point
 and the highest available percentile of observations around the stop.';
+
+CREATE VIEW view_median_to_jore_lines AS (
+  SELECT
+    sm.stop_id,
+    ST_MakeLine(sm.geom, js.geom) AS geom
+  FROM stop_median AS sm
+  INNER JOIN jore_stop AS js
+    ON (sm.stop_id = js.stop_id)
+);
+
+COMMENT ON VIEW view_median_to_jore_lines IS
+'LINESTRING geometries from "stop_median" to "jore_stop" by stop_id.';
