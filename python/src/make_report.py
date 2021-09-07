@@ -63,8 +63,8 @@ def main():
                 r.text = v
                 hlink = r.hyperlink
                 hlink.address = v
-        else:
-            slide.placeholders[k].text = v or ''
+            else:
+                slide.placeholders[k].text = v or ''
 
         img_path = f'/qgis/out/main_{stop_id}.png'
         if os.path.exists(img_path):
