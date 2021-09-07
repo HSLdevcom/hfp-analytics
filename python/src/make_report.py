@@ -21,6 +21,24 @@ def main():
     finally:
         conn.close()
 
+    phi = dict(
+        title = 0,
+        main_map = 13,
+        index_map = 14,
+        result_class = 15,
+        median_coordinates = 16,
+        dist_to_jore = 17,
+        recomm_radius = 18,
+        n_stop_known = 19,
+        radii_info = 20,
+        n_stop_guessed = 21,
+        n_stop_null_near = 22,
+        observation_route_dirs = 23,
+        observation_date_range = 24,
+        stop_import_date = 25,
+        transitlog_url = 26
+    )
+
     slide_texts = {}
     for row in res:
         slide_texts[row['stop_id']] = {phi[col]: row[col] for col in phi.keys() if col in row.keys()}
