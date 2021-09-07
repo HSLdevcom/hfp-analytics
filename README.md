@@ -81,10 +81,11 @@ The database name is `stopcorr` and username `postgres`.
 
 ### Adjusting map styles in QGIS
 
-The map images are generated using the [QGIS Server](https://docs.qgis.org/3.16/en/docs/server_manual/index.html) WMS service, which uses a normal QGIS project file, which in turn uses the Postgres database for all the vector data.
 Adjusting the basemap and vector layers and their styles is done in the `qgis/stopcorr.qgs` project file.
-For this you will need QGIS Desktop >= 3.16.
-Note that the vector layers are configured to use the database connection parameters within the container network and will therefore not work directly when you open the project on your host machine.
+The two print layouts, `main` and `index`, are used to produce Atlas png images from each median stop.
+To adjust the layouts, open the layout, activate the map item and Atlas preview, and uncheck `Lock layers`.
+Now the layer styles will follow the main window.
+Finally, remember to check `Lock layers` again.
 
 **NOTE:** The Postgres connection credentials are currently saved to the QGIS project file, which is unsafe and NOT recommended at least if the database is made available outside the host machine in any way.
 
