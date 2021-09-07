@@ -10,7 +10,9 @@ services:
       - 127.0.0.1:${POSTGRES_HOST_PORT}:5432
     volumes:
       - ./db/sql:/docker-entrypoint-initdb.d:ro
+      # Change to an actual import volume for production:
       - ./testdata/import:/import:ro
+      # Change to a persistent volume for production:
       - type: tmpfs
         target: /var/lib/postgresql/data
     healthcheck:
@@ -19,6 +21,16 @@ services:
       start_period: 5s
       timeout: 20s
       retries: 3
+  worker:
+    image: stopcorr/stopcorr-python:latest
+    build: ./python
+    restart: "no"
+    env_file: .env
+    volumes:
+      - ./python/src:/code:ro
+      - ./qgis/out:/qgis/out:ro
+      - ./results:/results
+    command: python -c "print('worker OK')"
 
 networks:
   default:
