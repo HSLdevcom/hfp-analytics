@@ -31,6 +31,8 @@ conditional_mkdir data/import
 conditional_mkdir qgis/out
 conditional_mkdir results
 
+docker-compose build
+
 if [ ! "$(docker network ls | grep stopcorr_nw)" ]; then
   docker network create --attachable stopcorr_nw
   echo "stopcorr_nw docker network created"
