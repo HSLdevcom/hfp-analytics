@@ -56,6 +56,13 @@ def main():
     for stop_id in stop_ids:
         slide = prs.slides.add_slide(layout)
         for k, v in slide_texts[stop_id].items():
+        if k == phi['transitlog_url'] and v:
+            p = slide.placeholders[k].text_frame.paragraphs[0]
+            r = p.add_run()
+            r.text = v
+            hlink = r.hyperlink
+            hlink.address = v
+        else:
             slide.placeholders[k].text = v or ''
     prs.save(f'/results/stopcorr_{date.today().strftime('%Y-%m-%d')}.pptx')
 
