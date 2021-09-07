@@ -1,0 +1,3330 @@
+<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>
+<qgis saveUser="keripukki" version="3.16.3-Hannover" saveUserFull="Arttu Kosonen" projectname="" saveDateTime="2021-09-06T16:52:28">
+  <homePath path=""/>
+  <title></title>
+  <autotransaction active="0"/>
+  <evaluateDefaultValues active="0"/>
+  <trust active="0"/>
+  <projectCrs>
+    <spatialrefsys>
+      <wkt>PROJCS["WGS 84 / Pseudo-Mercator",GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4326"]],PROJECTION["Mercator_1SP"],PARAMETER["central_meridian",0],PARAMETER["scale_factor",1],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["X",EAST],AXIS["Y",NORTH],EXTENSION["PROJ4","+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs"],AUTHORITY["EPSG","3857"]]</wkt>
+      <proj4>+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs</proj4>
+      <srsid>3857</srsid>
+      <srid>3857</srid>
+      <authid>EPSG:3857</authid>
+      <description>WGS 84 / Pseudo-Mercator</description>
+      <projectionacronym>merc</projectionacronym>
+      <ellipsoidacronym>WGS84</ellipsoidacronym>
+      <geographicflag>false</geographicflag>
+    </spatialrefsys>
+  </projectCrs>
+  <layer-tree-group>
+    <customproperties/>
+    <layer-tree-group checked="Qt::Unchecked" name="main map" expanded="0">
+      <customproperties/>
+      <layer-tree-layer checked="Qt::Checked" legend_exp="" name="stop_median" source="dbname='stopcorr' host=localhost port=5432 user='postgres' sslmode=disable key='stop_id' checkPrimaryKeyUnicity='1' table=&quot;(SELECT sm.* FROM stop_median AS sm WHERE (sm.n_stop_known + sm.n_stop_guessed) >= 100   AND sm.dist_to_jore_point_m >= 25    OR sm.dist_to_jore_point_m IS NULL&#xa;)&quot; (geom)" providerKey="postgres" expanded="1" legend_split_behavior="0" id="QueryLayer_1c6a2b96_64ad_4191_adeb_f6fb34e77dcc" patch_size="-1,-1">
+        <customproperties/>
+      </layer-tree-layer>
+      <layer-tree-layer checked="Qt::Checked" legend_exp="" name="jore_stop" source="dbname='stopcorr' host=localhost port=5432 user='postgres' sslmode=disable key='stop_id' srid=3067 type=Point checkPrimaryKeyUnicity='1' table=&quot;public&quot;.&quot;jore_stop&quot; (geom)" providerKey="postgres" expanded="1" legend_split_behavior="0" id="jore_stop_b0ddc35a_8a7c_489d_9ef8_7c030c872714" patch_size="-1,-1">
+        <customproperties/>
+      </layer-tree-layer>
+      <layer-tree-layer checked="Qt::Checked" legend_exp="" name="circles" source="dbname='stopcorr' host=localhost port=5432 user='postgres' sslmode=disable key='percentile,stop_id' checkPrimaryKeyUnicity='1' table=&quot;(SELECT c.* FROM view_percentile_circles AS c INNER JOIN stop_median AS sm   ON (c.stop_id = sm.stop_id) WHERE (sm.n_stop_known + sm.n_stop_guessed) >= 100   AND sm.dist_to_jore_point_m >= 25    OR sm.dist_to_jore_point_m IS NULL&#xa;)&quot; (geom)" providerKey="postgres" expanded="1" legend_split_behavior="0" id="QueryLayer_1e9b8518_63bc_4df5_9196_22723c08d6af" patch_size="-1,-1">
+        <customproperties/>
+      </layer-tree-layer>
+      <layer-tree-layer checked="Qt::Checked" legend_exp="" name="median->jore lines" source="dbname='stopcorr' host=localhost port=5432 user='postgres' sslmode=disable key='stop_id' checkPrimaryKeyUnicity='1' table=&quot;(SELECT l.* FROM view_median_to_jore_lines AS l INNER JOIN stop_median AS sm   ON (l.stop_id = sm.stop_id) WHERE (sm.n_stop_known + sm.n_stop_guessed) >= 100   AND sm.dist_to_jore_point_m >= 25    OR sm.dist_to_jore_point_m IS NULL&#xa;)&quot; (geom)" providerKey="postgres" expanded="1" legend_split_behavior="0" id="QueryLayer_bb19bd50_6f5d_4e8f_aacd_94235b3ebc31" patch_size="-1,-1">
+        <customproperties/>
+      </layer-tree-layer>
+      <layer-tree-layer checked="Qt::Checked" legend_exp="" name="stop known" source="dbname='stopcorr' host=localhost port=5432 user='postgres' sslmode=disable key='tst,event,oper,veh' srid=3067 type=Point checkPrimaryKeyUnicity='1' table=&quot;public&quot;.&quot;observation&quot; (geom) sql=stop_id IS NOT NULL AND stop_id_guessed IS false" providerKey="postgres" expanded="1" legend_split_behavior="0" id="observation_700f46fb_7426_49df_a4f7_75d9cf32f354" patch_size="-1,-1">
+        <customproperties/>
+      </layer-tree-layer>
+      <layer-tree-layer checked="Qt::Checked" legend_exp="" name="stop guessed" source="dbname='stopcorr' host=localhost port=5432 user='postgres' sslmode=disable key='tst,event,oper,veh' srid=3067 type=Point checkPrimaryKeyUnicity='1' table=&quot;public&quot;.&quot;observation&quot; (geom) sql=stop_id IS NOT NULL AND stop_id_guessed IS true" providerKey="postgres" expanded="1" legend_split_behavior="0" id="stop_known_d9f6e739_c232_4b07_adf1_4c97fbffde68" patch_size="-1,-1">
+        <customproperties/>
+      </layer-tree-layer>
+      <layer-tree-layer checked="Qt::Checked" legend_exp="" name="NULL stop id" source="dbname='stopcorr' host=localhost port=5432 user='postgres' sslmode=disable key='tst,event,oper,veh' srid=3067 type=Point checkPrimaryKeyUnicity='1' table=&quot;public&quot;.&quot;observation&quot; (geom) sql=stop_id IS NULL" providerKey="postgres" expanded="1" legend_split_behavior="0" id="observation_2448dc91_67ec_4655_8fb2_1513a4d4d890" patch_size="-1,-1">
+        <customproperties/>
+      </layer-tree-layer>
+      <layer-tree-layer checked="Qt::Checked" legend_exp="" name="hsl-map 50" source="crs=EPSG:3857&amp;format&amp;type=xyz&amp;url=https://cdn.digitransit.fi/map/v1/hsl-map/%7Bz%7D/%7Bx%7D/%7By%7D.png" providerKey="wms" expanded="0" legend_split_behavior="0" id="hsl_map_34e508cb_c7f8_4b11_8982_9a31c94875d7" patch_size="-1,-1">
+        <customproperties/>
+      </layer-tree-layer>
+      <layer-tree-layer checked="Qt::Unchecked" legend_exp="" name="viewports atlas" source="dbname='stopcorr' host=localhost port=5432 user='postgres' sslmode=disable key='stop_id' checkPrimaryKeyUnicity='1' table=&quot;(SELECT vrv.* FROM view_report_viewport AS vrv INNER JOIN stop_median AS sm   ON (vrv.stop_id = sm.stop_id) WHERE (sm.n_stop_known + sm.n_stop_guessed) >= 100   AND sm.dist_to_jore_point_m >= 25    OR sm.dist_to_jore_point_m IS NULL&#xa;)&quot; (geom)" providerKey="postgres" expanded="1" legend_split_behavior="0" id="viewports_1d50d9f6_2f4e_4b79_9e31_b6a081a4d9db" patch_size="-1,-1">
+        <customproperties/>
+      </layer-tree-layer>
+    </layer-tree-group>
+    <layer-tree-group checked="Qt::Checked" name="index map" expanded="1">
+      <customproperties/>
+      <layer-tree-layer checked="Qt::Checked" legend_exp="" name="viewports" source="dbname='stopcorr' host=localhost port=5432 user='postgres' sslmode=disable key='stop_id' checkPrimaryKeyUnicity='1' table=&quot;(SELECT vrv.* FROM view_report_viewport AS vrv INNER JOIN stop_median AS sm   ON (vrv.stop_id = sm.stop_id) WHERE (sm.n_stop_known + sm.n_stop_guessed) >= 100   AND sm.dist_to_jore_point_m >= 25    OR sm.dist_to_jore_point_m IS NULL&#xa;)&quot; (geom)" providerKey="postgres" expanded="1" legend_split_behavior="0" id="QueryLayer_1bdd7dd0_53a0_415a_9d83_d50405e7c439" patch_size="-1,-1">
+        <customproperties/>
+      </layer-tree-layer>
+      <layer-tree-layer checked="Qt::Checked" legend_exp="" name="hsl-map 100" source="crs=EPSG:3857&amp;format&amp;type=xyz&amp;url=https://cdn.digitransit.fi/map/v1/hsl-map/%7Bz%7D/%7Bx%7D/%7By%7D.png" providerKey="wms" expanded="0" legend_split_behavior="0" id="hsl_map_352b6a9e_8137_48d7_b4a5_a222c6024c2c" patch_size="-1,-1">
+        <customproperties/>
+      </layer-tree-layer>
+    </layer-tree-group>
+    <custom-order enabled="0">
+      <item>hsl_map_34e508cb_c7f8_4b11_8982_9a31c94875d7</item>
+      <item>jore_stop_b0ddc35a_8a7c_489d_9ef8_7c030c872714</item>
+      <item>QueryLayer_1bdd7dd0_53a0_415a_9d83_d50405e7c439</item>
+      <item>hsl_map_352b6a9e_8137_48d7_b4a5_a222c6024c2c</item>
+      <item>viewports_1d50d9f6_2f4e_4b79_9e31_b6a081a4d9db</item>
+      <item>QueryLayer_1c6a2b96_64ad_4191_adeb_f6fb34e77dcc</item>
+      <item>QueryLayer_bb19bd50_6f5d_4e8f_aacd_94235b3ebc31</item>
+      <item>QueryLayer_1e9b8518_63bc_4df5_9196_22723c08d6af</item>
+      <item>observation_2448dc91_67ec_4655_8fb2_1513a4d4d890</item>
+      <item>observation_700f46fb_7426_49df_a4f7_75d9cf32f354</item>
+      <item>stop_known_d9f6e739_c232_4b07_adf1_4c97fbffde68</item>
+    </custom-order>
+  </layer-tree-group>
+  <snapping-settings type="1" unit="1" mode="2" tolerance="12" enabled="0" self-snapping="0" minScale="0" scaleDependencyMode="0" intersection-snapping="0" maxScale="0">
+    <individual-layer-settings>
+      <layer-setting type="1" tolerance="12" enabled="0" minScale="0" units="1" id="QueryLayer_1c6a2b96_64ad_4191_adeb_f6fb34e77dcc" maxScale="0"/>
+      <layer-setting type="1" tolerance="12" enabled="0" minScale="0" units="1" id="observation_2448dc91_67ec_4655_8fb2_1513a4d4d890" maxScale="0"/>
+      <layer-setting type="1" tolerance="12" enabled="0" minScale="0" units="1" id="observation_700f46fb_7426_49df_a4f7_75d9cf32f354" maxScale="0"/>
+      <layer-setting type="1" tolerance="12" enabled="0" minScale="0" units="1" id="QueryLayer_bb19bd50_6f5d_4e8f_aacd_94235b3ebc31" maxScale="0"/>
+      <layer-setting type="1" tolerance="12" enabled="0" minScale="0" units="1" id="QueryLayer_1e9b8518_63bc_4df5_9196_22723c08d6af" maxScale="0"/>
+      <layer-setting type="1" tolerance="12" enabled="0" minScale="0" units="1" id="viewports_1d50d9f6_2f4e_4b79_9e31_b6a081a4d9db" maxScale="0"/>
+      <layer-setting type="1" tolerance="12" enabled="0" minScale="0" units="1" id="stop_known_d9f6e739_c232_4b07_adf1_4c97fbffde68" maxScale="0"/>
+      <layer-setting type="1" tolerance="12" enabled="0" minScale="0" units="1" id="QueryLayer_1bdd7dd0_53a0_415a_9d83_d50405e7c439" maxScale="0"/>
+      <layer-setting type="1" tolerance="12" enabled="0" minScale="0" units="1" id="jore_stop_b0ddc35a_8a7c_489d_9ef8_7c030c872714" maxScale="0"/>
+    </individual-layer-settings>
+  </snapping-settings>
+  <relations/>
+  <mapcanvas annotationsVisible="1" name="theMapCanvas">
+    <units>meters</units>
+    <extent>
+      <xmin>2777331.85767872352153063</xmin>
+      <ymin>8441305.1625417061150074</ymin>
+      <xmax>2777712.27590351644903421</xmax>
+      <ymax>8441362.30699028447270393</ymax>
+    </extent>
+    <rotation>0</rotation>
+    <destinationsrs>
+      <spatialrefsys>
+        <wkt>PROJCS["WGS 84 / Pseudo-Mercator",GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4326"]],PROJECTION["Mercator_1SP"],PARAMETER["central_meridian",0],PARAMETER["scale_factor",1],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["X",EAST],AXIS["Y",NORTH],EXTENSION["PROJ4","+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs"],AUTHORITY["EPSG","3857"]]</wkt>
+        <proj4>+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs</proj4>
+        <srsid>3857</srsid>
+        <srid>3857</srid>
+        <authid>EPSG:3857</authid>
+        <description>WGS 84 / Pseudo-Mercator</description>
+        <projectionacronym>merc</projectionacronym>
+        <ellipsoidacronym>WGS84</ellipsoidacronym>
+        <geographicflag>false</geographicflag>
+      </spatialrefsys>
+    </destinationsrs>
+    <rendermaptile>0</rendermaptile>
+    <expressionContextScope/>
+  </mapcanvas>
+  <projectModels/>
+  <legend updateDrawingOrder="true">
+    <legendgroup checked="Qt::Unchecked" name="main map" open="false">
+      <legendlayer checked="Qt::Checked" drawingOrder="-1" name="stop_median" open="true" showFeatureCount="0">
+        <filegroup open="true" hidden="false">
+          <legendlayerfile isInOverview="0" visible="0" layerid="QueryLayer_1c6a2b96_64ad_4191_adeb_f6fb34e77dcc"/>
+        </filegroup>
+      </legendlayer>
+      <legendlayer checked="Qt::Checked" drawingOrder="-1" name="jore_stop" open="true" showFeatureCount="0">
+        <filegroup open="true" hidden="false">
+          <legendlayerfile isInOverview="0" visible="0" layerid="jore_stop_b0ddc35a_8a7c_489d_9ef8_7c030c872714"/>
+        </filegroup>
+      </legendlayer>
+      <legendlayer checked="Qt::Checked" drawingOrder="-1" name="circles" open="true" showFeatureCount="0">
+        <filegroup open="true" hidden="false">
+          <legendlayerfile isInOverview="0" visible="0" layerid="QueryLayer_1e9b8518_63bc_4df5_9196_22723c08d6af"/>
+        </filegroup>
+      </legendlayer>
+      <legendlayer checked="Qt::Checked" drawingOrder="-1" name="median->jore lines" open="true" showFeatureCount="0">
+        <filegroup open="true" hidden="false">
+          <legendlayerfile isInOverview="0" visible="0" layerid="QueryLayer_bb19bd50_6f5d_4e8f_aacd_94235b3ebc31"/>
+        </filegroup>
+      </legendlayer>
+      <legendlayer checked="Qt::Checked" drawingOrder="-1" name="stop known" open="true" showFeatureCount="0">
+        <filegroup open="true" hidden="false">
+          <legendlayerfile isInOverview="0" visible="0" layerid="observation_700f46fb_7426_49df_a4f7_75d9cf32f354"/>
+        </filegroup>
+      </legendlayer>
+      <legendlayer checked="Qt::Checked" drawingOrder="-1" name="stop guessed" open="true" showFeatureCount="0">
+        <filegroup open="true" hidden="false">
+          <legendlayerfile isInOverview="0" visible="0" layerid="stop_known_d9f6e739_c232_4b07_adf1_4c97fbffde68"/>
+        </filegroup>
+      </legendlayer>
+      <legendlayer checked="Qt::Checked" drawingOrder="-1" name="NULL stop id" open="true" showFeatureCount="0">
+        <filegroup open="true" hidden="false">
+          <legendlayerfile isInOverview="0" visible="0" layerid="observation_2448dc91_67ec_4655_8fb2_1513a4d4d890"/>
+        </filegroup>
+      </legendlayer>
+      <legendlayer checked="Qt::Checked" drawingOrder="-1" name="hsl-map 50" open="false" showFeatureCount="0">
+        <filegroup open="false" hidden="false">
+          <legendlayerfile isInOverview="0" visible="0" layerid="hsl_map_34e508cb_c7f8_4b11_8982_9a31c94875d7"/>
+        </filegroup>
+      </legendlayer>
+      <legendlayer checked="Qt::Unchecked" drawingOrder="-1" name="viewports atlas" open="true" showFeatureCount="0">
+        <filegroup open="true" hidden="false">
+          <legendlayerfile isInOverview="0" visible="0" layerid="viewports_1d50d9f6_2f4e_4b79_9e31_b6a081a4d9db"/>
+        </filegroup>
+      </legendlayer>
+    </legendgroup>
+    <legendgroup checked="Qt::Checked" name="index map" open="true">
+      <legendlayer checked="Qt::Checked" drawingOrder="-1" name="viewports" open="true" showFeatureCount="0">
+        <filegroup open="true" hidden="false">
+          <legendlayerfile isInOverview="0" visible="1" layerid="QueryLayer_1bdd7dd0_53a0_415a_9d83_d50405e7c439"/>
+        </filegroup>
+      </legendlayer>
+      <legendlayer checked="Qt::Checked" drawingOrder="-1" name="hsl-map 100" open="false" showFeatureCount="0">
+        <filegroup open="false" hidden="false">
+          <legendlayerfile isInOverview="0" visible="1" layerid="hsl_map_352b6a9e_8137_48d7_b4a5_a222c6024c2c"/>
+        </filegroup>
+      </legendlayer>
+    </legendgroup>
+  </legend>
+  <mapViewDocks/>
+  <mapViewDocks3D/>
+  <main-annotation-layer type="annotation" autoRefreshTime="0" refreshOnNotifyEnabled="0" refreshOnNotifyMessage="" autoRefreshEnabled="0">
+    <id>Annotations_28e93034_b39c_4a16_bf9b_7ddeb6a49d46</id>
+    <datasource></datasource>
+    <keywordList>
+      <value></value>
+    </keywordList>
+    <layername>Annotations</layername>
+    <srs>
+      <spatialrefsys>
+        <wkt></wkt>
+        <proj4></proj4>
+        <srsid>0</srsid>
+        <srid>0</srid>
+        <authid></authid>
+        <description></description>
+        <projectionacronym></projectionacronym>
+        <ellipsoidacronym></ellipsoidacronym>
+        <geographicflag>true</geographicflag>
+      </spatialrefsys>
+    </srs>
+    <resourceMetadata>
+      <identifier></identifier>
+      <parentidentifier></parentidentifier>
+      <language></language>
+      <type></type>
+      <title></title>
+      <abstract></abstract>
+      <links/>
+      <fees></fees>
+      <encoding></encoding>
+      <crs>
+        <spatialrefsys>
+          <wkt></wkt>
+          <proj4></proj4>
+          <srsid>0</srsid>
+          <srid>0</srid>
+          <authid></authid>
+          <description></description>
+          <projectionacronym></projectionacronym>
+          <ellipsoidacronym></ellipsoidacronym>
+          <geographicflag>true</geographicflag>
+        </spatialrefsys>
+      </crs>
+      <extent/>
+    </resourceMetadata>
+    <items/>
+    <layerOpacity>1</layerOpacity>
+  </main-annotation-layer>
+  <projectlayers>
+    <maplayer simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" maxScale="0" simplifyDrawingTol="1" minScale="100000000" type="vector" refreshOnNotifyMessage="" wkbType="Polygon" autoRefreshEnabled="0" autoRefreshTime="0" simplifyAlgorithm="0" readOnly="0" geometry="Polygon" styleCategories="AllStyleCategories" refreshOnNotifyEnabled="0" simplifyDrawingHints="1" simplifyLocal="1" labelsEnabled="0">
+      <extent>
+        <xmin>24.66175763433964363</xmin>
+        <ymin>60.13895991768374216</ymin>
+        <xmax>25.33152038230667458</xmax>
+        <ymax>60.53294202664677925</ymax>
+      </extent>
+      <id>QueryLayer_1bdd7dd0_53a0_415a_9d83_d50405e7c439</id>
+      <datasource>dbname='stopcorr' host=localhost port=5432 user='postgres' password='postgres' sslmode=disable key='stop_id' checkPrimaryKeyUnicity='1' table="(SELECT vrv.* FROM view_report_viewport AS vrv INNER JOIN stop_median AS sm   ON (vrv.stop_id = sm.stop_id) WHERE (sm.n_stop_known + sm.n_stop_guessed) >= 100   AND sm.dist_to_jore_point_m >= 25    OR sm.dist_to_jore_point_m IS NULL
+)" (geom)</datasource>
+      <keywordList>
+        <value></value>
+      </keywordList>
+      <layername>viewports</layername>
+      <srs>
+        <spatialrefsys>
+          <wkt>GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4326"]]</wkt>
+          <proj4>+proj=longlat +datum=WGS84 +no_defs</proj4>
+          <srsid>3452</srsid>
+          <srid>4326</srid>
+          <authid>EPSG:4326</authid>
+          <description>WGS 84</description>
+          <projectionacronym>longlat</projectionacronym>
+          <ellipsoidacronym>WGS84</ellipsoidacronym>
+          <geographicflag>true</geographicflag>
+        </spatialrefsys>
+      </srs>
+      <resourceMetadata>
+        <identifier></identifier>
+        <parentidentifier></parentidentifier>
+        <language></language>
+        <type>dataset</type>
+        <title></title>
+        <abstract></abstract>
+        <links/>
+        <fees></fees>
+        <encoding></encoding>
+        <crs>
+          <spatialrefsys>
+            <wkt>GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4326"]]</wkt>
+            <proj4>+proj=longlat +datum=WGS84 +no_defs</proj4>
+            <srsid>3452</srsid>
+            <srid>4326</srid>
+            <authid>EPSG:4326</authid>
+            <description>WGS 84</description>
+            <projectionacronym>longlat</projectionacronym>
+            <ellipsoidacronym>WGS84</ellipsoidacronym>
+            <geographicflag>true</geographicflag>
+          </spatialrefsys>
+        </crs>
+        <extent/>
+      </resourceMetadata>
+      <provider encoding="">postgres</provider>
+      <vectorjoins/>
+      <layerDependencies/>
+      <dataDependencies/>
+      <expressionfields/>
+      <map-layer-style-manager current="default">
+        <map-layer-style name="default"/>
+      </map-layer-style-manager>
+      <auxiliaryLayer/>
+      <flags>
+        <Identifiable>1</Identifiable>
+        <Removable>1</Removable>
+        <Searchable>1</Searchable>
+      </flags>
+      <temporal startExpression="" endField="" durationField="" mode="0" durationUnit="min" accumulate="0" enabled="0" startField="" fixedDuration="0" endExpression="">
+        <fixedRange>
+          <start></start>
+          <end></end>
+        </fixedRange>
+      </temporal>
+      <renderer-v2 type="RuleRenderer" symbollevels="0" forceraster="0" enableorderby="0">
+        <rules key="{d10ed8a6-e452-475f-bd2f-5f625ccac987}">
+          <rule symbol="0" filter="stop_id = @atlas_featureid" key="{5545cbaf-910a-4d15-838a-a50415659f50}"/>
+        </rules>
+        <symbols>
+          <symbol force_rhr="0" type="fill" alpha="1" name="0" clip_to_extent="1">
+            <layer pass="0" class="SimpleFill" enabled="1" locked="0">
+              <prop k="border_width_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="color" v="220,4,81,125"/>
+              <prop k="joinstyle" v="bevel"/>
+              <prop k="offset" v="0,0"/>
+              <prop k="offset_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="outline_color" v="220,4,81,255"/>
+              <prop k="outline_style" v="solid"/>
+              <prop k="outline_width" v="0.3"/>
+              <prop k="outline_width_unit" v="MM"/>
+              <prop k="style" v="solid"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </symbols>
+      </renderer-v2>
+      <customproperties/>
+      <blendMode>0</blendMode>
+      <featureBlendMode>0</featureBlendMode>
+      <layerOpacity>1</layerOpacity>
+      <geometryOptions geometryPrecision="0" removeDuplicateNodes="0">
+        <activeChecks type="StringList">
+          <Option type="QString" value=""/>
+        </activeChecks>
+        <checkConfiguration/>
+      </geometryOptions>
+      <legend type="default-vector"/>
+      <referencedLayers/>
+      <fieldConfiguration>
+        <field name="stop_id" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+      </fieldConfiguration>
+      <aliases>
+        <alias index="0" name="" field="stop_id"/>
+      </aliases>
+      <defaults>
+        <default expression="" applyOnUpdate="0" field="stop_id"/>
+      </defaults>
+      <constraints>
+        <constraint notnull_strength="1" constraints="3" exp_strength="0" field="stop_id" unique_strength="1"/>
+      </constraints>
+      <constraintExpressions>
+        <constraint exp="" desc="" field="stop_id"/>
+      </constraintExpressions>
+      <expressionfields/>
+      <attributeactions>
+        <defaultAction value="{00000000-0000-0000-0000-000000000000}" key="Canvas"/>
+      </attributeactions>
+      <attributetableconfig sortExpression="" actionWidgetStyle="dropDown" sortOrder="0">
+        <columns/>
+      </attributetableconfig>
+      <conditionalstyles>
+        <rowstyles/>
+        <fieldstyles/>
+      </conditionalstyles>
+      <storedexpressions/>
+      <editform tolerant="1"></editform>
+      <editforminit/>
+      <editforminitcodesource>0</editforminitcodesource>
+      <editforminitfilepath></editforminitfilepath>
+      <editforminitcode><![CDATA[]]></editforminitcode>
+      <featformsuppress>0</featformsuppress>
+      <editorlayout>generatedlayout</editorlayout>
+      <editable/>
+      <labelOnTop/>
+      <dataDefinedFieldProperties/>
+      <widgets/>
+      <previewExpression></previewExpression>
+      <mapTip></mapTip>
+    </maplayer>
+    <maplayer simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" maxScale="0" simplifyDrawingTol="1" minScale="100000000" type="vector" refreshOnNotifyMessage="" wkbType="Point" autoRefreshEnabled="0" autoRefreshTime="0" simplifyAlgorithm="0" readOnly="0" geometry="Point" styleCategories="AllStyleCategories" refreshOnNotifyEnabled="0" simplifyDrawingHints="1" simplifyLocal="1" labelsEnabled="0">
+      <extent>
+        <xmin>370483.44424133881693706</xmin>
+        <ymin>6669501.86916334554553032</ymin>
+        <xmax>407728.88743544346652925</xmax>
+        <ymax>6712194.77612040471285582</ymax>
+      </extent>
+      <id>QueryLayer_1c6a2b96_64ad_4191_adeb_f6fb34e77dcc</id>
+      <datasource>dbname='stopcorr' host=localhost port=5432 user='postgres' password='postgres' sslmode=disable key='stop_id' checkPrimaryKeyUnicity='1' table="(SELECT sm.* FROM stop_median AS sm WHERE (sm.n_stop_known + sm.n_stop_guessed) >= 100   AND sm.dist_to_jore_point_m >= 25    OR sm.dist_to_jore_point_m IS NULL
+)" (geom)</datasource>
+      <keywordList>
+        <value></value>
+      </keywordList>
+      <layername>stop_median</layername>
+      <srs>
+        <spatialrefsys>
+          <wkt>PROJCS["ETRS89 / TM35FIN(E,N)",GEOGCS["ETRS89",DATUM["European_Terrestrial_Reference_System_1989",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6258"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4258"]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",27],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],AUTHORITY["EPSG","3067"]]</wkt>
+          <proj4>+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs</proj4>
+          <srsid>1030</srsid>
+          <srid>3067</srid>
+          <authid>EPSG:3067</authid>
+          <description>ETRS89 / TM35FIN(E,N)</description>
+          <projectionacronym>utm</projectionacronym>
+          <ellipsoidacronym>GRS80</ellipsoidacronym>
+          <geographicflag>false</geographicflag>
+        </spatialrefsys>
+      </srs>
+      <resourceMetadata>
+        <identifier></identifier>
+        <parentidentifier></parentidentifier>
+        <language></language>
+        <type>dataset</type>
+        <title></title>
+        <abstract></abstract>
+        <links/>
+        <fees></fees>
+        <encoding></encoding>
+        <crs>
+          <spatialrefsys>
+            <wkt>PROJCS["ETRS89 / TM35FIN(E,N)",GEOGCS["ETRS89",DATUM["European_Terrestrial_Reference_System_1989",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6258"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4258"]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",27],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],AUTHORITY["EPSG","3067"]]</wkt>
+            <proj4>+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs</proj4>
+            <srsid>1030</srsid>
+            <srid>3067</srid>
+            <authid>EPSG:3067</authid>
+            <description>ETRS89 / TM35FIN(E,N)</description>
+            <projectionacronym>utm</projectionacronym>
+            <ellipsoidacronym>GRS80</ellipsoidacronym>
+            <geographicflag>false</geographicflag>
+          </spatialrefsys>
+        </crs>
+        <extent/>
+      </resourceMetadata>
+      <provider encoding="">postgres</provider>
+      <vectorjoins/>
+      <layerDependencies/>
+      <dataDependencies/>
+      <expressionfields/>
+      <map-layer-style-manager current="default">
+        <map-layer-style name="default"/>
+      </map-layer-style-manager>
+      <auxiliaryLayer/>
+      <flags>
+        <Identifiable>1</Identifiable>
+        <Removable>1</Removable>
+        <Searchable>1</Searchable>
+      </flags>
+      <temporal startExpression="" endField="to_date" durationField="" mode="2" durationUnit="min" accumulate="0" enabled="0" startField="from_date" fixedDuration="0" endExpression="">
+        <fixedRange>
+          <start></start>
+          <end></end>
+        </fixedRange>
+      </temporal>
+      <renderer-v2 type="RuleRenderer" symbollevels="0" forceraster="0" enableorderby="0">
+        <rules key="{33ff860d-7ba2-46c4-adbf-a93a406ee4f0}">
+          <rule symbol="0" filter="stop_id = @atlas_featureid" key="{065507d8-fbdb-4f6b-818e-1855f5793fc0}"/>
+        </rules>
+        <symbols>
+          <symbol force_rhr="0" type="marker" alpha="1" name="0" clip_to_extent="1">
+            <layer pass="0" class="SimpleMarker" enabled="1" locked="0">
+              <prop k="angle" v="0"/>
+              <prop k="color" v="255,255,255,255"/>
+              <prop k="horizontal_anchor_point" v="1"/>
+              <prop k="joinstyle" v="bevel"/>
+              <prop k="name" v="circle"/>
+              <prop k="offset" v="0,0"/>
+              <prop k="offset_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="outline_color" v="72,72,72,255"/>
+              <prop k="outline_style" v="solid"/>
+              <prop k="outline_width" v="0.6"/>
+              <prop k="outline_width_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="outline_width_unit" v="MM"/>
+              <prop k="scale_method" v="diameter"/>
+              <prop k="size" v="3"/>
+              <prop k="size_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="size_unit" v="MM"/>
+              <prop k="vertical_anchor_point" v="1"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </symbols>
+      </renderer-v2>
+      <customproperties/>
+      <blendMode>0</blendMode>
+      <featureBlendMode>0</featureBlendMode>
+      <layerOpacity>1</layerOpacity>
+      <geometryOptions geometryPrecision="0" removeDuplicateNodes="0">
+        <activeChecks type="StringList">
+          <Option type="QString" value=""/>
+        </activeChecks>
+        <checkConfiguration/>
+      </geometryOptions>
+      <legend type="default-vector"/>
+      <referencedLayers/>
+      <fieldConfiguration>
+        <field name="stop_id" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="from_date" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="to_date" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="n_stop_known" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="n_stop_guessed" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="n_stop_null_near" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="dist_to_jore_point_m" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="observation_route_dirs" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="result_class" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="recommended_min_radius_m" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="manual_acceptance_needed" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+      </fieldConfiguration>
+      <aliases>
+        <alias index="0" name="" field="stop_id"/>
+        <alias index="1" name="" field="from_date"/>
+        <alias index="2" name="" field="to_date"/>
+        <alias index="3" name="" field="n_stop_known"/>
+        <alias index="4" name="" field="n_stop_guessed"/>
+        <alias index="5" name="" field="n_stop_null_near"/>
+        <alias index="6" name="" field="dist_to_jore_point_m"/>
+        <alias index="7" name="" field="observation_route_dirs"/>
+        <alias index="8" name="" field="result_class"/>
+        <alias index="9" name="" field="recommended_min_radius_m"/>
+        <alias index="10" name="" field="manual_acceptance_needed"/>
+      </aliases>
+      <defaults>
+        <default expression="" applyOnUpdate="0" field="stop_id"/>
+        <default expression="" applyOnUpdate="0" field="from_date"/>
+        <default expression="" applyOnUpdate="0" field="to_date"/>
+        <default expression="" applyOnUpdate="0" field="n_stop_known"/>
+        <default expression="" applyOnUpdate="0" field="n_stop_guessed"/>
+        <default expression="" applyOnUpdate="0" field="n_stop_null_near"/>
+        <default expression="" applyOnUpdate="0" field="dist_to_jore_point_m"/>
+        <default expression="" applyOnUpdate="0" field="observation_route_dirs"/>
+        <default expression="" applyOnUpdate="0" field="result_class"/>
+        <default expression="" applyOnUpdate="0" field="recommended_min_radius_m"/>
+        <default expression="" applyOnUpdate="0" field="manual_acceptance_needed"/>
+      </defaults>
+      <constraints>
+        <constraint notnull_strength="1" constraints="3" exp_strength="0" field="stop_id" unique_strength="1"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="from_date" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="to_date" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="n_stop_known" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="n_stop_guessed" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="n_stop_null_near" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="dist_to_jore_point_m" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="observation_route_dirs" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="result_class" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="recommended_min_radius_m" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="manual_acceptance_needed" unique_strength="0"/>
+      </constraints>
+      <constraintExpressions>
+        <constraint exp="" desc="" field="stop_id"/>
+        <constraint exp="" desc="" field="from_date"/>
+        <constraint exp="" desc="" field="to_date"/>
+        <constraint exp="" desc="" field="n_stop_known"/>
+        <constraint exp="" desc="" field="n_stop_guessed"/>
+        <constraint exp="" desc="" field="n_stop_null_near"/>
+        <constraint exp="" desc="" field="dist_to_jore_point_m"/>
+        <constraint exp="" desc="" field="observation_route_dirs"/>
+        <constraint exp="" desc="" field="result_class"/>
+        <constraint exp="" desc="" field="recommended_min_radius_m"/>
+        <constraint exp="" desc="" field="manual_acceptance_needed"/>
+      </constraintExpressions>
+      <expressionfields/>
+      <attributeactions>
+        <defaultAction value="{00000000-0000-0000-0000-000000000000}" key="Canvas"/>
+      </attributeactions>
+      <attributetableconfig sortExpression="" actionWidgetStyle="dropDown" sortOrder="0">
+        <columns/>
+      </attributetableconfig>
+      <conditionalstyles>
+        <rowstyles/>
+        <fieldstyles/>
+      </conditionalstyles>
+      <storedexpressions/>
+      <editform tolerant="1"></editform>
+      <editforminit/>
+      <editforminitcodesource>0</editforminitcodesource>
+      <editforminitfilepath></editforminitfilepath>
+      <editforminitcode><![CDATA[]]></editforminitcode>
+      <featformsuppress>0</featformsuppress>
+      <editorlayout>generatedlayout</editorlayout>
+      <editable/>
+      <labelOnTop/>
+      <dataDefinedFieldProperties/>
+      <widgets/>
+      <previewExpression></previewExpression>
+      <mapTip></mapTip>
+    </maplayer>
+    <maplayer simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" maxScale="0" simplifyDrawingTol="1" minScale="100000000" type="vector" refreshOnNotifyMessage="" wkbType="Polygon" autoRefreshEnabled="0" autoRefreshTime="0" simplifyAlgorithm="0" readOnly="0" geometry="Polygon" styleCategories="AllStyleCategories" refreshOnNotifyEnabled="0" simplifyDrawingHints="1" simplifyLocal="1" labelsEnabled="1">
+      <extent>
+        <xmin>370468.32813625916605815</xmin>
+        <ymin>6669486.75305826589465141</ymin>
+        <xmax>407735.12750483280979097</xmax>
+        <ymax>6712203.84070609044283628</ymax>
+      </extent>
+      <id>QueryLayer_1e9b8518_63bc_4df5_9196_22723c08d6af</id>
+      <datasource>dbname='stopcorr' host=localhost port=5432 user='postgres' password='postgres' sslmode=disable key='percentile,stop_id' checkPrimaryKeyUnicity='1' table="(SELECT c.* FROM view_percentile_circles AS c INNER JOIN stop_median AS sm   ON (c.stop_id = sm.stop_id) WHERE (sm.n_stop_known + sm.n_stop_guessed) >= 100   AND sm.dist_to_jore_point_m >= 25    OR sm.dist_to_jore_point_m IS NULL
+)" (geom)</datasource>
+      <keywordList>
+        <value></value>
+      </keywordList>
+      <layername>circles</layername>
+      <srs>
+        <spatialrefsys>
+          <wkt>PROJCS["ETRS89 / TM35FIN(E,N)",GEOGCS["ETRS89",DATUM["European_Terrestrial_Reference_System_1989",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6258"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4258"]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",27],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],AUTHORITY["EPSG","3067"]]</wkt>
+          <proj4>+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs</proj4>
+          <srsid>1030</srsid>
+          <srid>3067</srid>
+          <authid>EPSG:3067</authid>
+          <description>ETRS89 / TM35FIN(E,N)</description>
+          <projectionacronym>utm</projectionacronym>
+          <ellipsoidacronym>GRS80</ellipsoidacronym>
+          <geographicflag>false</geographicflag>
+        </spatialrefsys>
+      </srs>
+      <resourceMetadata>
+        <identifier></identifier>
+        <parentidentifier></parentidentifier>
+        <language></language>
+        <type>dataset</type>
+        <title></title>
+        <abstract></abstract>
+        <links/>
+        <fees></fees>
+        <encoding></encoding>
+        <crs>
+          <spatialrefsys>
+            <wkt>PROJCS["ETRS89 / TM35FIN(E,N)",GEOGCS["ETRS89",DATUM["European_Terrestrial_Reference_System_1989",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6258"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4258"]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",27],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],AUTHORITY["EPSG","3067"]]</wkt>
+            <proj4>+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs</proj4>
+            <srsid>1030</srsid>
+            <srid>3067</srid>
+            <authid>EPSG:3067</authid>
+            <description>ETRS89 / TM35FIN(E,N)</description>
+            <projectionacronym>utm</projectionacronym>
+            <ellipsoidacronym>GRS80</ellipsoidacronym>
+            <geographicflag>false</geographicflag>
+          </spatialrefsys>
+        </crs>
+        <extent/>
+      </resourceMetadata>
+      <provider encoding="">postgres</provider>
+      <vectorjoins/>
+      <layerDependencies/>
+      <dataDependencies/>
+      <expressionfields/>
+      <map-layer-style-manager current="default">
+        <map-layer-style name="default"/>
+      </map-layer-style-manager>
+      <auxiliaryLayer/>
+      <flags>
+        <Identifiable>1</Identifiable>
+        <Removable>1</Removable>
+        <Searchable>1</Searchable>
+      </flags>
+      <temporal startExpression="" endField="" durationField="" mode="0" durationUnit="min" accumulate="0" enabled="0" startField="" fixedDuration="0" endExpression="">
+        <fixedRange>
+          <start></start>
+          <end></end>
+        </fixedRange>
+      </temporal>
+      <renderer-v2 type="RuleRenderer" symbollevels="0" forceraster="0" enableorderby="0">
+        <rules key="{a7c6c95b-8edf-4a2e-9156-f3ddcc26334b}">
+          <rule symbol="0" filter="stop_id = @atlas_featureid" key="{9e378d83-3001-4510-97f7-c540e85c8a60}"/>
+        </rules>
+        <symbols>
+          <symbol force_rhr="0" type="fill" alpha="1" name="0" clip_to_extent="1">
+            <layer pass="0" class="SimpleFill" enabled="1" locked="0">
+              <prop k="border_width_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="color" v="255,158,23,0"/>
+              <prop k="joinstyle" v="bevel"/>
+              <prop k="offset" v="0,0"/>
+              <prop k="offset_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="outline_color" v="72,72,72,255"/>
+              <prop k="outline_style" v="solid"/>
+              <prop k="outline_width" v="0.15"/>
+              <prop k="outline_width_unit" v="MM"/>
+              <prop k="style" v="solid"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </symbols>
+      </renderer-v2>
+      <labeling type="simple">
+        <settings calloutType="simple">
+          <text-style capitalization="0" fontStrikeout="0" previewBkgrdColor="255,255,255,255" fontWeight="75" fieldName="round(percentile * 100, 0) || ' %'" fontWordSpacing="0" fontKerning="1" textColor="72,72,72,255" fontSizeMapUnitScale="3x:0,0,0,0,0,0" namedStyle="Bold" fontUnderline="0" isExpression="1" useSubstitutions="0" textOrientation="horizontal" blendMode="0" fontLetterSpacing="0" fontFamily="Arial" allowHtml="0" multilineHeight="1" textOpacity="1" fontItalic="0" fontSize="10" fontSizeUnit="Point">
+            <text-buffer bufferJoinStyle="128" bufferBlendMode="0" bufferOpacity="1" bufferSizeUnits="MM" bufferSizeMapUnitScale="3x:0,0,0,0,0,0" bufferSize="0.5" bufferDraw="1" bufferColor="255,255,255,255" bufferNoFill="1"/>
+            <text-mask maskType="0" maskOpacity="1" maskedSymbolLayers="" maskEnabled="0" maskSizeUnits="MM" maskSizeMapUnitScale="3x:0,0,0,0,0,0" maskJoinStyle="128" maskSize="1.5"/>
+            <background shapeOpacity="1" shapeRadiiX="0" shapeSizeMapUnitScale="3x:0,0,0,0,0,0" shapeRadiiY="0" shapeFillColor="255,255,255,255" shapeOffsetUnit="MM" shapeSizeUnit="MM" shapeOffsetX="0" shapeType="0" shapeOffsetMapUnitScale="3x:0,0,0,0,0,0" shapeSizeType="0" shapeDraw="0" shapeBorderWidthMapUnitScale="3x:0,0,0,0,0,0" shapeSVGFile="" shapeSizeX="0" shapeBorderWidth="0" shapeJoinStyle="64" shapeRadiiMapUnitScale="3x:0,0,0,0,0,0" shapeBorderWidthUnit="MM" shapeOffsetY="0" shapeRotation="0" shapeRotationType="0" shapeSizeY="0" shapeBorderColor="128,128,128,255" shapeBlendMode="0" shapeRadiiUnit="MM">
+              <symbol force_rhr="0" type="marker" alpha="1" name="markerSymbol" clip_to_extent="1">
+                <layer pass="0" class="SimpleMarker" enabled="1" locked="0">
+                  <prop k="angle" v="0"/>
+                  <prop k="color" v="232,113,141,255"/>
+                  <prop k="horizontal_anchor_point" v="1"/>
+                  <prop k="joinstyle" v="bevel"/>
+                  <prop k="name" v="circle"/>
+                  <prop k="offset" v="0,0"/>
+                  <prop k="offset_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+                  <prop k="offset_unit" v="MM"/>
+                  <prop k="outline_color" v="35,35,35,255"/>
+                  <prop k="outline_style" v="solid"/>
+                  <prop k="outline_width" v="0"/>
+                  <prop k="outline_width_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+                  <prop k="outline_width_unit" v="MM"/>
+                  <prop k="scale_method" v="diameter"/>
+                  <prop k="size" v="2"/>
+                  <prop k="size_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+                  <prop k="size_unit" v="MM"/>
+                  <prop k="vertical_anchor_point" v="1"/>
+                  <data_defined_properties>
+                    <Option type="Map">
+                      <Option type="QString" value="" name="name"/>
+                      <Option name="properties"/>
+                      <Option type="QString" value="collection" name="type"/>
+                    </Option>
+                  </data_defined_properties>
+                </layer>
+              </symbol>
+            </background>
+            <shadow shadowOffsetDist="1" shadowOpacity="0.7" shadowOffsetUnit="MM" shadowRadius="1.5" shadowRadiusMapUnitScale="3x:0,0,0,0,0,0" shadowColor="0,0,0,255" shadowRadiusAlphaOnly="0" shadowOffsetAngle="135" shadowOffsetMapUnitScale="3x:0,0,0,0,0,0" shadowOffsetGlobal="1" shadowDraw="0" shadowScale="100" shadowBlendMode="6" shadowUnder="0" shadowRadiusUnit="MM"/>
+            <dd_properties>
+              <Option type="Map">
+                <Option type="QString" value="" name="name"/>
+                <Option name="properties"/>
+                <Option type="QString" value="collection" name="type"/>
+              </Option>
+            </dd_properties>
+            <substitutions/>
+          </text-style>
+          <text-format leftDirectionSymbol="&lt;" multilineAlign="3" addDirectionSymbol="0" placeDirectionSymbol="0" rightDirectionSymbol=">" reverseDirectionSymbol="0" formatNumbers="0" autoWrapLength="0" decimals="3" wrapChar="" useMaxLineLengthForAutoWrap="1" plussign="0"/>
+          <placement placementFlags="10" maxCurvedCharAngleOut="-25" centroidInside="0" lineAnchorType="0" centroidWhole="0" lineAnchorPercent="0.5" distUnits="MM" overrunDistance="0" layerType="PolygonGeometry" xOffset="0" repeatDistance="0" distMapUnitScale="3x:0,0,0,0,0,0" preserveRotation="1" offsetType="0" fitInPolygonOnly="0" polygonPlacementFlags="2" dist="0" geometryGeneratorType="PointGeometry" quadOffset="4" labelOffsetMapUnitScale="3x:0,0,0,0,0,0" repeatDistanceUnits="MM" geometryGeneratorEnabled="0" yOffset="0" overrunDistanceMapUnitScale="3x:0,0,0,0,0,0" geometryGenerator="" predefinedPositionOrder="TR,TL,BR,BL,R,L,TSR,BSR" placement="8" maxCurvedCharAngleIn="25" offsetUnits="MM" repeatDistanceMapUnitScale="3x:0,0,0,0,0,0" priority="5" rotationAngle="0" overrunDistanceUnit="MM"/>
+          <rendering upsidedownLabels="0" minFeatureSize="0" scaleVisibility="0" labelPerPart="0" zIndex="0" fontMaxPixelSize="10000" obstacle="1" obstacleFactor="1" drawLabels="1" scaleMax="0" scaleMin="0" mergeLines="0" fontLimitPixelSize="0" displayAll="0" obstacleType="1" limitNumLabels="0" fontMinPixelSize="3" maxNumLabels="2000"/>
+          <dd_properties>
+            <Option type="Map">
+              <Option type="QString" value="" name="name"/>
+              <Option type="Map" name="properties">
+                <Option type="Map" name="PositionX">
+                  <Option type="bool" value="true" name="active"/>
+                  <Option type="QString" value="x(centroid($geometry))" name="expression"/>
+                  <Option type="int" value="3" name="type"/>
+                </Option>
+                <Option type="Map" name="PositionY">
+                  <Option type="bool" value="true" name="active"/>
+                  <Option type="QString" value="y_max($geometry)" name="expression"/>
+                  <Option type="int" value="3" name="type"/>
+                </Option>
+              </Option>
+              <Option type="QString" value="collection" name="type"/>
+            </Option>
+          </dd_properties>
+          <callout type="simple">
+            <Option type="Map">
+              <Option type="QString" value="pole_of_inaccessibility" name="anchorPoint"/>
+              <Option type="Map" name="ddProperties">
+                <Option type="QString" value="" name="name"/>
+                <Option name="properties"/>
+                <Option type="QString" value="collection" name="type"/>
+              </Option>
+              <Option type="bool" value="false" name="drawToAllParts"/>
+              <Option type="QString" value="0" name="enabled"/>
+              <Option type="QString" value="point_on_exterior" name="labelAnchorPoint"/>
+              <Option type="QString" value="&lt;symbol force_rhr=&quot;0&quot; type=&quot;line&quot; alpha=&quot;1&quot; name=&quot;symbol&quot; clip_to_extent=&quot;1&quot;>&lt;layer pass=&quot;0&quot; class=&quot;SimpleLine&quot; enabled=&quot;1&quot; locked=&quot;0&quot;>&lt;prop k=&quot;align_dash_pattern&quot; v=&quot;0&quot;/>&lt;prop k=&quot;capstyle&quot; v=&quot;square&quot;/>&lt;prop k=&quot;customdash&quot; v=&quot;5;2&quot;/>&lt;prop k=&quot;customdash_map_unit_scale&quot; v=&quot;3x:0,0,0,0,0,0&quot;/>&lt;prop k=&quot;customdash_unit&quot; v=&quot;MM&quot;/>&lt;prop k=&quot;dash_pattern_offset&quot; v=&quot;0&quot;/>&lt;prop k=&quot;dash_pattern_offset_map_unit_scale&quot; v=&quot;3x:0,0,0,0,0,0&quot;/>&lt;prop k=&quot;dash_pattern_offset_unit&quot; v=&quot;MM&quot;/>&lt;prop k=&quot;draw_inside_polygon&quot; v=&quot;0&quot;/>&lt;prop k=&quot;joinstyle&quot; v=&quot;bevel&quot;/>&lt;prop k=&quot;line_color&quot; v=&quot;60,60,60,255&quot;/>&lt;prop k=&quot;line_style&quot; v=&quot;solid&quot;/>&lt;prop k=&quot;line_width&quot; v=&quot;0.3&quot;/>&lt;prop k=&quot;line_width_unit&quot; v=&quot;MM&quot;/>&lt;prop k=&quot;offset&quot; v=&quot;0&quot;/>&lt;prop k=&quot;offset_map_unit_scale&quot; v=&quot;3x:0,0,0,0,0,0&quot;/>&lt;prop k=&quot;offset_unit&quot; v=&quot;MM&quot;/>&lt;prop k=&quot;ring_filter&quot; v=&quot;0&quot;/>&lt;prop k=&quot;tweak_dash_pattern_on_corners&quot; v=&quot;0&quot;/>&lt;prop k=&quot;use_custom_dash&quot; v=&quot;0&quot;/>&lt;prop k=&quot;width_map_unit_scale&quot; v=&quot;3x:0,0,0,0,0,0&quot;/>&lt;data_defined_properties>&lt;Option type=&quot;Map&quot;>&lt;Option type=&quot;QString&quot; value=&quot;&quot; name=&quot;name&quot;/>&lt;Option name=&quot;properties&quot;/>&lt;Option type=&quot;QString&quot; value=&quot;collection&quot; name=&quot;type&quot;/>&lt;/Option>&lt;/data_defined_properties>&lt;/layer>&lt;/symbol>" name="lineSymbol"/>
+              <Option type="double" value="0" name="minLength"/>
+              <Option type="QString" value="3x:0,0,0,0,0,0" name="minLengthMapUnitScale"/>
+              <Option type="QString" value="MM" name="minLengthUnit"/>
+              <Option type="double" value="0" name="offsetFromAnchor"/>
+              <Option type="QString" value="3x:0,0,0,0,0,0" name="offsetFromAnchorMapUnitScale"/>
+              <Option type="QString" value="MM" name="offsetFromAnchorUnit"/>
+              <Option type="double" value="0" name="offsetFromLabel"/>
+              <Option type="QString" value="3x:0,0,0,0,0,0" name="offsetFromLabelMapUnitScale"/>
+              <Option type="QString" value="MM" name="offsetFromLabelUnit"/>
+            </Option>
+          </callout>
+        </settings>
+      </labeling>
+      <customproperties/>
+      <blendMode>0</blendMode>
+      <featureBlendMode>0</featureBlendMode>
+      <layerOpacity>1</layerOpacity>
+      <geometryOptions geometryPrecision="0" removeDuplicateNodes="0">
+        <activeChecks type="StringList">
+          <Option type="QString" value=""/>
+        </activeChecks>
+        <checkConfiguration/>
+      </geometryOptions>
+      <legend type="default-vector"/>
+      <referencedLayers/>
+      <fieldConfiguration>
+        <field name="stop_id" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="percentile" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="radius_m" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="n_observations" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+      </fieldConfiguration>
+      <aliases>
+        <alias index="0" name="" field="stop_id"/>
+        <alias index="1" name="" field="percentile"/>
+        <alias index="2" name="" field="radius_m"/>
+        <alias index="3" name="" field="n_observations"/>
+      </aliases>
+      <defaults>
+        <default expression="" applyOnUpdate="0" field="stop_id"/>
+        <default expression="" applyOnUpdate="0" field="percentile"/>
+        <default expression="" applyOnUpdate="0" field="radius_m"/>
+        <default expression="" applyOnUpdate="0" field="n_observations"/>
+      </defaults>
+      <constraints>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="stop_id" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="percentile" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="radius_m" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="n_observations" unique_strength="0"/>
+      </constraints>
+      <constraintExpressions>
+        <constraint exp="" desc="" field="stop_id"/>
+        <constraint exp="" desc="" field="percentile"/>
+        <constraint exp="" desc="" field="radius_m"/>
+        <constraint exp="" desc="" field="n_observations"/>
+      </constraintExpressions>
+      <expressionfields/>
+      <attributeactions>
+        <defaultAction value="{00000000-0000-0000-0000-000000000000}" key="Canvas"/>
+      </attributeactions>
+      <attributetableconfig sortExpression="" actionWidgetStyle="dropDown" sortOrder="0">
+        <columns/>
+      </attributetableconfig>
+      <conditionalstyles>
+        <rowstyles/>
+        <fieldstyles/>
+      </conditionalstyles>
+      <storedexpressions/>
+      <editform tolerant="1"></editform>
+      <editforminit/>
+      <editforminitcodesource>0</editforminitcodesource>
+      <editforminitfilepath></editforminitfilepath>
+      <editforminitcode><![CDATA[]]></editforminitcode>
+      <featformsuppress>0</featformsuppress>
+      <editorlayout>generatedlayout</editorlayout>
+      <editable/>
+      <labelOnTop/>
+      <dataDefinedFieldProperties/>
+      <widgets/>
+      <previewExpression></previewExpression>
+      <mapTip></mapTip>
+    </maplayer>
+    <maplayer simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" maxScale="0" simplifyDrawingTol="1" minScale="100000000" type="vector" refreshOnNotifyMessage="" wkbType="LineString" autoRefreshEnabled="0" autoRefreshTime="0" simplifyAlgorithm="0" readOnly="0" geometry="Line" styleCategories="AllStyleCategories" refreshOnNotifyEnabled="0" simplifyDrawingHints="1" simplifyLocal="1" labelsEnabled="1">
+      <extent>
+        <xmin>370201.18917027045972645</xmin>
+        <ymin>6669354.37173337303102016</ymin>
+        <xmax>407744.10866010561585426</xmax>
+        <ymax>6712232.10313861910253763</ymax>
+      </extent>
+      <id>QueryLayer_bb19bd50_6f5d_4e8f_aacd_94235b3ebc31</id>
+      <datasource>dbname='stopcorr' host=localhost port=5432 user='postgres' password='postgres' sslmode=disable key='stop_id' checkPrimaryKeyUnicity='1' table="(SELECT l.* FROM view_median_to_jore_lines AS l INNER JOIN stop_median AS sm   ON (l.stop_id = sm.stop_id) WHERE (sm.n_stop_known + sm.n_stop_guessed) >= 100   AND sm.dist_to_jore_point_m >= 25    OR sm.dist_to_jore_point_m IS NULL
+)" (geom)</datasource>
+      <keywordList>
+        <value></value>
+      </keywordList>
+      <layername>median->jore lines</layername>
+      <srs>
+        <spatialrefsys>
+          <wkt>PROJCS["ETRS89 / TM35FIN(E,N)",GEOGCS["ETRS89",DATUM["European_Terrestrial_Reference_System_1989",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6258"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4258"]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",27],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],AUTHORITY["EPSG","3067"]]</wkt>
+          <proj4>+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs</proj4>
+          <srsid>1030</srsid>
+          <srid>3067</srid>
+          <authid>EPSG:3067</authid>
+          <description>ETRS89 / TM35FIN(E,N)</description>
+          <projectionacronym>utm</projectionacronym>
+          <ellipsoidacronym>GRS80</ellipsoidacronym>
+          <geographicflag>false</geographicflag>
+        </spatialrefsys>
+      </srs>
+      <resourceMetadata>
+        <identifier></identifier>
+        <parentidentifier></parentidentifier>
+        <language></language>
+        <type>dataset</type>
+        <title></title>
+        <abstract></abstract>
+        <links/>
+        <fees></fees>
+        <encoding></encoding>
+        <crs>
+          <spatialrefsys>
+            <wkt>PROJCS["ETRS89 / TM35FIN(E,N)",GEOGCS["ETRS89",DATUM["European_Terrestrial_Reference_System_1989",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6258"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4258"]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",27],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],AUTHORITY["EPSG","3067"]]</wkt>
+            <proj4>+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs</proj4>
+            <srsid>1030</srsid>
+            <srid>3067</srid>
+            <authid>EPSG:3067</authid>
+            <description>ETRS89 / TM35FIN(E,N)</description>
+            <projectionacronym>utm</projectionacronym>
+            <ellipsoidacronym>GRS80</ellipsoidacronym>
+            <geographicflag>false</geographicflag>
+          </spatialrefsys>
+        </crs>
+        <extent/>
+      </resourceMetadata>
+      <provider encoding="">postgres</provider>
+      <vectorjoins/>
+      <layerDependencies/>
+      <dataDependencies/>
+      <expressionfields/>
+      <map-layer-style-manager current="default">
+        <map-layer-style name="default"/>
+      </map-layer-style-manager>
+      <auxiliaryLayer/>
+      <flags>
+        <Identifiable>1</Identifiable>
+        <Removable>1</Removable>
+        <Searchable>1</Searchable>
+      </flags>
+      <temporal startExpression="" endField="" durationField="" mode="0" durationUnit="min" accumulate="0" enabled="0" startField="" fixedDuration="0" endExpression="">
+        <fixedRange>
+          <start></start>
+          <end></end>
+        </fixedRange>
+      </temporal>
+      <renderer-v2 type="RuleRenderer" symbollevels="0" forceraster="0" enableorderby="0">
+        <rules key="{128936a2-c58f-464c-bd35-a11420d7ee3c}">
+          <rule symbol="0" filter="stop_id = @atlas_featureid" key="{a776dbd7-a2af-4489-8879-424eb4f18134}"/>
+        </rules>
+        <symbols>
+          <symbol force_rhr="0" type="line" alpha="1" name="0" clip_to_extent="1">
+            <layer pass="0" class="SimpleLine" enabled="1" locked="0">
+              <prop k="align_dash_pattern" v="0"/>
+              <prop k="capstyle" v="square"/>
+              <prop k="customdash" v="5;2"/>
+              <prop k="customdash_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="customdash_unit" v="MM"/>
+              <prop k="dash_pattern_offset" v="0"/>
+              <prop k="dash_pattern_offset_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="dash_pattern_offset_unit" v="MM"/>
+              <prop k="draw_inside_polygon" v="0"/>
+              <prop k="joinstyle" v="bevel"/>
+              <prop k="line_color" v="72,72,72,255"/>
+              <prop k="line_style" v="solid"/>
+              <prop k="line_width" v="0.3"/>
+              <prop k="line_width_unit" v="MM"/>
+              <prop k="offset" v="0"/>
+              <prop k="offset_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="ring_filter" v="0"/>
+              <prop k="tweak_dash_pattern_on_corners" v="0"/>
+              <prop k="use_custom_dash" v="0"/>
+              <prop k="width_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </symbols>
+      </renderer-v2>
+      <labeling type="simple">
+        <settings calloutType="simple">
+          <text-style capitalization="0" fontStrikeout="0" previewBkgrdColor="255,255,255,255" fontWeight="75" fieldName="round($length, 0) || ' m'" fontWordSpacing="0" fontKerning="1" textColor="72,72,72,255" fontSizeMapUnitScale="3x:0,0,0,0,0,0" namedStyle="Bold" fontUnderline="0" isExpression="1" useSubstitutions="0" textOrientation="horizontal" blendMode="0" fontLetterSpacing="0" fontFamily="Arial" allowHtml="0" multilineHeight="1" textOpacity="1" fontItalic="0" fontSize="10" fontSizeUnit="Point">
+            <text-buffer bufferJoinStyle="128" bufferBlendMode="0" bufferOpacity="1" bufferSizeUnits="MM" bufferSizeMapUnitScale="3x:0,0,0,0,0,0" bufferSize="0.8" bufferDraw="1" bufferColor="255,255,255,255" bufferNoFill="1"/>
+            <text-mask maskType="0" maskOpacity="1" maskedSymbolLayers="" maskEnabled="0" maskSizeUnits="MM" maskSizeMapUnitScale="3x:0,0,0,0,0,0" maskJoinStyle="128" maskSize="1.5"/>
+            <background shapeOpacity="1" shapeRadiiX="0" shapeSizeMapUnitScale="3x:0,0,0,0,0,0" shapeRadiiY="0" shapeFillColor="255,255,255,255" shapeOffsetUnit="MM" shapeSizeUnit="MM" shapeOffsetX="0" shapeType="0" shapeOffsetMapUnitScale="3x:0,0,0,0,0,0" shapeSizeType="0" shapeDraw="0" shapeBorderWidthMapUnitScale="3x:0,0,0,0,0,0" shapeSVGFile="" shapeSizeX="0" shapeBorderWidth="0" shapeJoinStyle="64" shapeRadiiMapUnitScale="3x:0,0,0,0,0,0" shapeBorderWidthUnit="MM" shapeOffsetY="0" shapeRotation="0" shapeRotationType="0" shapeSizeY="0" shapeBorderColor="128,128,128,255" shapeBlendMode="0" shapeRadiiUnit="MM">
+              <symbol force_rhr="0" type="marker" alpha="1" name="markerSymbol" clip_to_extent="1">
+                <layer pass="0" class="SimpleMarker" enabled="1" locked="0">
+                  <prop k="angle" v="0"/>
+                  <prop k="color" v="183,72,75,255"/>
+                  <prop k="horizontal_anchor_point" v="1"/>
+                  <prop k="joinstyle" v="bevel"/>
+                  <prop k="name" v="circle"/>
+                  <prop k="offset" v="0,0"/>
+                  <prop k="offset_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+                  <prop k="offset_unit" v="MM"/>
+                  <prop k="outline_color" v="35,35,35,255"/>
+                  <prop k="outline_style" v="solid"/>
+                  <prop k="outline_width" v="0"/>
+                  <prop k="outline_width_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+                  <prop k="outline_width_unit" v="MM"/>
+                  <prop k="scale_method" v="diameter"/>
+                  <prop k="size" v="2"/>
+                  <prop k="size_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+                  <prop k="size_unit" v="MM"/>
+                  <prop k="vertical_anchor_point" v="1"/>
+                  <data_defined_properties>
+                    <Option type="Map">
+                      <Option type="QString" value="" name="name"/>
+                      <Option name="properties"/>
+                      <Option type="QString" value="collection" name="type"/>
+                    </Option>
+                  </data_defined_properties>
+                </layer>
+              </symbol>
+            </background>
+            <shadow shadowOffsetDist="1" shadowOpacity="0.7" shadowOffsetUnit="MM" shadowRadius="1.5" shadowRadiusMapUnitScale="3x:0,0,0,0,0,0" shadowColor="0,0,0,255" shadowRadiusAlphaOnly="0" shadowOffsetAngle="135" shadowOffsetMapUnitScale="3x:0,0,0,0,0,0" shadowOffsetGlobal="1" shadowDraw="0" shadowScale="100" shadowBlendMode="6" shadowUnder="0" shadowRadiusUnit="MM"/>
+            <dd_properties>
+              <Option type="Map">
+                <Option type="QString" value="" name="name"/>
+                <Option name="properties"/>
+                <Option type="QString" value="collection" name="type"/>
+              </Option>
+            </dd_properties>
+            <substitutions/>
+          </text-style>
+          <text-format leftDirectionSymbol="&lt;" multilineAlign="0" addDirectionSymbol="0" placeDirectionSymbol="0" rightDirectionSymbol=">" reverseDirectionSymbol="0" formatNumbers="0" autoWrapLength="0" decimals="3" wrapChar="" useMaxLineLengthForAutoWrap="1" plussign="0"/>
+          <placement placementFlags="10" maxCurvedCharAngleOut="-25" centroidInside="0" lineAnchorType="0" centroidWhole="0" lineAnchorPercent="0.5" distUnits="MM" overrunDistance="0" layerType="LineGeometry" xOffset="0" repeatDistance="0" distMapUnitScale="3x:0,0,0,0,0,0" preserveRotation="1" offsetType="0" fitInPolygonOnly="0" polygonPlacementFlags="2" dist="0" geometryGeneratorType="PointGeometry" quadOffset="4" labelOffsetMapUnitScale="3x:0,0,0,0,0,0" repeatDistanceUnits="MM" geometryGeneratorEnabled="0" yOffset="0" overrunDistanceMapUnitScale="3x:0,0,0,0,0,0" geometryGenerator="" predefinedPositionOrder="TR,TL,BR,BL,R,L,TSR,BSR" placement="2" maxCurvedCharAngleIn="25" offsetUnits="MM" repeatDistanceMapUnitScale="3x:0,0,0,0,0,0" priority="5" rotationAngle="0" overrunDistanceUnit="MM"/>
+          <rendering upsidedownLabels="0" minFeatureSize="0" scaleVisibility="0" labelPerPart="0" zIndex="0" fontMaxPixelSize="10000" obstacle="1" obstacleFactor="1" drawLabels="1" scaleMax="0" scaleMin="0" mergeLines="0" fontLimitPixelSize="0" displayAll="0" obstacleType="1" limitNumLabels="0" fontMinPixelSize="3" maxNumLabels="2000"/>
+          <dd_properties>
+            <Option type="Map">
+              <Option type="QString" value="" name="name"/>
+              <Option name="properties"/>
+              <Option type="QString" value="collection" name="type"/>
+            </Option>
+          </dd_properties>
+          <callout type="simple">
+            <Option type="Map">
+              <Option type="QString" value="pole_of_inaccessibility" name="anchorPoint"/>
+              <Option type="Map" name="ddProperties">
+                <Option type="QString" value="" name="name"/>
+                <Option name="properties"/>
+                <Option type="QString" value="collection" name="type"/>
+              </Option>
+              <Option type="bool" value="false" name="drawToAllParts"/>
+              <Option type="QString" value="0" name="enabled"/>
+              <Option type="QString" value="point_on_exterior" name="labelAnchorPoint"/>
+              <Option type="QString" value="&lt;symbol force_rhr=&quot;0&quot; type=&quot;line&quot; alpha=&quot;1&quot; name=&quot;symbol&quot; clip_to_extent=&quot;1&quot;>&lt;layer pass=&quot;0&quot; class=&quot;SimpleLine&quot; enabled=&quot;1&quot; locked=&quot;0&quot;>&lt;prop k=&quot;align_dash_pattern&quot; v=&quot;0&quot;/>&lt;prop k=&quot;capstyle&quot; v=&quot;square&quot;/>&lt;prop k=&quot;customdash&quot; v=&quot;5;2&quot;/>&lt;prop k=&quot;customdash_map_unit_scale&quot; v=&quot;3x:0,0,0,0,0,0&quot;/>&lt;prop k=&quot;customdash_unit&quot; v=&quot;MM&quot;/>&lt;prop k=&quot;dash_pattern_offset&quot; v=&quot;0&quot;/>&lt;prop k=&quot;dash_pattern_offset_map_unit_scale&quot; v=&quot;3x:0,0,0,0,0,0&quot;/>&lt;prop k=&quot;dash_pattern_offset_unit&quot; v=&quot;MM&quot;/>&lt;prop k=&quot;draw_inside_polygon&quot; v=&quot;0&quot;/>&lt;prop k=&quot;joinstyle&quot; v=&quot;bevel&quot;/>&lt;prop k=&quot;line_color&quot; v=&quot;60,60,60,255&quot;/>&lt;prop k=&quot;line_style&quot; v=&quot;solid&quot;/>&lt;prop k=&quot;line_width&quot; v=&quot;0.3&quot;/>&lt;prop k=&quot;line_width_unit&quot; v=&quot;MM&quot;/>&lt;prop k=&quot;offset&quot; v=&quot;0&quot;/>&lt;prop k=&quot;offset_map_unit_scale&quot; v=&quot;3x:0,0,0,0,0,0&quot;/>&lt;prop k=&quot;offset_unit&quot; v=&quot;MM&quot;/>&lt;prop k=&quot;ring_filter&quot; v=&quot;0&quot;/>&lt;prop k=&quot;tweak_dash_pattern_on_corners&quot; v=&quot;0&quot;/>&lt;prop k=&quot;use_custom_dash&quot; v=&quot;0&quot;/>&lt;prop k=&quot;width_map_unit_scale&quot; v=&quot;3x:0,0,0,0,0,0&quot;/>&lt;data_defined_properties>&lt;Option type=&quot;Map&quot;>&lt;Option type=&quot;QString&quot; value=&quot;&quot; name=&quot;name&quot;/>&lt;Option name=&quot;properties&quot;/>&lt;Option type=&quot;QString&quot; value=&quot;collection&quot; name=&quot;type&quot;/>&lt;/Option>&lt;/data_defined_properties>&lt;/layer>&lt;/symbol>" name="lineSymbol"/>
+              <Option type="double" value="0" name="minLength"/>
+              <Option type="QString" value="3x:0,0,0,0,0,0" name="minLengthMapUnitScale"/>
+              <Option type="QString" value="MM" name="minLengthUnit"/>
+              <Option type="double" value="0" name="offsetFromAnchor"/>
+              <Option type="QString" value="3x:0,0,0,0,0,0" name="offsetFromAnchorMapUnitScale"/>
+              <Option type="QString" value="MM" name="offsetFromAnchorUnit"/>
+              <Option type="double" value="0" name="offsetFromLabel"/>
+              <Option type="QString" value="3x:0,0,0,0,0,0" name="offsetFromLabelMapUnitScale"/>
+              <Option type="QString" value="MM" name="offsetFromLabelUnit"/>
+            </Option>
+          </callout>
+        </settings>
+      </labeling>
+      <customproperties/>
+      <blendMode>0</blendMode>
+      <featureBlendMode>0</featureBlendMode>
+      <layerOpacity>1</layerOpacity>
+      <geometryOptions geometryPrecision="0" removeDuplicateNodes="0">
+        <activeChecks type="StringList">
+          <Option type="QString" value=""/>
+        </activeChecks>
+        <checkConfiguration/>
+      </geometryOptions>
+      <legend type="default-vector"/>
+      <referencedLayers/>
+      <fieldConfiguration>
+        <field name="stop_id" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+      </fieldConfiguration>
+      <aliases>
+        <alias index="0" name="" field="stop_id"/>
+      </aliases>
+      <defaults>
+        <default expression="" applyOnUpdate="0" field="stop_id"/>
+      </defaults>
+      <constraints>
+        <constraint notnull_strength="1" constraints="3" exp_strength="0" field="stop_id" unique_strength="1"/>
+      </constraints>
+      <constraintExpressions>
+        <constraint exp="" desc="" field="stop_id"/>
+      </constraintExpressions>
+      <expressionfields/>
+      <attributeactions>
+        <defaultAction value="{00000000-0000-0000-0000-000000000000}" key="Canvas"/>
+      </attributeactions>
+      <attributetableconfig sortExpression="" actionWidgetStyle="dropDown" sortOrder="0">
+        <columns/>
+      </attributetableconfig>
+      <conditionalstyles>
+        <rowstyles/>
+        <fieldstyles/>
+      </conditionalstyles>
+      <storedexpressions/>
+      <editform tolerant="1"></editform>
+      <editforminit/>
+      <editforminitcodesource>0</editforminitcodesource>
+      <editforminitfilepath></editforminitfilepath>
+      <editforminitcode><![CDATA[]]></editforminitcode>
+      <featformsuppress>0</featformsuppress>
+      <editorlayout>generatedlayout</editorlayout>
+      <editable/>
+      <labelOnTop/>
+      <dataDefinedFieldProperties/>
+      <widgets/>
+      <previewExpression></previewExpression>
+      <mapTip></mapTip>
+    </maplayer>
+    <maplayer type="raster" styleCategories="AllStyleCategories" autoRefreshTime="0" refreshOnNotifyEnabled="0" hasScaleBasedVisibilityFlag="0" minScale="1e+8" refreshOnNotifyMessage="" autoRefreshEnabled="0" maxScale="0">
+      <extent>
+        <xmin>-20037508.34278924390673637</xmin>
+        <ymin>-20037508.34278925508260727</ymin>
+        <xmax>20037508.34278924390673637</xmax>
+        <ymax>20037508.34278924390673637</ymax>
+      </extent>
+      <id>hsl_map_34e508cb_c7f8_4b11_8982_9a31c94875d7</id>
+      <datasource>crs=EPSG:3857&amp;format&amp;type=xyz&amp;url=https://cdn.digitransit.fi/map/v1/hsl-map/%7Bz%7D/%7Bx%7D/%7By%7D.png</datasource>
+      <keywordList>
+        <value></value>
+      </keywordList>
+      <layername>hsl-map 50</layername>
+      <srs>
+        <spatialrefsys>
+          <wkt>PROJCS["WGS 84 / Pseudo-Mercator",GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4326"]],PROJECTION["Mercator_1SP"],PARAMETER["central_meridian",0],PARAMETER["scale_factor",1],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["X",EAST],AXIS["Y",NORTH],EXTENSION["PROJ4","+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs"],AUTHORITY["EPSG","3857"]]</wkt>
+          <proj4>+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs</proj4>
+          <srsid>3857</srsid>
+          <srid>3857</srid>
+          <authid>EPSG:3857</authid>
+          <description>WGS 84 / Pseudo-Mercator</description>
+          <projectionacronym>merc</projectionacronym>
+          <ellipsoidacronym>WGS84</ellipsoidacronym>
+          <geographicflag>false</geographicflag>
+        </spatialrefsys>
+      </srs>
+      <resourceMetadata>
+        <identifier></identifier>
+        <parentidentifier></parentidentifier>
+        <language></language>
+        <type></type>
+        <title></title>
+        <abstract></abstract>
+        <links/>
+        <fees></fees>
+        <encoding></encoding>
+        <crs>
+          <spatialrefsys>
+            <wkt></wkt>
+            <proj4></proj4>
+            <srsid>0</srsid>
+            <srid>0</srid>
+            <authid></authid>
+            <description></description>
+            <projectionacronym></projectionacronym>
+            <ellipsoidacronym></ellipsoidacronym>
+            <geographicflag>false</geographicflag>
+          </spatialrefsys>
+        </crs>
+        <extent/>
+      </resourceMetadata>
+      <provider>wms</provider>
+      <noData>
+        <noDataList useSrcNoData="0" bandNo="1"/>
+      </noData>
+      <map-layer-style-manager current="default">
+        <map-layer-style name="default"/>
+      </map-layer-style-manager>
+      <flags>
+        <Identifiable>1</Identifiable>
+        <Removable>1</Removable>
+        <Searchable>1</Searchable>
+      </flags>
+      <temporal mode="0" enabled="0" fetchMode="0">
+        <fixedRange>
+          <start></start>
+          <end></end>
+        </fixedRange>
+      </temporal>
+      <customproperties>
+        <property value="Undefined" key="identify/format"/>
+      </customproperties>
+      <pipe>
+        <provider>
+          <resampling zoomedOutResamplingMethod="nearestNeighbour" enabled="false" zoomedInResamplingMethod="nearestNeighbour" maxOversampling="2"/>
+        </provider>
+        <rasterrenderer type="singlebandcolordata" opacity="0.5" nodataColor="" alphaBand="-1" band="1">
+          <rasterTransparency/>
+          <minMaxOrigin>
+            <limits>None</limits>
+            <extent>WholeRaster</extent>
+            <statAccuracy>Estimated</statAccuracy>
+            <cumulativeCutLower>0.02</cumulativeCutLower>
+            <cumulativeCutUpper>0.98</cumulativeCutUpper>
+            <stdDevFactor>2</stdDevFactor>
+          </minMaxOrigin>
+        </rasterrenderer>
+        <brightnesscontrast brightness="0" gamma="1" contrast="0"/>
+        <huesaturation grayscaleMode="0" colorizeGreen="128" colorizeOn="0" colorizeStrength="100" saturation="0" colorizeRed="255" colorizeBlue="128"/>
+        <rasterresampler maxOversampling="2"/>
+        <resamplingStage>resamplingFilter</resamplingStage>
+      </pipe>
+      <blendMode>0</blendMode>
+    </maplayer>
+    <maplayer type="raster" styleCategories="AllStyleCategories" autoRefreshTime="0" refreshOnNotifyEnabled="0" hasScaleBasedVisibilityFlag="0" minScale="1e+8" refreshOnNotifyMessage="" autoRefreshEnabled="0" maxScale="0">
+      <extent>
+        <xmin>-20037508.34278924390673637</xmin>
+        <ymin>-20037508.34278925508260727</ymin>
+        <xmax>20037508.34278924390673637</xmax>
+        <ymax>20037508.34278924390673637</ymax>
+      </extent>
+      <id>hsl_map_352b6a9e_8137_48d7_b4a5_a222c6024c2c</id>
+      <datasource>crs=EPSG:3857&amp;format&amp;type=xyz&amp;url=https://cdn.digitransit.fi/map/v1/hsl-map/%7Bz%7D/%7Bx%7D/%7By%7D.png</datasource>
+      <keywordList>
+        <value></value>
+      </keywordList>
+      <layername>hsl-map 100</layername>
+      <srs>
+        <spatialrefsys>
+          <wkt>PROJCS["WGS 84 / Pseudo-Mercator",GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4326"]],PROJECTION["Mercator_1SP"],PARAMETER["central_meridian",0],PARAMETER["scale_factor",1],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["X",EAST],AXIS["Y",NORTH],EXTENSION["PROJ4","+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs"],AUTHORITY["EPSG","3857"]]</wkt>
+          <proj4>+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs</proj4>
+          <srsid>3857</srsid>
+          <srid>3857</srid>
+          <authid>EPSG:3857</authid>
+          <description>WGS 84 / Pseudo-Mercator</description>
+          <projectionacronym>merc</projectionacronym>
+          <ellipsoidacronym>WGS84</ellipsoidacronym>
+          <geographicflag>false</geographicflag>
+        </spatialrefsys>
+      </srs>
+      <resourceMetadata>
+        <identifier></identifier>
+        <parentidentifier></parentidentifier>
+        <language></language>
+        <type></type>
+        <title></title>
+        <abstract></abstract>
+        <links/>
+        <fees></fees>
+        <encoding></encoding>
+        <crs>
+          <spatialrefsys>
+            <wkt></wkt>
+            <proj4></proj4>
+            <srsid>0</srsid>
+            <srid>0</srid>
+            <authid></authid>
+            <description></description>
+            <projectionacronym></projectionacronym>
+            <ellipsoidacronym></ellipsoidacronym>
+            <geographicflag>true</geographicflag>
+          </spatialrefsys>
+        </crs>
+        <extent/>
+      </resourceMetadata>
+      <provider>wms</provider>
+      <noData>
+        <noDataList useSrcNoData="0" bandNo="1"/>
+      </noData>
+      <map-layer-style-manager current="default">
+        <map-layer-style name="default"/>
+      </map-layer-style-manager>
+      <flags>
+        <Identifiable>1</Identifiable>
+        <Removable>1</Removable>
+        <Searchable>1</Searchable>
+      </flags>
+      <temporal mode="0" enabled="0" fetchMode="0">
+        <fixedRange>
+          <start></start>
+          <end></end>
+        </fixedRange>
+      </temporal>
+      <customproperties>
+        <property value="Undefined" key="identify/format"/>
+      </customproperties>
+      <pipe>
+        <provider>
+          <resampling zoomedOutResamplingMethod="nearestNeighbour" enabled="false" zoomedInResamplingMethod="nearestNeighbour" maxOversampling="2"/>
+        </provider>
+        <rasterrenderer type="singlebandcolordata" opacity="1" nodataColor="" alphaBand="-1" band="1">
+          <rasterTransparency/>
+          <minMaxOrigin>
+            <limits>None</limits>
+            <extent>WholeRaster</extent>
+            <statAccuracy>Estimated</statAccuracy>
+            <cumulativeCutLower>0.02</cumulativeCutLower>
+            <cumulativeCutUpper>0.98</cumulativeCutUpper>
+            <stdDevFactor>2</stdDevFactor>
+          </minMaxOrigin>
+        </rasterrenderer>
+        <brightnesscontrast brightness="0" gamma="1" contrast="0"/>
+        <huesaturation grayscaleMode="0" colorizeGreen="128" colorizeOn="0" colorizeStrength="100" saturation="0" colorizeRed="255" colorizeBlue="128"/>
+        <rasterresampler maxOversampling="2"/>
+        <resamplingStage>resamplingFilter</resamplingStage>
+      </pipe>
+      <blendMode>0</blendMode>
+    </maplayer>
+    <maplayer simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" maxScale="0" simplifyDrawingTol="1" minScale="100000000" type="vector" refreshOnNotifyMessage="" wkbType="Point" autoRefreshEnabled="0" autoRefreshTime="0" simplifyAlgorithm="0" readOnly="0" geometry="Point" styleCategories="AllStyleCategories" refreshOnNotifyEnabled="0" simplifyDrawingHints="1" simplifyLocal="1" labelsEnabled="0">
+      <extent>
+        <xmin>87130.67766462051076815</xmin>
+        <ymin>6641069.03805992379784584</ymin>
+        <xmax>632904.85325699381064624</xmax>
+        <ymax>7384887.77161229774355888</ymax>
+      </extent>
+      <id>jore_stop_b0ddc35a_8a7c_489d_9ef8_7c030c872714</id>
+      <datasource>dbname='stopcorr' host=localhost port=5432 user='postgres' password='postgres' sslmode=disable key='stop_id' srid=3067 type=Point checkPrimaryKeyUnicity='1' table="public"."jore_stop" (geom)</datasource>
+      <keywordList>
+        <value></value>
+      </keywordList>
+      <layername>jore_stop</layername>
+      <srs>
+        <spatialrefsys>
+          <wkt>PROJCS["ETRS89 / TM35FIN(E,N)",GEOGCS["ETRS89",DATUM["European_Terrestrial_Reference_System_1989",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6258"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4258"]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",27],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],AUTHORITY["EPSG","3067"]]</wkt>
+          <proj4>+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs</proj4>
+          <srsid>1030</srsid>
+          <srid>3067</srid>
+          <authid>EPSG:3067</authid>
+          <description>ETRS89 / TM35FIN(E,N)</description>
+          <projectionacronym>utm</projectionacronym>
+          <ellipsoidacronym>GRS80</ellipsoidacronym>
+          <geographicflag>false</geographicflag>
+        </spatialrefsys>
+      </srs>
+      <resourceMetadata>
+        <identifier></identifier>
+        <parentidentifier></parentidentifier>
+        <language></language>
+        <type>dataset</type>
+        <title></title>
+        <abstract>Current HSL stops from Jore/Digitransit. See Digitransit for the first columns.</abstract>
+        <links/>
+        <fees></fees>
+        <encoding></encoding>
+        <crs>
+          <spatialrefsys>
+            <wkt>PROJCS["ETRS89 / TM35FIN(E,N)",GEOGCS["ETRS89",DATUM["European_Terrestrial_Reference_System_1989",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6258"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4258"]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",27],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],AUTHORITY["EPSG","3067"]]</wkt>
+            <proj4>+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs</proj4>
+            <srsid>1030</srsid>
+            <srid>3067</srid>
+            <authid>EPSG:3067</authid>
+            <description>ETRS89 / TM35FIN(E,N)</description>
+            <projectionacronym>utm</projectionacronym>
+            <ellipsoidacronym>GRS80</ellipsoidacronym>
+            <geographicflag>false</geographicflag>
+          </spatialrefsys>
+        </crs>
+        <extent/>
+      </resourceMetadata>
+      <provider encoding="">postgres</provider>
+      <vectorjoins/>
+      <layerDependencies/>
+      <dataDependencies/>
+      <expressionfields/>
+      <map-layer-style-manager current="default">
+        <map-layer-style name="default"/>
+      </map-layer-style-manager>
+      <auxiliaryLayer/>
+      <flags>
+        <Identifiable>1</Identifiable>
+        <Removable>1</Removable>
+        <Searchable>1</Searchable>
+      </flags>
+      <temporal startExpression="" endField="" durationField="" mode="0" durationUnit="min" accumulate="0" enabled="0" startField="" fixedDuration="0" endExpression="">
+        <fixedRange>
+          <start></start>
+          <end></end>
+        </fixedRange>
+      </temporal>
+      <renderer-v2 type="RuleRenderer" symbollevels="0" forceraster="0" enableorderby="0">
+        <rules key="{a33bdefc-fd41-4fa4-8339-7bd50439d04a}">
+          <rule symbol="0" filter="stop_id = @atlas_featureid" key="{56e8b4f7-19cf-451f-97f1-3ccc5a325998}"/>
+        </rules>
+        <symbols>
+          <symbol force_rhr="0" type="marker" alpha="1" name="0" clip_to_extent="1">
+            <layer pass="0" class="SimpleMarker" enabled="1" locked="0">
+              <prop k="angle" v="0"/>
+              <prop k="color" v="255,255,255,255"/>
+              <prop k="horizontal_anchor_point" v="1"/>
+              <prop k="joinstyle" v="bevel"/>
+              <prop k="name" v="circle"/>
+              <prop k="offset" v="0,0"/>
+              <prop k="offset_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="outline_color" v="0,122,201,255"/>
+              <prop k="outline_style" v="solid"/>
+              <prop k="outline_width" v="0.6"/>
+              <prop k="outline_width_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="outline_width_unit" v="MM"/>
+              <prop k="scale_method" v="diameter"/>
+              <prop k="size" v="3"/>
+              <prop k="size_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="size_unit" v="MM"/>
+              <prop k="vertical_anchor_point" v="1"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </symbols>
+      </renderer-v2>
+      <customproperties/>
+      <blendMode>0</blendMode>
+      <featureBlendMode>0</featureBlendMode>
+      <layerOpacity>1</layerOpacity>
+      <geometryOptions geometryPrecision="0" removeDuplicateNodes="0">
+        <activeChecks type="StringList">
+          <Option type="QString" value=""/>
+        </activeChecks>
+        <checkConfiguration/>
+      </geometryOptions>
+      <legend type="default-vector"/>
+      <referencedLayers/>
+      <fieldConfiguration>
+        <field name="stop_id" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="stop_code" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="stop_name" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="parent_station" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="stop_mode" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="route_dirs_via_stop" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="date_imported" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="long" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="lat" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+      </fieldConfiguration>
+      <aliases>
+        <alias index="0" name="" field="stop_id"/>
+        <alias index="1" name="" field="stop_code"/>
+        <alias index="2" name="" field="stop_name"/>
+        <alias index="3" name="" field="parent_station"/>
+        <alias index="4" name="" field="stop_mode"/>
+        <alias index="5" name="" field="route_dirs_via_stop"/>
+        <alias index="6" name="" field="date_imported"/>
+        <alias index="7" name="" field="long"/>
+        <alias index="8" name="" field="lat"/>
+      </aliases>
+      <defaults>
+        <default expression="" applyOnUpdate="0" field="stop_id"/>
+        <default expression="" applyOnUpdate="0" field="stop_code"/>
+        <default expression="" applyOnUpdate="0" field="stop_name"/>
+        <default expression="" applyOnUpdate="0" field="parent_station"/>
+        <default expression="" applyOnUpdate="0" field="stop_mode"/>
+        <default expression="" applyOnUpdate="0" field="route_dirs_via_stop"/>
+        <default expression="" applyOnUpdate="0" field="date_imported"/>
+        <default expression="" applyOnUpdate="0" field="long"/>
+        <default expression="" applyOnUpdate="0" field="lat"/>
+      </defaults>
+      <constraints>
+        <constraint notnull_strength="1" constraints="3" exp_strength="0" field="stop_id" unique_strength="1"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="stop_code" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="stop_name" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="parent_station" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="stop_mode" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="route_dirs_via_stop" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="date_imported" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="long" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="lat" unique_strength="0"/>
+      </constraints>
+      <constraintExpressions>
+        <constraint exp="" desc="" field="stop_id"/>
+        <constraint exp="" desc="" field="stop_code"/>
+        <constraint exp="" desc="" field="stop_name"/>
+        <constraint exp="" desc="" field="parent_station"/>
+        <constraint exp="" desc="" field="stop_mode"/>
+        <constraint exp="" desc="" field="route_dirs_via_stop"/>
+        <constraint exp="" desc="" field="date_imported"/>
+        <constraint exp="" desc="" field="long"/>
+        <constraint exp="" desc="" field="lat"/>
+      </constraintExpressions>
+      <expressionfields/>
+      <attributeactions>
+        <defaultAction value="{00000000-0000-0000-0000-000000000000}" key="Canvas"/>
+      </attributeactions>
+      <attributetableconfig sortExpression="" actionWidgetStyle="dropDown" sortOrder="0">
+        <columns/>
+      </attributetableconfig>
+      <conditionalstyles>
+        <rowstyles/>
+        <fieldstyles/>
+      </conditionalstyles>
+      <storedexpressions/>
+      <editform tolerant="1"></editform>
+      <editforminit/>
+      <editforminitcodesource>0</editforminitcodesource>
+      <editforminitfilepath></editforminitfilepath>
+      <editforminitcode><![CDATA[]]></editforminitcode>
+      <featformsuppress>0</featformsuppress>
+      <editorlayout>generatedlayout</editorlayout>
+      <editable/>
+      <labelOnTop/>
+      <dataDefinedFieldProperties/>
+      <widgets/>
+      <previewExpression></previewExpression>
+      <mapTip></mapTip>
+    </maplayer>
+    <maplayer simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" maxScale="0" simplifyDrawingTol="1" minScale="100000000" type="vector" refreshOnNotifyMessage="" wkbType="Point" autoRefreshEnabled="0" autoRefreshTime="0" simplifyAlgorithm="0" readOnly="0" geometry="Point" styleCategories="AllStyleCategories" refreshOnNotifyEnabled="0" simplifyDrawingHints="1" simplifyLocal="1" labelsEnabled="0">
+      <extent>
+        <xmin>310612.09714382846141234</xmin>
+        <ymin>6502347.21974521316587925</ymin>
+        <xmax>608438.21403876692056656</xmax>
+        <ymax>6879359.36042729299515486</ymax>
+      </extent>
+      <id>observation_2448dc91_67ec_4655_8fb2_1513a4d4d890</id>
+      <datasource>dbname='stopcorr' host=localhost port=5432 user='postgres' password='postgres' sslmode=disable key='tst,event,oper,veh' srid=3067 type=Point checkPrimaryKeyUnicity='1' table="public"."observation" (geom) sql=stop_id IS NULL</datasource>
+      <keywordList>
+        <value></value>
+      </keywordList>
+      <layername>NULL stop id</layername>
+      <srs>
+        <spatialrefsys>
+          <wkt>PROJCS["ETRS89 / TM35FIN(E,N)",GEOGCS["ETRS89",DATUM["European_Terrestrial_Reference_System_1989",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6258"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4258"]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",27],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],AUTHORITY["EPSG","3067"]]</wkt>
+          <proj4>+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs</proj4>
+          <srsid>1030</srsid>
+          <srid>3067</srid>
+          <authid>EPSG:3067</authid>
+          <description>ETRS89 / TM35FIN(E,N)</description>
+          <projectionacronym>utm</projectionacronym>
+          <ellipsoidacronym>GRS80</ellipsoidacronym>
+          <geographicflag>false</geographicflag>
+        </spatialrefsys>
+      </srs>
+      <resourceMetadata>
+        <identifier></identifier>
+        <parentidentifier></parentidentifier>
+        <language></language>
+        <type>dataset</type>
+        <title></title>
+        <abstract>DOO and DOC events imported from HFP. See Digitransit doc for the first columns.</abstract>
+        <links/>
+        <fees></fees>
+        <encoding></encoding>
+        <crs>
+          <spatialrefsys>
+            <wkt>PROJCS["ETRS89 / TM35FIN(E,N)",GEOGCS["ETRS89",DATUM["European_Terrestrial_Reference_System_1989",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6258"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4258"]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",27],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],AUTHORITY["EPSG","3067"]]</wkt>
+            <proj4>+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs</proj4>
+            <srsid>1030</srsid>
+            <srid>3067</srid>
+            <authid>EPSG:3067</authid>
+            <description>ETRS89 / TM35FIN(E,N)</description>
+            <projectionacronym>utm</projectionacronym>
+            <ellipsoidacronym>GRS80</ellipsoidacronym>
+            <geographicflag>false</geographicflag>
+          </spatialrefsys>
+        </crs>
+        <extent/>
+      </resourceMetadata>
+      <provider encoding="">postgres</provider>
+      <vectorjoins/>
+      <layerDependencies/>
+      <dataDependencies/>
+      <expressionfields/>
+      <map-layer-style-manager current="default">
+        <map-layer-style name="default"/>
+      </map-layer-style-manager>
+      <auxiliaryLayer/>
+      <flags>
+        <Identifiable>1</Identifiable>
+        <Removable>1</Removable>
+        <Searchable>1</Searchable>
+      </flags>
+      <temporal startExpression="" endField="" durationField="" mode="0" durationUnit="min" accumulate="0" enabled="0" startField="" fixedDuration="0" endExpression="">
+        <fixedRange>
+          <start></start>
+          <end></end>
+        </fixedRange>
+      </temporal>
+      <renderer-v2 type="singleSymbol" symbollevels="0" forceraster="0" enableorderby="0">
+        <symbols>
+          <symbol force_rhr="0" type="marker" alpha="1" name="0" clip_to_extent="1">
+            <layer pass="0" class="SimpleMarker" enabled="1" locked="0">
+              <prop k="angle" v="0"/>
+              <prop k="color" v="226,60,60,20"/>
+              <prop k="horizontal_anchor_point" v="1"/>
+              <prop k="joinstyle" v="bevel"/>
+              <prop k="name" v="circle"/>
+              <prop k="offset" v="0,0"/>
+              <prop k="offset_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="outline_color" v="226,60,60,46"/>
+              <prop k="outline_style" v="solid"/>
+              <prop k="outline_width" v="0"/>
+              <prop k="outline_width_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="outline_width_unit" v="MM"/>
+              <prop k="scale_method" v="diameter"/>
+              <prop k="size" v="1"/>
+              <prop k="size_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="size_unit" v="MM"/>
+              <prop k="vertical_anchor_point" v="1"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </symbols>
+        <rotation/>
+        <sizescale/>
+      </renderer-v2>
+      <customproperties/>
+      <blendMode>0</blendMode>
+      <featureBlendMode>0</featureBlendMode>
+      <layerOpacity>1</layerOpacity>
+      <geometryOptions geometryPrecision="0" removeDuplicateNodes="0">
+        <activeChecks type="StringList">
+          <Option type="QString" value=""/>
+        </activeChecks>
+        <checkConfiguration/>
+      </geometryOptions>
+      <legend type="default-vector"/>
+      <referencedLayers/>
+      <fieldConfiguration>
+        <field name="tst" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="event" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="oper" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="veh" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="route" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="dir" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="oday" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="start" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="stop_id" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="stop_id_guessed" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="dist_to_jore_point_m" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="dist_to_median_point_m" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="long" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="lat" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+      </fieldConfiguration>
+      <aliases>
+        <alias index="0" name="" field="tst"/>
+        <alias index="1" name="" field="event"/>
+        <alias index="2" name="" field="oper"/>
+        <alias index="3" name="" field="veh"/>
+        <alias index="4" name="" field="route"/>
+        <alias index="5" name="" field="dir"/>
+        <alias index="6" name="" field="oday"/>
+        <alias index="7" name="" field="start"/>
+        <alias index="8" name="" field="stop_id"/>
+        <alias index="9" name="" field="stop_id_guessed"/>
+        <alias index="10" name="" field="dist_to_jore_point_m"/>
+        <alias index="11" name="" field="dist_to_median_point_m"/>
+        <alias index="12" name="" field="long"/>
+        <alias index="13" name="" field="lat"/>
+      </aliases>
+      <defaults>
+        <default expression="" applyOnUpdate="0" field="tst"/>
+        <default expression="" applyOnUpdate="0" field="event"/>
+        <default expression="" applyOnUpdate="0" field="oper"/>
+        <default expression="" applyOnUpdate="0" field="veh"/>
+        <default expression="" applyOnUpdate="0" field="route"/>
+        <default expression="" applyOnUpdate="0" field="dir"/>
+        <default expression="" applyOnUpdate="0" field="oday"/>
+        <default expression="" applyOnUpdate="0" field="start"/>
+        <default expression="" applyOnUpdate="0" field="stop_id"/>
+        <default expression="" applyOnUpdate="0" field="stop_id_guessed"/>
+        <default expression="" applyOnUpdate="0" field="dist_to_jore_point_m"/>
+        <default expression="" applyOnUpdate="0" field="dist_to_median_point_m"/>
+        <default expression="" applyOnUpdate="0" field="long"/>
+        <default expression="" applyOnUpdate="0" field="lat"/>
+      </defaults>
+      <constraints>
+        <constraint notnull_strength="1" constraints="1" exp_strength="0" field="tst" unique_strength="0"/>
+        <constraint notnull_strength="1" constraints="1" exp_strength="0" field="event" unique_strength="0"/>
+        <constraint notnull_strength="1" constraints="1" exp_strength="0" field="oper" unique_strength="0"/>
+        <constraint notnull_strength="1" constraints="1" exp_strength="0" field="veh" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="route" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="dir" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="oday" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="start" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="stop_id" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="stop_id_guessed" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="dist_to_jore_point_m" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="dist_to_median_point_m" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="long" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="lat" unique_strength="0"/>
+      </constraints>
+      <constraintExpressions>
+        <constraint exp="" desc="" field="tst"/>
+        <constraint exp="" desc="" field="event"/>
+        <constraint exp="" desc="" field="oper"/>
+        <constraint exp="" desc="" field="veh"/>
+        <constraint exp="" desc="" field="route"/>
+        <constraint exp="" desc="" field="dir"/>
+        <constraint exp="" desc="" field="oday"/>
+        <constraint exp="" desc="" field="start"/>
+        <constraint exp="" desc="" field="stop_id"/>
+        <constraint exp="" desc="" field="stop_id_guessed"/>
+        <constraint exp="" desc="" field="dist_to_jore_point_m"/>
+        <constraint exp="" desc="" field="dist_to_median_point_m"/>
+        <constraint exp="" desc="" field="long"/>
+        <constraint exp="" desc="" field="lat"/>
+      </constraintExpressions>
+      <expressionfields/>
+      <attributeactions>
+        <defaultAction value="{00000000-0000-0000-0000-000000000000}" key="Canvas"/>
+      </attributeactions>
+      <attributetableconfig sortExpression="" actionWidgetStyle="dropDown" sortOrder="0">
+        <columns/>
+      </attributetableconfig>
+      <conditionalstyles>
+        <rowstyles/>
+        <fieldstyles/>
+      </conditionalstyles>
+      <storedexpressions/>
+      <editform tolerant="1"></editform>
+      <editforminit/>
+      <editforminitcodesource>0</editforminitcodesource>
+      <editforminitfilepath></editforminitfilepath>
+      <editforminitcode><![CDATA[]]></editforminitcode>
+      <featformsuppress>0</featformsuppress>
+      <editorlayout>generatedlayout</editorlayout>
+      <editable/>
+      <labelOnTop/>
+      <dataDefinedFieldProperties/>
+      <widgets/>
+      <previewExpression></previewExpression>
+      <mapTip></mapTip>
+    </maplayer>
+    <maplayer simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" maxScale="0" simplifyDrawingTol="1" minScale="100000000" type="vector" refreshOnNotifyMessage="" wkbType="Point" autoRefreshEnabled="0" autoRefreshTime="0" simplifyAlgorithm="0" readOnly="0" geometry="Point" styleCategories="AllStyleCategories" refreshOnNotifyEnabled="0" simplifyDrawingHints="1" simplifyLocal="1" labelsEnabled="0">
+      <extent>
+        <xmin>63733.15268668293720111</xmin>
+        <ymin>6529806.25064119044691324</ymin>
+        <xmax>584554.55349111638497561</xmax>
+        <ymax>7112163.36301364190876484</ymax>
+      </extent>
+      <id>observation_700f46fb_7426_49df_a4f7_75d9cf32f354</id>
+      <datasource>dbname='stopcorr' host=localhost port=5432 user='postgres' password='postgres' sslmode=disable key='tst,event,oper,veh' srid=3067 type=Point checkPrimaryKeyUnicity='1' table="public"."observation" (geom) sql=stop_id IS NOT NULL AND stop_id_guessed IS false</datasource>
+      <keywordList>
+        <value></value>
+      </keywordList>
+      <layername>stop known</layername>
+      <srs>
+        <spatialrefsys>
+          <wkt>PROJCS["ETRS89 / TM35FIN(E,N)",GEOGCS["ETRS89",DATUM["European_Terrestrial_Reference_System_1989",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6258"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4258"]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",27],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],AUTHORITY["EPSG","3067"]]</wkt>
+          <proj4>+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs</proj4>
+          <srsid>1030</srsid>
+          <srid>3067</srid>
+          <authid>EPSG:3067</authid>
+          <description>ETRS89 / TM35FIN(E,N)</description>
+          <projectionacronym>utm</projectionacronym>
+          <ellipsoidacronym>GRS80</ellipsoidacronym>
+          <geographicflag>false</geographicflag>
+        </spatialrefsys>
+      </srs>
+      <resourceMetadata>
+        <identifier></identifier>
+        <parentidentifier></parentidentifier>
+        <language></language>
+        <type>dataset</type>
+        <title></title>
+        <abstract>DOO and DOC events imported from HFP. See Digitransit doc for the first columns.</abstract>
+        <links/>
+        <fees></fees>
+        <encoding></encoding>
+        <crs>
+          <spatialrefsys>
+            <wkt>PROJCS["ETRS89 / TM35FIN(E,N)",GEOGCS["ETRS89",DATUM["European_Terrestrial_Reference_System_1989",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6258"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4258"]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",27],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],AUTHORITY["EPSG","3067"]]</wkt>
+            <proj4>+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs</proj4>
+            <srsid>1030</srsid>
+            <srid>3067</srid>
+            <authid>EPSG:3067</authid>
+            <description>ETRS89 / TM35FIN(E,N)</description>
+            <projectionacronym>utm</projectionacronym>
+            <ellipsoidacronym>GRS80</ellipsoidacronym>
+            <geographicflag>false</geographicflag>
+          </spatialrefsys>
+        </crs>
+        <extent/>
+      </resourceMetadata>
+      <provider encoding="">postgres</provider>
+      <vectorjoins/>
+      <layerDependencies/>
+      <dataDependencies/>
+      <expressionfields/>
+      <map-layer-style-manager current="default">
+        <map-layer-style name="default"/>
+      </map-layer-style-manager>
+      <auxiliaryLayer/>
+      <flags>
+        <Identifiable>1</Identifiable>
+        <Removable>1</Removable>
+        <Searchable>1</Searchable>
+      </flags>
+      <temporal startExpression="" endField="" durationField="" mode="0" durationUnit="min" accumulate="0" enabled="0" startField="" fixedDuration="0" endExpression="">
+        <fixedRange>
+          <start></start>
+          <end></end>
+        </fixedRange>
+      </temporal>
+      <renderer-v2 type="RuleRenderer" symbollevels="0" forceraster="0" enableorderby="0">
+        <rules key="{b8e62f8f-1452-4192-ada2-ed9bba5707c4}">
+          <rule symbol="0" filter="stop_id = @atlas_featureid" key="{a4ba1cec-11ac-49e8-a5c1-71d52007a705}"/>
+        </rules>
+        <symbols>
+          <symbol force_rhr="0" type="marker" alpha="1" name="0" clip_to_extent="1">
+            <layer pass="0" class="SimpleMarker" enabled="1" locked="0">
+              <prop k="angle" v="0"/>
+              <prop k="color" v="65,128,221,20"/>
+              <prop k="horizontal_anchor_point" v="1"/>
+              <prop k="joinstyle" v="bevel"/>
+              <prop k="name" v="circle"/>
+              <prop k="offset" v="0,0"/>
+              <prop k="offset_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="outline_color" v="65,128,221,59"/>
+              <prop k="outline_style" v="solid"/>
+              <prop k="outline_width" v="0"/>
+              <prop k="outline_width_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="outline_width_unit" v="MM"/>
+              <prop k="scale_method" v="diameter"/>
+              <prop k="size" v="1"/>
+              <prop k="size_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="size_unit" v="MM"/>
+              <prop k="vertical_anchor_point" v="1"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </symbols>
+      </renderer-v2>
+      <customproperties/>
+      <blendMode>0</blendMode>
+      <featureBlendMode>0</featureBlendMode>
+      <layerOpacity>1</layerOpacity>
+      <geometryOptions geometryPrecision="0" removeDuplicateNodes="0">
+        <activeChecks type="StringList">
+          <Option type="QString" value=""/>
+        </activeChecks>
+        <checkConfiguration/>
+      </geometryOptions>
+      <legend type="default-vector"/>
+      <referencedLayers/>
+      <fieldConfiguration>
+        <field name="tst" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="event" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="oper" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="veh" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="route" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="dir" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="oday" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="start" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="stop_id" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="stop_id_guessed" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="dist_to_jore_point_m" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="dist_to_median_point_m" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="long" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="lat" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+      </fieldConfiguration>
+      <aliases>
+        <alias index="0" name="" field="tst"/>
+        <alias index="1" name="" field="event"/>
+        <alias index="2" name="" field="oper"/>
+        <alias index="3" name="" field="veh"/>
+        <alias index="4" name="" field="route"/>
+        <alias index="5" name="" field="dir"/>
+        <alias index="6" name="" field="oday"/>
+        <alias index="7" name="" field="start"/>
+        <alias index="8" name="" field="stop_id"/>
+        <alias index="9" name="" field="stop_id_guessed"/>
+        <alias index="10" name="" field="dist_to_jore_point_m"/>
+        <alias index="11" name="" field="dist_to_median_point_m"/>
+        <alias index="12" name="" field="long"/>
+        <alias index="13" name="" field="lat"/>
+      </aliases>
+      <defaults>
+        <default expression="" applyOnUpdate="0" field="tst"/>
+        <default expression="" applyOnUpdate="0" field="event"/>
+        <default expression="" applyOnUpdate="0" field="oper"/>
+        <default expression="" applyOnUpdate="0" field="veh"/>
+        <default expression="" applyOnUpdate="0" field="route"/>
+        <default expression="" applyOnUpdate="0" field="dir"/>
+        <default expression="" applyOnUpdate="0" field="oday"/>
+        <default expression="" applyOnUpdate="0" field="start"/>
+        <default expression="" applyOnUpdate="0" field="stop_id"/>
+        <default expression="" applyOnUpdate="0" field="stop_id_guessed"/>
+        <default expression="" applyOnUpdate="0" field="dist_to_jore_point_m"/>
+        <default expression="" applyOnUpdate="0" field="dist_to_median_point_m"/>
+        <default expression="" applyOnUpdate="0" field="long"/>
+        <default expression="" applyOnUpdate="0" field="lat"/>
+      </defaults>
+      <constraints>
+        <constraint notnull_strength="1" constraints="1" exp_strength="0" field="tst" unique_strength="0"/>
+        <constraint notnull_strength="1" constraints="1" exp_strength="0" field="event" unique_strength="0"/>
+        <constraint notnull_strength="1" constraints="1" exp_strength="0" field="oper" unique_strength="0"/>
+        <constraint notnull_strength="1" constraints="1" exp_strength="0" field="veh" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="route" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="dir" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="oday" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="start" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="stop_id" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="stop_id_guessed" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="dist_to_jore_point_m" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="dist_to_median_point_m" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="long" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="lat" unique_strength="0"/>
+      </constraints>
+      <constraintExpressions>
+        <constraint exp="" desc="" field="tst"/>
+        <constraint exp="" desc="" field="event"/>
+        <constraint exp="" desc="" field="oper"/>
+        <constraint exp="" desc="" field="veh"/>
+        <constraint exp="" desc="" field="route"/>
+        <constraint exp="" desc="" field="dir"/>
+        <constraint exp="" desc="" field="oday"/>
+        <constraint exp="" desc="" field="start"/>
+        <constraint exp="" desc="" field="stop_id"/>
+        <constraint exp="" desc="" field="stop_id_guessed"/>
+        <constraint exp="" desc="" field="dist_to_jore_point_m"/>
+        <constraint exp="" desc="" field="dist_to_median_point_m"/>
+        <constraint exp="" desc="" field="long"/>
+        <constraint exp="" desc="" field="lat"/>
+      </constraintExpressions>
+      <expressionfields/>
+      <attributeactions>
+        <defaultAction value="{00000000-0000-0000-0000-000000000000}" key="Canvas"/>
+      </attributeactions>
+      <attributetableconfig sortExpression="" actionWidgetStyle="dropDown" sortOrder="0">
+        <columns/>
+      </attributetableconfig>
+      <conditionalstyles>
+        <rowstyles/>
+        <fieldstyles/>
+      </conditionalstyles>
+      <storedexpressions/>
+      <editform tolerant="1"></editform>
+      <editforminit/>
+      <editforminitcodesource>0</editforminitcodesource>
+      <editforminitfilepath></editforminitfilepath>
+      <editforminitcode><![CDATA[]]></editforminitcode>
+      <featformsuppress>0</featformsuppress>
+      <editorlayout>generatedlayout</editorlayout>
+      <editable/>
+      <labelOnTop/>
+      <dataDefinedFieldProperties/>
+      <widgets/>
+      <previewExpression></previewExpression>
+      <mapTip></mapTip>
+    </maplayer>
+    <maplayer simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" maxScale="0" simplifyDrawingTol="1" minScale="100000000" type="vector" refreshOnNotifyMessage="" wkbType="Point" autoRefreshEnabled="0" autoRefreshTime="0" simplifyAlgorithm="0" readOnly="0" geometry="Point" styleCategories="AllStyleCategories" refreshOnNotifyEnabled="0" simplifyDrawingHints="1" simplifyLocal="1" labelsEnabled="0">
+      <extent>
+        <xmin>352769.92013832996599376</xmin>
+        <ymin>6657529.35283956956118345</ymin>
+        <xmax>411240.25630573654780164</xmax>
+        <ymax>6723234.84032828267663717</ymax>
+      </extent>
+      <id>stop_known_d9f6e739_c232_4b07_adf1_4c97fbffde68</id>
+      <datasource>dbname='stopcorr' host=localhost port=5432 user='postgres' password='postgres' sslmode=disable key='tst,event,oper,veh' srid=3067 type=Point checkPrimaryKeyUnicity='1' table="public"."observation" (geom) sql=stop_id IS NOT NULL AND stop_id_guessed IS true</datasource>
+      <keywordList>
+        <value></value>
+      </keywordList>
+      <layername>stop guessed</layername>
+      <srs>
+        <spatialrefsys>
+          <wkt>PROJCS["ETRS89 / TM35FIN(E,N)",GEOGCS["ETRS89",DATUM["European_Terrestrial_Reference_System_1989",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6258"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4258"]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",27],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],AUTHORITY["EPSG","3067"]]</wkt>
+          <proj4>+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs</proj4>
+          <srsid>1030</srsid>
+          <srid>3067</srid>
+          <authid>EPSG:3067</authid>
+          <description>ETRS89 / TM35FIN(E,N)</description>
+          <projectionacronym>utm</projectionacronym>
+          <ellipsoidacronym>GRS80</ellipsoidacronym>
+          <geographicflag>false</geographicflag>
+        </spatialrefsys>
+      </srs>
+      <resourceMetadata>
+        <identifier></identifier>
+        <parentidentifier></parentidentifier>
+        <language></language>
+        <type>dataset</type>
+        <title></title>
+        <abstract>DOO and DOC events imported from HFP. See Digitransit doc for the first columns.</abstract>
+        <links/>
+        <fees></fees>
+        <encoding></encoding>
+        <crs>
+          <spatialrefsys>
+            <wkt>PROJCS["ETRS89 / TM35FIN(E,N)",GEOGCS["ETRS89",DATUM["European_Terrestrial_Reference_System_1989",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6258"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4258"]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",27],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],AUTHORITY["EPSG","3067"]]</wkt>
+            <proj4>+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs</proj4>
+            <srsid>1030</srsid>
+            <srid>3067</srid>
+            <authid>EPSG:3067</authid>
+            <description>ETRS89 / TM35FIN(E,N)</description>
+            <projectionacronym>utm</projectionacronym>
+            <ellipsoidacronym>GRS80</ellipsoidacronym>
+            <geographicflag>false</geographicflag>
+          </spatialrefsys>
+        </crs>
+        <extent/>
+      </resourceMetadata>
+      <provider encoding="">postgres</provider>
+      <vectorjoins/>
+      <layerDependencies/>
+      <dataDependencies/>
+      <expressionfields/>
+      <map-layer-style-manager current="default">
+        <map-layer-style name="default"/>
+      </map-layer-style-manager>
+      <auxiliaryLayer/>
+      <flags>
+        <Identifiable>1</Identifiable>
+        <Removable>1</Removable>
+        <Searchable>1</Searchable>
+      </flags>
+      <temporal startExpression="" endField="" durationField="" mode="0" durationUnit="min" accumulate="0" enabled="0" startField="" fixedDuration="0" endExpression="">
+        <fixedRange>
+          <start></start>
+          <end></end>
+        </fixedRange>
+      </temporal>
+      <renderer-v2 type="RuleRenderer" symbollevels="0" forceraster="0" enableorderby="0">
+        <rules key="{b8e62f8f-1452-4192-ada2-ed9bba5707c4}">
+          <rule symbol="0" filter="stop_id = @atlas_featureid" key="{a4ba1cec-11ac-49e8-a5c1-71d52007a705}"/>
+        </rules>
+        <symbols>
+          <symbol force_rhr="0" type="marker" alpha="1" name="0" clip_to_extent="1">
+            <layer pass="0" class="SimpleMarker" enabled="1" locked="0">
+              <prop k="angle" v="0"/>
+              <prop k="color" v="207,152,79,20"/>
+              <prop k="horizontal_anchor_point" v="1"/>
+              <prop k="joinstyle" v="bevel"/>
+              <prop k="name" v="circle"/>
+              <prop k="offset" v="0,0"/>
+              <prop k="offset_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="outline_color" v="207,152,79,58"/>
+              <prop k="outline_style" v="solid"/>
+              <prop k="outline_width" v="0"/>
+              <prop k="outline_width_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="outline_width_unit" v="MM"/>
+              <prop k="scale_method" v="diameter"/>
+              <prop k="size" v="1"/>
+              <prop k="size_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="size_unit" v="MM"/>
+              <prop k="vertical_anchor_point" v="1"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </symbols>
+      </renderer-v2>
+      <customproperties/>
+      <blendMode>0</blendMode>
+      <featureBlendMode>0</featureBlendMode>
+      <layerOpacity>1</layerOpacity>
+      <geometryOptions geometryPrecision="0" removeDuplicateNodes="0">
+        <activeChecks type="StringList">
+          <Option type="QString" value=""/>
+        </activeChecks>
+        <checkConfiguration/>
+      </geometryOptions>
+      <legend type="default-vector"/>
+      <referencedLayers/>
+      <fieldConfiguration>
+        <field name="tst" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="event" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="oper" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="veh" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="route" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="dir" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="oday" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="start" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="stop_id" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="stop_id_guessed" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="dist_to_jore_point_m" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="dist_to_median_point_m" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="long" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+        <field name="lat" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+      </fieldConfiguration>
+      <aliases>
+        <alias index="0" name="" field="tst"/>
+        <alias index="1" name="" field="event"/>
+        <alias index="2" name="" field="oper"/>
+        <alias index="3" name="" field="veh"/>
+        <alias index="4" name="" field="route"/>
+        <alias index="5" name="" field="dir"/>
+        <alias index="6" name="" field="oday"/>
+        <alias index="7" name="" field="start"/>
+        <alias index="8" name="" field="stop_id"/>
+        <alias index="9" name="" field="stop_id_guessed"/>
+        <alias index="10" name="" field="dist_to_jore_point_m"/>
+        <alias index="11" name="" field="dist_to_median_point_m"/>
+        <alias index="12" name="" field="long"/>
+        <alias index="13" name="" field="lat"/>
+      </aliases>
+      <defaults>
+        <default expression="" applyOnUpdate="0" field="tst"/>
+        <default expression="" applyOnUpdate="0" field="event"/>
+        <default expression="" applyOnUpdate="0" field="oper"/>
+        <default expression="" applyOnUpdate="0" field="veh"/>
+        <default expression="" applyOnUpdate="0" field="route"/>
+        <default expression="" applyOnUpdate="0" field="dir"/>
+        <default expression="" applyOnUpdate="0" field="oday"/>
+        <default expression="" applyOnUpdate="0" field="start"/>
+        <default expression="" applyOnUpdate="0" field="stop_id"/>
+        <default expression="" applyOnUpdate="0" field="stop_id_guessed"/>
+        <default expression="" applyOnUpdate="0" field="dist_to_jore_point_m"/>
+        <default expression="" applyOnUpdate="0" field="dist_to_median_point_m"/>
+        <default expression="" applyOnUpdate="0" field="long"/>
+        <default expression="" applyOnUpdate="0" field="lat"/>
+      </defaults>
+      <constraints>
+        <constraint notnull_strength="1" constraints="1" exp_strength="0" field="tst" unique_strength="0"/>
+        <constraint notnull_strength="1" constraints="1" exp_strength="0" field="event" unique_strength="0"/>
+        <constraint notnull_strength="1" constraints="1" exp_strength="0" field="oper" unique_strength="0"/>
+        <constraint notnull_strength="1" constraints="1" exp_strength="0" field="veh" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="route" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="dir" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="oday" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="start" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="stop_id" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="stop_id_guessed" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="dist_to_jore_point_m" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="dist_to_median_point_m" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="long" unique_strength="0"/>
+        <constraint notnull_strength="0" constraints="0" exp_strength="0" field="lat" unique_strength="0"/>
+      </constraints>
+      <constraintExpressions>
+        <constraint exp="" desc="" field="tst"/>
+        <constraint exp="" desc="" field="event"/>
+        <constraint exp="" desc="" field="oper"/>
+        <constraint exp="" desc="" field="veh"/>
+        <constraint exp="" desc="" field="route"/>
+        <constraint exp="" desc="" field="dir"/>
+        <constraint exp="" desc="" field="oday"/>
+        <constraint exp="" desc="" field="start"/>
+        <constraint exp="" desc="" field="stop_id"/>
+        <constraint exp="" desc="" field="stop_id_guessed"/>
+        <constraint exp="" desc="" field="dist_to_jore_point_m"/>
+        <constraint exp="" desc="" field="dist_to_median_point_m"/>
+        <constraint exp="" desc="" field="long"/>
+        <constraint exp="" desc="" field="lat"/>
+      </constraintExpressions>
+      <expressionfields/>
+      <attributeactions>
+        <defaultAction value="{00000000-0000-0000-0000-000000000000}" key="Canvas"/>
+      </attributeactions>
+      <attributetableconfig sortExpression="" actionWidgetStyle="dropDown" sortOrder="0">
+        <columns/>
+      </attributetableconfig>
+      <conditionalstyles>
+        <rowstyles/>
+        <fieldstyles/>
+      </conditionalstyles>
+      <storedexpressions/>
+      <editform tolerant="1"></editform>
+      <editforminit/>
+      <editforminitcodesource>0</editforminitcodesource>
+      <editforminitfilepath></editforminitfilepath>
+      <editforminitcode><![CDATA[]]></editforminitcode>
+      <featformsuppress>0</featformsuppress>
+      <editorlayout>generatedlayout</editorlayout>
+      <editable/>
+      <labelOnTop/>
+      <dataDefinedFieldProperties/>
+      <widgets/>
+      <previewExpression></previewExpression>
+      <mapTip></mapTip>
+    </maplayer>
+    <maplayer simplifyMaxScale="1" hasScaleBasedVisibilityFlag="0" maxScale="0" simplifyDrawingTol="1" minScale="100000000" type="vector" refreshOnNotifyMessage="" wkbType="Polygon" autoRefreshEnabled="0" autoRefreshTime="0" simplifyAlgorithm="0" readOnly="0" geometry="Polygon" styleCategories="AllStyleCategories" refreshOnNotifyEnabled="0" simplifyDrawingHints="1" simplifyLocal="1" labelsEnabled="0">
+      <extent>
+        <xmin>24.66175763433964363</xmin>
+        <ymin>60.13895991768374216</ymin>
+        <xmax>25.33152038230667458</xmax>
+        <ymax>60.53294202664677925</ymax>
+      </extent>
+      <id>viewports_1d50d9f6_2f4e_4b79_9e31_b6a081a4d9db</id>
+      <datasource>dbname='stopcorr' host=localhost port=5432 user='postgres' password='postgres' sslmode=disable key='stop_id' checkPrimaryKeyUnicity='1' table="(SELECT vrv.* FROM view_report_viewport AS vrv INNER JOIN stop_median AS sm   ON (vrv.stop_id = sm.stop_id) WHERE (sm.n_stop_known + sm.n_stop_guessed) >= 100   AND sm.dist_to_jore_point_m >= 25    OR sm.dist_to_jore_point_m IS NULL
+)" (geom)</datasource>
+      <keywordList>
+        <value></value>
+      </keywordList>
+      <layername>viewports atlas</layername>
+      <srs>
+        <spatialrefsys>
+          <wkt>GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4326"]]</wkt>
+          <proj4>+proj=longlat +datum=WGS84 +no_defs</proj4>
+          <srsid>3452</srsid>
+          <srid>4326</srid>
+          <authid>EPSG:4326</authid>
+          <description>WGS 84</description>
+          <projectionacronym>longlat</projectionacronym>
+          <ellipsoidacronym>WGS84</ellipsoidacronym>
+          <geographicflag>true</geographicflag>
+        </spatialrefsys>
+      </srs>
+      <resourceMetadata>
+        <identifier></identifier>
+        <parentidentifier></parentidentifier>
+        <language></language>
+        <type>dataset</type>
+        <title></title>
+        <abstract></abstract>
+        <links/>
+        <fees></fees>
+        <encoding></encoding>
+        <crs>
+          <spatialrefsys>
+            <wkt>GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4326"]]</wkt>
+            <proj4>+proj=longlat +datum=WGS84 +no_defs</proj4>
+            <srsid>3452</srsid>
+            <srid>4326</srid>
+            <authid>EPSG:4326</authid>
+            <description>WGS 84</description>
+            <projectionacronym>longlat</projectionacronym>
+            <ellipsoidacronym>WGS84</ellipsoidacronym>
+            <geographicflag>true</geographicflag>
+          </spatialrefsys>
+        </crs>
+        <extent/>
+      </resourceMetadata>
+      <provider encoding="">postgres</provider>
+      <vectorjoins/>
+      <layerDependencies/>
+      <dataDependencies/>
+      <expressionfields/>
+      <map-layer-style-manager current="default">
+        <map-layer-style name="default"/>
+      </map-layer-style-manager>
+      <auxiliaryLayer/>
+      <flags>
+        <Identifiable>1</Identifiable>
+        <Removable>1</Removable>
+        <Searchable>1</Searchable>
+      </flags>
+      <temporal startExpression="" endField="" durationField="" mode="0" durationUnit="min" accumulate="0" enabled="0" startField="" fixedDuration="0" endExpression="">
+        <fixedRange>
+          <start></start>
+          <end></end>
+        </fixedRange>
+      </temporal>
+      <renderer-v2 type="singleSymbol" symbollevels="0" forceraster="0" enableorderby="0">
+        <symbols>
+          <symbol force_rhr="0" type="fill" alpha="1" name="0" clip_to_extent="1">
+            <layer pass="0" class="SimpleFill" enabled="1" locked="0">
+              <prop k="border_width_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="color" v="220,4,81,34"/>
+              <prop k="joinstyle" v="bevel"/>
+              <prop k="offset" v="0,0"/>
+              <prop k="offset_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="outline_color" v="220,4,81,255"/>
+              <prop k="outline_style" v="solid"/>
+              <prop k="outline_width" v="0.3"/>
+              <prop k="outline_width_unit" v="MM"/>
+              <prop k="style" v="solid"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </symbols>
+        <rotation/>
+        <sizescale/>
+      </renderer-v2>
+      <customproperties>
+        <property value="&quot;stop_id&quot;" key="dualview/previewExpressions"/>
+      </customproperties>
+      <blendMode>0</blendMode>
+      <featureBlendMode>0</featureBlendMode>
+      <layerOpacity>1</layerOpacity>
+      <geometryOptions geometryPrecision="0" removeDuplicateNodes="0">
+        <activeChecks type="StringList">
+          <Option type="QString" value=""/>
+        </activeChecks>
+        <checkConfiguration/>
+      </geometryOptions>
+      <legend type="default-vector"/>
+      <referencedLayers/>
+      <fieldConfiguration>
+        <field name="stop_id" configurationFlags="None">
+          <editWidget type="">
+            <config>
+              <Option/>
+            </config>
+          </editWidget>
+        </field>
+      </fieldConfiguration>
+      <aliases>
+        <alias index="0" name="" field="stop_id"/>
+      </aliases>
+      <defaults>
+        <default expression="" applyOnUpdate="0" field="stop_id"/>
+      </defaults>
+      <constraints>
+        <constraint notnull_strength="1" constraints="3" exp_strength="0" field="stop_id" unique_strength="1"/>
+      </constraints>
+      <constraintExpressions>
+        <constraint exp="" desc="" field="stop_id"/>
+      </constraintExpressions>
+      <expressionfields/>
+      <attributeactions>
+        <defaultAction value="{00000000-0000-0000-0000-000000000000}" key="Canvas"/>
+      </attributeactions>
+      <attributetableconfig sortExpression="" actionWidgetStyle="dropDown" sortOrder="0">
+        <columns>
+          <column type="field" name="stop_id" width="-1" hidden="0"/>
+          <column type="actions" width="-1" hidden="1"/>
+        </columns>
+      </attributetableconfig>
+      <conditionalstyles>
+        <rowstyles/>
+        <fieldstyles/>
+      </conditionalstyles>
+      <storedexpressions/>
+      <editform tolerant="1"></editform>
+      <editforminit/>
+      <editforminitcodesource>0</editforminitcodesource>
+      <editforminitfilepath></editforminitfilepath>
+      <editforminitcode><![CDATA[]]></editforminitcode>
+      <featformsuppress>0</featformsuppress>
+      <editorlayout>generatedlayout</editorlayout>
+      <editable/>
+      <labelOnTop/>
+      <dataDefinedFieldProperties/>
+      <widgets/>
+      <previewExpression>"stop_id"</previewExpression>
+      <mapTip></mapTip>
+    </maplayer>
+  </projectlayers>
+  <layerorder>
+    <layer id="hsl_map_34e508cb_c7f8_4b11_8982_9a31c94875d7"/>
+    <layer id="jore_stop_b0ddc35a_8a7c_489d_9ef8_7c030c872714"/>
+    <layer id="QueryLayer_1bdd7dd0_53a0_415a_9d83_d50405e7c439"/>
+    <layer id="hsl_map_352b6a9e_8137_48d7_b4a5_a222c6024c2c"/>
+    <layer id="viewports_1d50d9f6_2f4e_4b79_9e31_b6a081a4d9db"/>
+    <layer id="QueryLayer_1c6a2b96_64ad_4191_adeb_f6fb34e77dcc"/>
+    <layer id="QueryLayer_bb19bd50_6f5d_4e8f_aacd_94235b3ebc31"/>
+    <layer id="QueryLayer_1e9b8518_63bc_4df5_9196_22723c08d6af"/>
+    <layer id="observation_2448dc91_67ec_4655_8fb2_1513a4d4d890"/>
+    <layer id="observation_700f46fb_7426_49df_a4f7_75d9cf32f354"/>
+    <layer id="stop_known_d9f6e739_c232_4b07_adf1_4c97fbffde68"/>
+  </layerorder>
+  <properties>
+    <DefaultStyles>
+      <ColorRamp type="QString"></ColorRamp>
+      <Fill type="QString"></Fill>
+      <Line type="QString"></Line>
+      <Marker type="QString"></Marker>
+      <Opacity type="double">1</Opacity>
+      <RandomColors type="bool">true</RandomColors>
+    </DefaultStyles>
+    <Digitizing>
+      <AvoidIntersectionsMode type="int">0</AvoidIntersectionsMode>
+    </Digitizing>
+    <Gui>
+      <CanvasColorBluePart type="int">255</CanvasColorBluePart>
+      <CanvasColorGreenPart type="int">255</CanvasColorGreenPart>
+      <CanvasColorRedPart type="int">255</CanvasColorRedPart>
+      <SelectionColorAlphaPart type="int">255</SelectionColorAlphaPart>
+      <SelectionColorBluePart type="int">255</SelectionColorBluePart>
+      <SelectionColorGreenPart type="int">0</SelectionColorGreenPart>
+      <SelectionColorRedPart type="int">255</SelectionColorRedPart>
+    </Gui>
+    <Layouts>
+      <lastLayoutExportDir type="QString">/home/keripukki/keripilvi/gitlab/stop-correspondence/temp/qgis/out</lastLayoutExportDir>
+    </Layouts>
+    <Legend>
+      <filterByMap type="bool">false</filterByMap>
+    </Legend>
+    <Macros>
+      <pythonCode type="QString"></pythonCode>
+    </Macros>
+    <Measure>
+      <Ellipsoid type="QString">WGS84</Ellipsoid>
+    </Measure>
+    <Measurement>
+      <AreaUnits type="QString">m2</AreaUnits>
+      <DistanceUnits type="QString">meters</DistanceUnits>
+    </Measurement>
+    <PAL>
+      <CandidatesLinePerCM type="double">5</CandidatesLinePerCM>
+      <CandidatesPolygonPerCM type="double">2.5</CandidatesPolygonPerCM>
+      <DrawRectOnly type="bool">false</DrawRectOnly>
+      <DrawUnplaced type="bool">false</DrawUnplaced>
+      <PlacementEngineVersion type="int">1</PlacementEngineVersion>
+      <SearchMethod type="int">0</SearchMethod>
+      <ShowingAllLabels type="bool">false</ShowingAllLabels>
+      <ShowingCandidates type="bool">false</ShowingCandidates>
+      <ShowingPartialsLabels type="bool">true</ShowingPartialsLabels>
+      <TextFormat type="int">0</TextFormat>
+      <UnplacedColor type="QString">255,0,0,255</UnplacedColor>
+    </PAL>
+    <Paths>
+      <Absolute type="bool">false</Absolute>
+    </Paths>
+    <PositionPrecision>
+      <Automatic type="bool">true</Automatic>
+      <DecimalPlaces type="int">2</DecimalPlaces>
+      <DegreeFormat type="QString">MU</DegreeFormat>
+    </PositionPrecision>
+    <SpatialRefSys>
+      <ProjectionsEnabled type="int">1</ProjectionsEnabled>
+    </SpatialRefSys>
+    <WCSLayers type="QStringList"/>
+    <WCSUrl type="QString"></WCSUrl>
+    <WFSLayers type="QStringList"/>
+    <WFSTLayers>
+      <Delete type="QStringList"/>
+      <Insert type="QStringList"/>
+      <Update type="QStringList"/>
+    </WFSTLayers>
+    <WFSUrl type="QString"></WFSUrl>
+    <WMSAccessConstraints type="QString">None</WMSAccessConstraints>
+    <WMSAddWktGeometry type="bool">false</WMSAddWktGeometry>
+    <WMSContactMail type="QString"></WMSContactMail>
+    <WMSContactOrganization type="QString"></WMSContactOrganization>
+    <WMSContactPerson type="QString"></WMSContactPerson>
+    <WMSContactPhone type="QString"></WMSContactPhone>
+    <WMSContactPosition type="QString"></WMSContactPosition>
+    <WMSDefaultMapUnitsPerMm type="double">1</WMSDefaultMapUnitsPerMm>
+    <WMSFees type="QString">conditions unknown</WMSFees>
+    <WMSImageQuality type="int">90</WMSImageQuality>
+    <WMSKeywordList type="QStringList">
+      <value></value>
+    </WMSKeywordList>
+    <WMSMaxAtlasFeatures type="int">1</WMSMaxAtlasFeatures>
+    <WMSOnlineResource type="QString"></WMSOnlineResource>
+    <WMSPrecision type="QString">8</WMSPrecision>
+    <WMSRootName type="QString"></WMSRootName>
+    <WMSSegmentizeFeatureInfoGeometry type="bool">false</WMSSegmentizeFeatureInfoGeometry>
+    <WMSServiceAbstract type="QString"></WMSServiceAbstract>
+    <WMSServiceCapabilities type="bool">false</WMSServiceCapabilities>
+    <WMSServiceTitle type="QString"></WMSServiceTitle>
+    <WMSTileBuffer type="int">0</WMSTileBuffer>
+    <WMSUrl type="QString"></WMSUrl>
+    <WMSUseLayerIDs type="bool">false</WMSUseLayerIDs>
+    <WMTSGrids>
+      <CRS type="QStringList"/>
+      <Config type="QStringList"/>
+    </WMTSGrids>
+    <WMTSJpegLayers>
+      <Group type="QStringList"/>
+      <Layer type="QStringList"/>
+      <Project type="bool">false</Project>
+    </WMTSJpegLayers>
+    <WMTSLayers>
+      <Group type="QStringList"/>
+      <Layer type="QStringList"/>
+      <Project type="bool">false</Project>
+    </WMTSLayers>
+    <WMTSMinScale type="int">5000</WMTSMinScale>
+    <WMTSPngLayers>
+      <Group type="QStringList"/>
+      <Layer type="QStringList"/>
+      <Project type="bool">false</Project>
+    </WMTSPngLayers>
+    <WMTSUrl type="QString"></WMTSUrl>
+  </properties>
+  <dataDefinedServerProperties>
+    <Option type="Map">
+      <Option type="QString" value="" name="name"/>
+      <Option name="properties"/>
+      <Option type="QString" value="collection" name="type"/>
+    </Option>
+  </dataDefinedServerProperties>
+  <visibility-presets/>
+  <transformContext>
+    <srcDest sourceTransform="+towgs84=0,0,0" source="EPSG:3067" destTransform="" dest="EPSG:3857"/>
+    <srcDest sourceTransform="+towgs84=0,0,0" source="EPSG:3067" destTransform="" dest="EPSG:4326"/>
+    <srcDest sourceTransform="" source="EPSG:3857" destTransform="+towgs84=0,0,0" dest="EPSG:3067"/>
+  </transformContext>
+  <projectMetadata>
+    <identifier></identifier>
+    <parentidentifier></parentidentifier>
+    <language></language>
+    <type></type>
+    <title></title>
+    <abstract></abstract>
+    <contact>
+      <name></name>
+      <organization></organization>
+      <position></position>
+      <voice></voice>
+      <fax></fax>
+      <email></email>
+      <role></role>
+    </contact>
+    <links/>
+    <author>Arttu Kosonen</author>
+    <creation>2021-08-26T12:42:33</creation>
+  </projectMetadata>
+  <Annotations/>
+  <Layouts>
+    <Layout worldFileMap="{ed6e6fe6-0e06-44a8-9d18-c0c3dda98b0d}" printResolution="300" name="main" units="mm">
+      <Snapper snapToItems="1" tolerance="5" snapToGrid="0" snapToGuides="1"/>
+      <Grid resUnits="mm" offsetX="0" offsetY="0" resolution="10" offsetUnits="mm"/>
+      <PageCollection>
+        <symbol force_rhr="0" type="fill" alpha="1" name="" clip_to_extent="1">
+          <layer pass="0" class="SimpleFill" enabled="1" locked="0">
+            <prop k="border_width_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+            <prop k="color" v="255,255,255,255"/>
+            <prop k="joinstyle" v="miter"/>
+            <prop k="offset" v="0,0"/>
+            <prop k="offset_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+            <prop k="offset_unit" v="MM"/>
+            <prop k="outline_color" v="35,35,35,255"/>
+            <prop k="outline_style" v="no"/>
+            <prop k="outline_width" v="0.26"/>
+            <prop k="outline_width_unit" v="MM"/>
+            <prop k="style" v="solid"/>
+            <data_defined_properties>
+              <Option type="Map">
+                <Option type="QString" value="" name="name"/>
+                <Option name="properties"/>
+                <Option type="QString" value="collection" name="type"/>
+              </Option>
+            </data_defined_properties>
+          </layer>
+        </symbol>
+        <LayoutItem id="" groupUuid="" templateUuid="{4da4fef0-6cb2-4be2-9d95-2a0f592f32ab}" size="165,165,mm" outlineWidthM="0.3,mm" type="65638" frame="false" visibility="1" referencePoint="0" blendMode="0" excludeFromExports="0" frameJoinStyle="miter" positionOnPage="0,0,mm" zValue="0" background="true" opacity="1" positionLock="false" position="0,0,mm" uuid="{4da4fef0-6cb2-4be2-9d95-2a0f592f32ab}" itemRotation="0">
+          <FrameColor red="0" green="0" blue="0" alpha="255"/>
+          <BackgroundColor red="255" green="255" blue="255" alpha="255"/>
+          <LayoutObject>
+            <dataDefinedProperties>
+              <Option type="Map">
+                <Option type="QString" value="" name="name"/>
+                <Option name="properties"/>
+                <Option type="QString" value="collection" name="type"/>
+              </Option>
+            </dataDefinedProperties>
+            <customproperties/>
+          </LayoutObject>
+          <symbol force_rhr="0" type="fill" alpha="1" name="" clip_to_extent="1">
+            <layer pass="0" class="SimpleFill" enabled="1" locked="0">
+              <prop k="border_width_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="color" v="255,255,255,255"/>
+              <prop k="joinstyle" v="miter"/>
+              <prop k="offset" v="0,0"/>
+              <prop k="offset_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="outline_color" v="35,35,35,255"/>
+              <prop k="outline_style" v="no"/>
+              <prop k="outline_width" v="0.26"/>
+              <prop k="outline_width_unit" v="MM"/>
+              <prop k="style" v="solid"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </LayoutItem>
+        <GuideCollection visible="1"/>
+      </PageCollection>
+      <LayoutItem size="146,10.5547,mm" numSubdivisions="1" type="65646" unitType="meters" numSegments="1" style="Line Ticks Up" background="false" frame="false" numMapUnitsPerScaleBarUnit="1" labelBarSpace="2" mapUuid="{ed6e6fe6-0e06-44a8-9d18-c0c3dda98b0d}" subdivisionsHeight="1.5" positionLock="true" uuid="{96808380-6a53-4dc8-ad7d-a27aee56d509}" maxBarWidth="150" id="" opacity="1" alignment="0" groupUuid="" segmentSizeMode="0" minBarWidth="50" visibility="1" boxContentSpace="1" templateUuid="{96808380-6a53-4dc8-ad7d-a27aee56d509}" outlineWidth="0.3" height="2" outlineWidthM="0.3,mm" frameJoinStyle="miter" numSegmentsLeft="0" referencePoint="8" blendMode="0" lineCapStyle="square" itemRotation="0" unitLabel="m" lineJoinStyle="miter" labelVerticalPlacement="0" position="165,165,mm" numUnitsPerSegment="100" zValue="2" excludeFromExports="0" positionOnPage="165,165,mm" segmentMillimeters="135.706" labelHorizontalPlacement="0">
+        <FrameColor red="0" green="0" blue="0" alpha="255"/>
+        <BackgroundColor red="255" green="255" blue="255" alpha="255"/>
+        <LayoutObject>
+          <dataDefinedProperties>
+            <Option type="Map">
+              <Option type="QString" value="" name="name"/>
+              <Option name="properties"/>
+              <Option type="QString" value="collection" name="type"/>
+            </Option>
+          </dataDefinedProperties>
+          <customproperties/>
+        </LayoutObject>
+        <text-style capitalization="0" fontStrikeout="0" previewBkgrdColor="255,255,255,255" fontWeight="50" fontWordSpacing="0" fontKerning="1" textColor="72,72,72,255" fontSizeMapUnitScale="3x:0,0,0,0,0,0" namedStyle="" fontUnderline="0" textOrientation="horizontal" blendMode="0" fontLetterSpacing="0" fontFamily="Arial" allowHtml="0" multilineHeight="1" textOpacity="1" fontItalic="0" fontSize="10" fontSizeUnit="Point">
+          <text-buffer bufferJoinStyle="128" bufferBlendMode="0" bufferOpacity="1" bufferSizeUnits="MM" bufferSizeMapUnitScale="3x:0,0,0,0,0,0" bufferSize="1" bufferDraw="0" bufferColor="255,255,255,255" bufferNoFill="1"/>
+          <text-mask maskType="0" maskOpacity="1" maskedSymbolLayers="" maskEnabled="0" maskSizeUnits="MM" maskSizeMapUnitScale="3x:0,0,0,0,0,0" maskJoinStyle="128" maskSize="1.5"/>
+          <background shapeOpacity="1" shapeRadiiX="0" shapeSizeMapUnitScale="3x:0,0,0,0,0,0" shapeRadiiY="0" shapeFillColor="255,255,255,255" shapeOffsetUnit="MM" shapeSizeUnit="MM" shapeOffsetX="0" shapeType="0" shapeOffsetMapUnitScale="3x:0,0,0,0,0,0" shapeSizeType="0" shapeDraw="0" shapeBorderWidthMapUnitScale="3x:0,0,0,0,0,0" shapeSVGFile="" shapeSizeX="0" shapeBorderWidth="0" shapeJoinStyle="64" shapeRadiiMapUnitScale="3x:0,0,0,0,0,0" shapeBorderWidthUnit="MM" shapeOffsetY="0" shapeRotation="0" shapeRotationType="0" shapeSizeY="0" shapeBorderColor="128,128,128,255" shapeBlendMode="0" shapeRadiiUnit="MM"/>
+          <shadow shadowOffsetDist="1" shadowOpacity="0.7" shadowOffsetUnit="MM" shadowRadius="1.5" shadowRadiusMapUnitScale="3x:0,0,0,0,0,0" shadowColor="0,0,0,255" shadowRadiusAlphaOnly="0" shadowOffsetAngle="135" shadowOffsetMapUnitScale="3x:0,0,0,0,0,0" shadowOffsetGlobal="1" shadowDraw="0" shadowScale="100" shadowBlendMode="6" shadowUnder="0" shadowRadiusUnit="MM"/>
+          <dd_properties>
+            <Option type="Map">
+              <Option type="QString" value="" name="name"/>
+              <Option name="properties"/>
+              <Option type="QString" value="collection" name="type"/>
+            </Option>
+          </dd_properties>
+        </text-style>
+        <strokeColor red="72" green="72" blue="72" alpha="255"/>
+        <numericFormat id="basic">
+          <Option type="Map">
+            <Option type="QChar" value="" name="decimal_separator"/>
+            <Option type="int" value="6" name="decimals"/>
+            <Option type="int" value="0" name="rounding_type"/>
+            <Option type="bool" value="false" name="show_plus"/>
+            <Option type="bool" value="true" name="show_thousand_separator"/>
+            <Option type="bool" value="false" name="show_trailing_zeros"/>
+            <Option type="QChar" value="" name="thousand_separator"/>
+          </Option>
+        </numericFormat>
+        <fillColor red="0" green="0" blue="0" alpha="255"/>
+        <fillColor2 red="255" green="255" blue="255" alpha="255"/>
+        <lineSymbol>
+          <symbol force_rhr="0" type="line" alpha="1" name="" clip_to_extent="1">
+            <layer pass="0" class="SimpleLine" enabled="1" locked="0">
+              <prop k="align_dash_pattern" v="0"/>
+              <prop k="capstyle" v="square"/>
+              <prop k="customdash" v="5;2"/>
+              <prop k="customdash_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="customdash_unit" v="MM"/>
+              <prop k="dash_pattern_offset" v="0"/>
+              <prop k="dash_pattern_offset_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="dash_pattern_offset_unit" v="MM"/>
+              <prop k="draw_inside_polygon" v="0"/>
+              <prop k="joinstyle" v="miter"/>
+              <prop k="line_color" v="72,72,72,255"/>
+              <prop k="line_style" v="solid"/>
+              <prop k="line_width" v="0.3"/>
+              <prop k="line_width_unit" v="MM"/>
+              <prop k="offset" v="0"/>
+              <prop k="offset_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="ring_filter" v="0"/>
+              <prop k="tweak_dash_pattern_on_corners" v="0"/>
+              <prop k="use_custom_dash" v="0"/>
+              <prop k="width_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </lineSymbol>
+        <divisionLineSymbol>
+          <symbol force_rhr="0" type="line" alpha="1" name="" clip_to_extent="1">
+            <layer pass="0" class="SimpleLine" enabled="1" locked="0">
+              <prop k="align_dash_pattern" v="0"/>
+              <prop k="capstyle" v="square"/>
+              <prop k="customdash" v="5;2"/>
+              <prop k="customdash_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="customdash_unit" v="MM"/>
+              <prop k="dash_pattern_offset" v="0"/>
+              <prop k="dash_pattern_offset_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="dash_pattern_offset_unit" v="MM"/>
+              <prop k="draw_inside_polygon" v="0"/>
+              <prop k="joinstyle" v="miter"/>
+              <prop k="line_color" v="72,72,72,255"/>
+              <prop k="line_style" v="solid"/>
+              <prop k="line_width" v="0.3"/>
+              <prop k="line_width_unit" v="MM"/>
+              <prop k="offset" v="0"/>
+              <prop k="offset_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="ring_filter" v="0"/>
+              <prop k="tweak_dash_pattern_on_corners" v="0"/>
+              <prop k="use_custom_dash" v="0"/>
+              <prop k="width_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </divisionLineSymbol>
+        <subdivisionLineSymbol>
+          <symbol force_rhr="0" type="line" alpha="1" name="" clip_to_extent="1">
+            <layer pass="0" class="SimpleLine" enabled="1" locked="0">
+              <prop k="align_dash_pattern" v="0"/>
+              <prop k="capstyle" v="square"/>
+              <prop k="customdash" v="5;2"/>
+              <prop k="customdash_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="customdash_unit" v="MM"/>
+              <prop k="dash_pattern_offset" v="0"/>
+              <prop k="dash_pattern_offset_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="dash_pattern_offset_unit" v="MM"/>
+              <prop k="draw_inside_polygon" v="0"/>
+              <prop k="joinstyle" v="miter"/>
+              <prop k="line_color" v="72,72,72,255"/>
+              <prop k="line_style" v="solid"/>
+              <prop k="line_width" v="0.3"/>
+              <prop k="line_width_unit" v="MM"/>
+              <prop k="offset" v="0"/>
+              <prop k="offset_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="ring_filter" v="0"/>
+              <prop k="tweak_dash_pattern_on_corners" v="0"/>
+              <prop k="use_custom_dash" v="0"/>
+              <prop k="width_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </subdivisionLineSymbol>
+        <fillSymbol1>
+          <symbol force_rhr="0" type="fill" alpha="1" name="" clip_to_extent="1">
+            <layer pass="0" class="SimpleFill" enabled="1" locked="0">
+              <prop k="border_width_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="color" v="0,0,0,255"/>
+              <prop k="joinstyle" v="bevel"/>
+              <prop k="offset" v="0,0"/>
+              <prop k="offset_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="outline_color" v="35,35,35,255"/>
+              <prop k="outline_style" v="no"/>
+              <prop k="outline_width" v="0.26"/>
+              <prop k="outline_width_unit" v="MM"/>
+              <prop k="style" v="solid"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </fillSymbol1>
+        <fillSymbol2>
+          <symbol force_rhr="0" type="fill" alpha="1" name="" clip_to_extent="1">
+            <layer pass="0" class="SimpleFill" enabled="1" locked="0">
+              <prop k="border_width_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="color" v="255,255,255,255"/>
+              <prop k="joinstyle" v="bevel"/>
+              <prop k="offset" v="0,0"/>
+              <prop k="offset_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="outline_color" v="35,35,35,255"/>
+              <prop k="outline_style" v="no"/>
+              <prop k="outline_width" v="0.26"/>
+              <prop k="outline_width_unit" v="MM"/>
+              <prop k="style" v="solid"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </fillSymbol2>
+      </LayoutItem>
+      <LayoutItem id="" drawCanvasItems="true" groupUuid="" templateUuid="{ed6e6fe6-0e06-44a8-9d18-c0c3dda98b0d}" mapFlags="0" size="165,165,mm" outlineWidthM="0.3,mm" type="65639" frame="false" visibility="1" followPresetName="" mapRotation="0" referencePoint="0" blendMode="0" excludeFromExports="0" followPreset="false" frameJoinStyle="miter" positionOnPage="0,0,mm" keepLayerSet="true" zValue="1" background="true" opacity="1" labelMargin="0,mm" positionLock="true" isTemporal="0" position="0,0,mm" uuid="{ed6e6fe6-0e06-44a8-9d18-c0c3dda98b0d}" itemRotation="0">
+        <FrameColor red="0" green="0" blue="0" alpha="255"/>
+        <BackgroundColor red="255" green="255" blue="255" alpha="255"/>
+        <LayoutObject>
+          <dataDefinedProperties>
+            <Option type="Map">
+              <Option type="QString" value="" name="name"/>
+              <Option name="properties"/>
+              <Option type="QString" value="collection" name="type"/>
+            </Option>
+          </dataDefinedProperties>
+          <customproperties/>
+        </LayoutObject>
+        <Extent ymin="8489637.37725176848471165" xmin="2786003.02383764088153839" xmax="2786248.56575833819806576" ymax="8489882.91917246021330357"/>
+        <LayerSet>
+          <Layer name="stop_median" source="dbname='stopcorr' host=localhost port=5432 user='postgres' sslmode=disable key='stop_id' checkPrimaryKeyUnicity='1' table=&quot;(SELECT sm.* FROM stop_median AS sm WHERE (sm.n_stop_known + sm.n_stop_guessed) >= 100   AND sm.dist_to_jore_point_m >= 25    OR sm.dist_to_jore_point_m IS NULL&#xa;)&quot; (geom)" provider="postgres">QueryLayer_1c6a2b96_64ad_4191_adeb_f6fb34e77dcc</Layer>
+          <Layer name="jore_stop" source="dbname='stopcorr' host=localhost port=5432 user='postgres' sslmode=disable key='stop_id' srid=3067 type=Point checkPrimaryKeyUnicity='1' table=&quot;public&quot;.&quot;jore_stop&quot; (geom)" provider="postgres">jore_stop_b0ddc35a_8a7c_489d_9ef8_7c030c872714</Layer>
+          <Layer name="circles" source="dbname='stopcorr' host=localhost port=5432 user='postgres' sslmode=disable key='percentile,stop_id' checkPrimaryKeyUnicity='1' table=&quot;(SELECT c.* FROM view_percentile_circles AS c INNER JOIN stop_median AS sm   ON (c.stop_id = sm.stop_id) WHERE (sm.n_stop_known + sm.n_stop_guessed) >= 100   AND sm.dist_to_jore_point_m >= 25    OR sm.dist_to_jore_point_m IS NULL&#xa;)&quot; (geom)" provider="postgres">QueryLayer_1e9b8518_63bc_4df5_9196_22723c08d6af</Layer>
+          <Layer name="median->jore lines" source="dbname='stopcorr' host=localhost port=5432 user='postgres' sslmode=disable key='stop_id' checkPrimaryKeyUnicity='1' table=&quot;(SELECT l.* FROM view_median_to_jore_lines AS l INNER JOIN stop_median AS sm   ON (l.stop_id = sm.stop_id) WHERE (sm.n_stop_known + sm.n_stop_guessed) >= 100   AND sm.dist_to_jore_point_m >= 25    OR sm.dist_to_jore_point_m IS NULL&#xa;)&quot; (geom)" provider="postgres">QueryLayer_bb19bd50_6f5d_4e8f_aacd_94235b3ebc31</Layer>
+          <Layer name="stop known" source="dbname='stopcorr' host=localhost port=5432 user='postgres' sslmode=disable key='tst,event,oper,veh' srid=3067 type=Point checkPrimaryKeyUnicity='1' table=&quot;public&quot;.&quot;observation&quot; (geom) sql=stop_id IS NOT NULL AND stop_id_guessed IS false" provider="postgres">observation_700f46fb_7426_49df_a4f7_75d9cf32f354</Layer>
+          <Layer name="stop guessed" source="dbname='stopcorr' host=localhost port=5432 user='postgres' sslmode=disable key='tst,event,oper,veh' srid=3067 type=Point checkPrimaryKeyUnicity='1' table=&quot;public&quot;.&quot;observation&quot; (geom) sql=stop_id IS NOT NULL AND stop_id_guessed IS true" provider="postgres">stop_known_d9f6e739_c232_4b07_adf1_4c97fbffde68</Layer>
+          <Layer name="NULL stop id" source="dbname='stopcorr' host=localhost port=5432 user='postgres' sslmode=disable key='tst,event,oper,veh' srid=3067 type=Point checkPrimaryKeyUnicity='1' table=&quot;public&quot;.&quot;observation&quot; (geom) sql=stop_id IS NULL" provider="postgres">observation_2448dc91_67ec_4655_8fb2_1513a4d4d890</Layer>
+          <Layer name="hsl-map 50" source="crs=EPSG:3857&amp;format&amp;type=xyz&amp;url=https://cdn.digitransit.fi/map/v1/hsl-map/%7Bz%7D/%7Bx%7D/%7By%7D.png" provider="wms">hsl_map_34e508cb_c7f8_4b11_8982_9a31c94875d7</Layer>
+        </LayerSet>
+        <AtlasMap scalingMode="2" margin="0" atlasDriven="1"/>
+        <labelBlockingItems/>
+        <atlasClippingSettings forceLabelsInside="0" enabled="0" clippingType="1" restrictLayers="0">
+          <layersToClip/>
+        </atlasClippingSettings>
+        <itemClippingSettings forceLabelsInside="0" clipSource="" enabled="0" clippingType="1"/>
+      </LayoutItem>
+      <customproperties>
+        <property value="png" key="atlasRasterFormat"/>
+        <property value="true" key="imageAntialias"/>
+        <property value="0" key="imageCropMarginBottom"/>
+        <property value="0" key="imageCropMarginLeft"/>
+        <property value="0" key="imageCropMarginRight"/>
+        <property value="0" key="imageCropMarginTop"/>
+        <property value="false" key="imageCropToContents"/>
+        <property value="false" key="singleFile"/>
+      </customproperties>
+      <Atlas sortAscending="1" sortFeatures="1" coverageLayerSource="dbname='stopcorr' host=localhost port=5432 user='postgres' sslmode=disable key='stop_id' checkPrimaryKeyUnicity='1' table=&quot;(SELECT vrv.* FROM view_report_viewport AS vrv INNER JOIN stop_median AS sm   ON (vrv.stop_id = sm.stop_id) WHERE (sm.n_stop_known + sm.n_stop_guessed) >= 100   AND sm.dist_to_jore_point_m >= 25    OR sm.dist_to_jore_point_m IS NULL&#xa;)&quot; (geom)" pageNameExpression="&quot;stop_id&quot;" filterFeatures="0" enabled="1" coverageLayerName="viewports atlas" coverageLayer="viewports_1d50d9f6_2f4e_4b79_9e31_b6a081a4d9db" filenamePattern="'main_'||@atlas_featureid" hideCoverage="0" sortKey="stop_id" coverageLayerProvider="postgres"/>
+    </Layout>
+    <Layout worldFileMap="{9699e432-6b46-4150-9992-f71bdb0cc0ff}" printResolution="300" name="index" units="mm">
+      <Snapper snapToItems="1" tolerance="5" snapToGrid="0" snapToGuides="1"/>
+      <Grid resUnits="mm" offsetX="0" offsetY="0" resolution="10" offsetUnits="mm"/>
+      <PageCollection>
+        <symbol force_rhr="0" type="fill" alpha="1" name="" clip_to_extent="1">
+          <layer pass="0" class="SimpleFill" enabled="1" locked="0">
+            <prop k="border_width_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+            <prop k="color" v="255,255,255,255"/>
+            <prop k="joinstyle" v="miter"/>
+            <prop k="offset" v="0,0"/>
+            <prop k="offset_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+            <prop k="offset_unit" v="MM"/>
+            <prop k="outline_color" v="35,35,35,255"/>
+            <prop k="outline_style" v="no"/>
+            <prop k="outline_width" v="0.26"/>
+            <prop k="outline_width_unit" v="MM"/>
+            <prop k="style" v="solid"/>
+            <data_defined_properties>
+              <Option type="Map">
+                <Option type="QString" value="" name="name"/>
+                <Option name="properties"/>
+                <Option type="QString" value="collection" name="type"/>
+              </Option>
+            </data_defined_properties>
+          </layer>
+        </symbol>
+        <LayoutItem id="" groupUuid="" templateUuid="{50cb4fbd-4252-42d7-a942-a316003e9187}" size="100,50,mm" outlineWidthM="0.3,mm" type="65638" frame="false" visibility="1" referencePoint="0" blendMode="0" excludeFromExports="0" frameJoinStyle="miter" positionOnPage="0,0,mm" zValue="0" background="true" opacity="1" positionLock="false" position="0,0,mm" uuid="{50cb4fbd-4252-42d7-a942-a316003e9187}" itemRotation="0">
+          <FrameColor red="0" green="0" blue="0" alpha="255"/>
+          <BackgroundColor red="255" green="255" blue="255" alpha="255"/>
+          <LayoutObject>
+            <dataDefinedProperties>
+              <Option type="Map">
+                <Option type="QString" value="" name="name"/>
+                <Option name="properties"/>
+                <Option type="QString" value="collection" name="type"/>
+              </Option>
+            </dataDefinedProperties>
+            <customproperties/>
+          </LayoutObject>
+          <symbol force_rhr="0" type="fill" alpha="1" name="" clip_to_extent="1">
+            <layer pass="0" class="SimpleFill" enabled="1" locked="0">
+              <prop k="border_width_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="color" v="255,255,255,255"/>
+              <prop k="joinstyle" v="miter"/>
+              <prop k="offset" v="0,0"/>
+              <prop k="offset_map_unit_scale" v="3x:0,0,0,0,0,0"/>
+              <prop k="offset_unit" v="MM"/>
+              <prop k="outline_color" v="35,35,35,255"/>
+              <prop k="outline_style" v="no"/>
+              <prop k="outline_width" v="0.26"/>
+              <prop k="outline_width_unit" v="MM"/>
+              <prop k="style" v="solid"/>
+              <data_defined_properties>
+                <Option type="Map">
+                  <Option type="QString" value="" name="name"/>
+                  <Option name="properties"/>
+                  <Option type="QString" value="collection" name="type"/>
+                </Option>
+              </data_defined_properties>
+            </layer>
+          </symbol>
+        </LayoutItem>
+        <GuideCollection visible="1"/>
+      </PageCollection>
+      <LayoutItem id="" drawCanvasItems="true" groupUuid="" templateUuid="{9699e432-6b46-4150-9992-f71bdb0cc0ff}" mapFlags="0" size="100,50,mm" outlineWidthM="0.3,mm" type="65639" frame="false" visibility="1" followPresetName="" mapRotation="0" referencePoint="0" blendMode="0" excludeFromExports="0" followPreset="false" frameJoinStyle="miter" positionOnPage="0,0,mm" keepLayerSet="true" zValue="1" background="true" opacity="1" labelMargin="0,mm" positionLock="false" isTemporal="0" position="0,0,mm" uuid="{9699e432-6b46-4150-9992-f71bdb0cc0ff}" itemRotation="0">
+        <FrameColor red="0" green="0" blue="0" alpha="255"/>
+        <BackgroundColor red="255" green="255" blue="255" alpha="255"/>
+        <LayoutObject>
+          <dataDefinedProperties>
+            <Option type="Map">
+              <Option type="QString" value="" name="name"/>
+              <Option name="properties"/>
+              <Option type="QString" value="collection" name="type"/>
+            </Option>
+          </dataDefinedProperties>
+          <customproperties/>
+        </LayoutObject>
+        <Extent ymin="8445999.90026540495455265" xmin="2757719.24134571570903063" xmax="2767719.24135591555386782" ymax="8450999.90027048997581005"/>
+        <LayerSet>
+          <Layer name="viewports" source="dbname='stopcorr' host=localhost port=5432 user='postgres' sslmode=disable key='stop_id' checkPrimaryKeyUnicity='1' table=&quot;(SELECT vrv.* FROM view_report_viewport AS vrv INNER JOIN stop_median AS sm   ON (vrv.stop_id = sm.stop_id) WHERE (sm.n_stop_known + sm.n_stop_guessed) >= 100   AND sm.dist_to_jore_point_m >= 25    OR sm.dist_to_jore_point_m IS NULL&#xa;)&quot; (geom)" provider="postgres">QueryLayer_1bdd7dd0_53a0_415a_9d83_d50405e7c439</Layer>
+          <Layer name="hsl-map 100" source="crs=EPSG:3857&amp;format&amp;type=xyz&amp;url=https://cdn.digitransit.fi/map/v1/hsl-map/%7Bz%7D/%7Bx%7D/%7By%7D.png" provider="wms">hsl_map_352b6a9e_8137_48d7_b4a5_a222c6024c2c</Layer>
+        </LayerSet>
+        <AtlasMap scalingMode="0" margin="0.10000000000000001" atlasDriven="1"/>
+        <labelBlockingItems/>
+        <atlasClippingSettings forceLabelsInside="0" enabled="0" clippingType="1" restrictLayers="0">
+          <layersToClip/>
+        </atlasClippingSettings>
+        <itemClippingSettings forceLabelsInside="0" clipSource="" enabled="0" clippingType="1"/>
+      </LayoutItem>
+      <customproperties>
+        <property value="png" key="atlasRasterFormat"/>
+        <property value="true" key="imageAntialias"/>
+        <property value="0" key="imageCropMarginBottom"/>
+        <property value="0" key="imageCropMarginLeft"/>
+        <property value="0" key="imageCropMarginRight"/>
+        <property value="0" key="imageCropMarginTop"/>
+        <property value="false" key="imageCropToContents"/>
+        <property value="false" key="singleFile"/>
+      </customproperties>
+      <Atlas sortFeatures="0" coverageLayerSource="dbname='stopcorr' host=localhost port=5432 user='postgres' sslmode=disable key='stop_id' checkPrimaryKeyUnicity='1' table=&quot;(SELECT vrv.* FROM view_report_viewport AS vrv INNER JOIN stop_median AS sm   ON (vrv.stop_id = sm.stop_id) WHERE (sm.n_stop_known + sm.n_stop_guessed) >= 100   AND sm.dist_to_jore_point_m >= 25    OR sm.dist_to_jore_point_m IS NULL&#xa;)&quot; (geom)" pageNameExpression="&quot;stop_id&quot;" filterFeatures="0" enabled="1" coverageLayerName="viewports" coverageLayer="QueryLayer_1bdd7dd0_53a0_415a_9d83_d50405e7c439" filenamePattern="'index_'||@atlas_featureid" hideCoverage="0" coverageLayerProvider="postgres"/>
+    </Layout>
+  </Layouts>
+  <Bookmarks/>
+  <ProjectViewSettings UseProjectScales="0">
+    <Scales/>
+    <DefaultViewExtent ymin="8441178.33751001767814159" xmin="2777331.85767872352153063" xmax="2777712.27590351644903421" ymax="8441489.13202197290956974">
+      <spatialrefsys>
+        <wkt>PROJCS["WGS 84 / Pseudo-Mercator",GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4326"]],PROJECTION["Mercator_1SP"],PARAMETER["central_meridian",0],PARAMETER["scale_factor",1],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["X",EAST],AXIS["Y",NORTH],EXTENSION["PROJ4","+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs"],AUTHORITY["EPSG","3857"]]</wkt>
+        <proj4>+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs</proj4>
+        <srsid>3857</srsid>
+        <srid>3857</srid>
+        <authid>EPSG:3857</authid>
+        <description>WGS 84 / Pseudo-Mercator</description>
+        <projectionacronym>merc</projectionacronym>
+        <ellipsoidacronym>WGS84</ellipsoidacronym>
+        <geographicflag>false</geographicflag>
+      </spatialrefsys>
+    </DefaultViewExtent>
+  </ProjectViewSettings>
+  <ProjectTimeSettings timeStep="1" frameRate="1" timeStepUnit="h" cumulativeTemporalRange="0"/>
+  <ProjectDisplaySettings>
+    <BearingFormat id="bearing">
+      <Option type="Map">
+        <Option type="QChar" value="" name="decimal_separator"/>
+        <Option type="int" value="6" name="decimals"/>
+        <Option type="int" value="0" name="direction_format"/>
+        <Option type="int" value="0" name="rounding_type"/>
+        <Option type="bool" value="false" name="show_plus"/>
+        <Option type="bool" value="true" name="show_thousand_separator"/>
+        <Option type="bool" value="false" name="show_trailing_zeros"/>
+        <Option type="QChar" value="" name="thousand_separator"/>
+      </Option>
+    </BearingFormat>
+  </ProjectDisplaySettings>
+</qgis>
