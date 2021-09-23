@@ -1,6 +1,6 @@
 # stop-correspondence
 
-![stopcorr db relations and procedures](img/stopcorr-relations-and-procedurs.png)
+![stopcorr db relations and procedures](img/stopcorr-relations-and-procedures.png)
 
 This tool produces a report of HSL transit stops whose geographical position and/or stop detection radius may require adjustments.
 By using the report, HSL personnel can adjust the coordinates and parameters of Jore stops to better reflect the real world, improving on the accuracy of stop area detection of transit vehicles in operation (and thus the operation data quality) as well as passenger information in Reittiopas and other info channels.
