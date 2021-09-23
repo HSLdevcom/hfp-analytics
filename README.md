@@ -1,5 +1,7 @@
 # stop-correspondence
 
+![stopcorr db relations and procedures](img/stopcorr-relations-and-procedurs.png)
+
 This tool produces a report of HSL transit stops whose geographical position and/or stop detection radius may require adjustments.
 By using the report, HSL personnel can adjust the coordinates and parameters of Jore stops to better reflect the real world, improving on the accuracy of stop area detection of transit vehicles in operation (and thus the operation data quality) as well as passenger information in Reittiopas and other info channels.
 
@@ -96,24 +98,15 @@ There you can adjust placeholder sizes, font styles etc. by editing the master s
 Note that each placeholder has an index that has been hard-coded to the `make_report.py` script;
 if you add or remove placeholders, run `analyze_pptx()` from `stopcorr.utils` to check the new index numbers and update the script accordingly.
 
-## Roadmap
+## Planned features
 
-Planned until the end of 2021 (along with another analysis round):
-
-- Remove the blank first slide from the result pptx
-- Filtering of stops, terminals, routes and areas to analyse
-- Create / amend an analysis for one or multiple selected stops
-- Create a report from selected stops
-- Automate main and index map using e.g. QGIS Server & Atlas plugin or Geopandas & map plotting libs
-
-Planned during 2022:
-
-- Serve per-stop results through an API
-- Access per-stop maps interactively from the browser
-- Adjust analysis parameters and re-run the analysis for a selected stop from the browser
-- Direct import of HFP events at a date range from HSL-DW (when HFP available there)
-- Transfer deployment & maintenance of the tool from LAR-datatiimi to TRO
-- Direct import of stops from Jore4, possibility to select a stop snapshot from a date in the past, rather than the current situation
+- Transfer development & maintenance of PostGIS db and procedures to InfoDevOps team (LAR retains the visualization & reporting stuff for the moment)
+- Access results through a REST API
+  - List all stops and key result parameters, such as Jore->median distance and percentile radius values
+  - Get details and related observations of a given stop
+- Trigger data updates and analyses through a REST API? (Authenticated user)
+- Use date range versioned stops instead of a snapshot from single date
+  - Allow using HFP samples based on the validity time of a selected stop for analysis
 
 
 
