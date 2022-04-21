@@ -107,13 +107,12 @@ async def get_stop_medians(stop_id = -1):
                 if len(stopMedians) == 0:
                     return f'Did not find stop median with given stop_id: {stop_id}'
 
-            stopMedianGeoJSONFeatures = []
-            stopDictionary = dict()
+            stopMedianDictionary = dict()
 
             for stopMedianTuple in stopMedians:
                 stopMedian = stopMedianTuple[0]
                 currentKey = stopMedian['stop_id']
-                currentStopMedian = stopDictionary.get(currentKey)
+                currentStopMedian = stopMedianDictionary.get(currentKey)
                 if currentStopMedian is None:
                     currentStopMedian = get_geojson_point(stopMedian['geom']['coordinates'], dict(
                         stop_id=stopMedian['stop_id'],
@@ -133,21 +132,21 @@ async def get_stop_medians(stop_id = -1):
                             n_observations=stopMedian['percentile_radii']['n_observations']
                         )]
                     ))
-                    stopDictionary[currentKey] = currentStopMedian
+                    stopMedianDictionary[currentKey] = currentStopMedian
                 else:
                     currentStopMedian['properties']['percentile_radii_list'].append(dict(
                         percentile=stopMedian['percentile_radii']['percentile'],
                         radius_m=stopMedian['percentile_radii']['radius_m'],
                         n_observations=stopMedian['percentile_radii']['n_observations']
                     ))
-                    stopDictionary[currentKey] = currentStopMedian
+                    stopMedianDictionary[currentKey] = currentStopMedian
 
-            stopGeoJSONFeatures = []
+            stopMedianGeoJSONFeatures = []
 
-            for key in stopDictionary:
-                stopGeoJSONFeatures.append(stopDictionary[key])
+            for key in stopMedianDictionary:
+                stopMedianGeoJSONFeatures.append(stopMedianDictionary[key])
 
-    return stopGeoJSONFeatures
+    return stopMedianGeoJSONFeatures
 
 
 # Returns a GeoJSON with HFP (door) observations which were used for analysis of that stop_id
