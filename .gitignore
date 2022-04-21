@@ -8,3 +8,5 @@ out/
 qgis/out/
 results/
 docker-compose.yml
+.idea
+testdata/import/hfp.csv
