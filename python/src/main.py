@@ -4,7 +4,9 @@ from stopcorr.utils import get_conn_params
 from stopcorr.utils import get_geojson_point
 from run_analysis import main
 import psycopg
+from psycopg import sql
 import json
+from collections import Mapping, Sequence
 
 app = FastAPI()
 
@@ -69,7 +71,6 @@ async def get_stop_medians(stop_id = -1):
     with psycopg.connect(**get_conn_params()) as conn:
         with conn.cursor() as cur:
 
-            print(f'QUERY WITH {stop_id}')
             cur.execute("SELECT \
                 json_build_object( \
                     'stop_id', sm.stop_id, \
@@ -155,15 +156,13 @@ async def get_stop_medians(stop_id = -1):
 async def get_hfp_points(stop_id: str):
     with psycopg.connect(**get_conn_params()) as conn:
         with conn.cursor() as cur:
-
-            cur.execute(f'SELECT row_to_json(row) FROM ( \
+            cur.execute('SELECT row_to_json(row) FROM ( \
                 SELECT * FROM \
                 observation \
-                WHERE stop_id = {stop_id}) row')
+                WHERE stop_id = %(stop_id)s) row', {'stop_id': stop_id})
             observations = cur.fetchall()
 
-            nullStopIdDistanceInMeters = 100
-            cur.execute(f'SELECT row_to_json(row) FROM ( \
+            cur.execute('SELECT row_to_json(row) FROM ( \
                 WITH null_stop_ids_within_meters AS ( \
                 SELECT \
                     found_ob_stops.lat, \
@@ -177,15 +176,15 @@ async def get_hfp_points(stop_id: str):
                 INNER JOIN LATERAL ( \
                     SELECT * FROM observation AS ob \
                     WHERE ob.stop_id IS NULL AND \
-                    ST_DWithin(ob.geom, js.geom, {nullStopIdDistanceInMeters}) \
+                    ST_DWithin(ob.geom, js.geom, %(nullStopIdDistanceInMeters)s) \
                 ) as found_ob_stops \
                 ON true \
-                WHERE js.stop_id = {stop_id} \
+                WHERE js.stop_id = %(stop_id)s \
                 ) \
                 SELECT * FROM null_stop_ids_within_meters \
-            ) row')
+            ) row', {'stop_id': stop_id, 'nullStopIdDistanceInMeters': 100})
             nullStopIdObservations = cur.fetchall()
-            print(nullStopIdObservations)
+
             observations = observations + nullStopIdObservations
 
             print(f'Found {len(observations)} observations.')
