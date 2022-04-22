@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from subprocess import call
 from stopcorr.utils import get_conn_params
 from stopcorr.utils import get_geojson_point
@@ -39,7 +39,10 @@ async def get_jore_stops(stop_id = -1):
             print(f'Found {len(stops)} Jore stops.')
 
             if len(stops) == 0:
-                return 'Error: no stop data available. Have you ran Jore & HFP data imports and then analysis?'
+                raise HTTPException(
+                    status_code=404,
+                    detail="Have you ran Jore & HFP data imports and then analysis?"
+                )
 
             stop_geojson_features = []
 
@@ -47,7 +50,10 @@ async def get_jore_stops(stop_id = -1):
                 stops = list(filter(lambda item: str(item[0]['stop_id']) == stop_id, stops))
 
                 if len(stops) == 0:
-                    return f'Did not find stop with given stop_id: {stop_id}'
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f'Did not find stop with given stop_id: {stop_id}'
+                    )
 
             for stop_tuple in stops:
                 stop = stop_tuple[0]
@@ -100,12 +106,18 @@ async def get_stop_medians(stop_id = -1):
             print(f'Found {len(stop_medians)} Jore stop medians.')
 
             if len(stop_medians) == 0:
-                return 'Error: no stop median data available. Have you ran Jore & HFP data imports and then analysis?'
+                raise HTTPException(
+                    status_code=404,
+                    detail="Have you ran Jore & HFP data imports and then analysis?"
+                )
 
             if stop_id != -1:
                 stop_medians = list(filter(lambda item: str(item[0]['stop_id']) == stop_id, stop_medians))
                 if len(stop_medians) == 0:
-                    return f'Did not find stop median with given stop_id: {stop_id}'
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f'Did not find stop median with given stop_id: {stop_id}'
+                    )
 
             stop_median_dict = dict()
 
@@ -189,7 +201,10 @@ async def get_hfp_points(stop_id: str):
             print(f'Found {len(observations)} observations.')
 
             if len(observations) == 0:
-                return f'Did not find hfp data for given stop: {stop_id}'
+                raise HTTPException(
+                    status_code=404,
+                    detail=f'Did not find hfp data for given stop: {stop_id}'
+                )
 
             hfp_geojson_features = []
 
