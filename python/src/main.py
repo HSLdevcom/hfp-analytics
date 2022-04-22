@@ -50,7 +50,7 @@ async def get_jore_stops(stop_id = -1):
 
             for stopTuple in stops:
                 stop = stopTuple[0]
-                stopFeature = get_geojson_point([stop['lat'], stop['long']], dict(
+                stopFeature = get_geojson_point([stop['long'], stop['lat']], dict(
                     stop_id=stop['stop_id'],
                     stop_code=stop['stop_code'],
                     stop_name=stop['stop_name'],
@@ -197,7 +197,7 @@ async def get_hfp_points(stop_id: str):
 
             for observationTuple in observations:
                 observation = observationTuple[0]
-                hfpFeature = get_geojson_point([observation['lat'], observation['long']], dict(
+                hfpFeature = get_geojson_point([observation['long'], observation['lat']], dict(
                     stop_id=observation['stop_id'],
                     stop_id_guessed=observation['stop_id_guessed'],
                     event=observation['event'],
