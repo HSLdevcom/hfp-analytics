@@ -1,20 +1,21 @@
-from fastapi import FastAPI, HTTPException
+"""Stop correspondence REST API"""
 from subprocess import call
+from fastapi import FastAPI, HTTPException
 from stopcorr.utils import get_conn_params
 from stopcorr.utils import get_geojson_point
 from run_analysis import main
 import psycopg
-from psycopg import sql
-import json
 
 app = FastAPI()
 
 @app.get("/")
 async def root():
+    """Api root"""
     return "Pysäkkianalyysi API:n root. Katso API:n dokumentaatio menemällä /docs tai /redoc"
 
 @app.get("/run_import")
 async def run_import():
+    """Runs data import"""
     print("Running import...")
     call("./import_all.sh")
     # TODO: update /job_status here?
@@ -22,6 +23,7 @@ async def run_import():
 
 @app.get("/run_analysis")
 async def run_analysis():
+    """Runs analysis"""
     print("Running analysis...")
     main()
     # TODO: update /job_status here?
@@ -30,6 +32,7 @@ async def run_analysis():
 
 @app.get("/jore_stops")
 async def get_jore_stops(stop_id = -1):
+    """Returns either all jore stops or one jore stop found with given stop_id"""
     with psycopg.connect(**get_conn_params()) as conn:
         with conn.cursor() as cur:
 
@@ -73,6 +76,7 @@ async def get_jore_stops(stop_id = -1):
 
 @app.get("/stop_medians")
 async def get_stop_medians(stop_id = -1):
+    """Returns stop medians and their percentile radii"""
     with psycopg.connect(**get_conn_params()) as conn:
         with conn.cursor() as cur:
 
@@ -112,38 +116,43 @@ async def get_stop_medians(stop_id = -1):
                 )
 
             if stop_id != -1:
-                stop_medians = list(filter(lambda item: str(item[0]['stop_id']) == stop_id, stop_medians))
+                stop_medians = list(filter(
+                    lambda item: str(item[0]['stop_id']) == stop_id,
+                    stop_medians
+                ))
                 if len(stop_medians) == 0:
                     raise HTTPException(
                         status_code=404,
                         detail=f'Did not find stop median with given stop_id: {stop_id}'
                     )
 
-            stop_median_dict = dict()
+            stop_median_dict = {}
 
             for stop_median_tuple in stop_medians:
                 stop_median = stop_median_tuple[0]
                 current_key = stop_median['stop_id']
                 current_stop_median = stop_median_dict.get(current_key)
                 if current_stop_median is None:
-                    current_stop_median = get_geojson_point(stop_median['geom']['coordinates'], dict(
-                        stop_id=stop_median['stop_id'],
-                        from_date=stop_median['from_date'],
-                        to_date=stop_median['to_date'],
-                        n_stop_known=stop_median['n_stop_known'],
-                        n_stop_guessed=stop_median['n_stop_guessed'],
-                        n_stop_null_near=stop_median['n_stop_null_near'],
-                        dist_to_jore_point_m=stop_median['dist_to_jore_point_m'],
-                        observation_route_dirs=stop_median['observation_route_dirs'],
-                        result_class=stop_median['result_class'],
-                        recommended_min_radius_m=stop_median['recommended_min_radius_m'],
-                        manual_acceptance_needed=stop_median['manual_acceptance_needed'],
-                        percentile_radii_list=[dict(
-                            percentile=stop_median['percentile_radii']['percentile'],
-                            radius_m=stop_median['percentile_radii']['radius_m'],
-                            n_observations=stop_median['percentile_radii']['n_observations']
-                        )]
-                    ))
+                    current_stop_median = get_geojson_point(
+                        stop_median['geom']['coordinates'],
+                        dict(
+                            stop_id=stop_median['stop_id'],
+                            from_date=stop_median['from_date'],
+                            to_date=stop_median['to_date'],
+                            n_stop_known=stop_median['n_stop_known'],
+                            n_stop_guessed=stop_median['n_stop_guessed'],
+                            n_stop_null_near=stop_median['n_stop_null_near'],
+                            dist_to_jore_point_m=stop_median['dist_to_jore_point_m'],
+                            observation_route_dirs=stop_median['observation_route_dirs'],
+                            result_class=stop_median['result_class'],
+                            recommended_min_radius_m=stop_median['recommended_min_radius_m'],
+                            manual_acceptance_needed=stop_median['manual_acceptance_needed'],
+                            percentile_radii_list=[dict(
+                                percentile=stop_median['percentile_radii']['percentile'],
+                                radius_m=stop_median['percentile_radii']['radius_m'],
+                                n_observations=stop_median['percentile_radii']['n_observations']
+                            )]
+                        ))
                     stop_median_dict[current_key] = current_stop_median
                 else:
                     current_stop_median['properties']['percentile_radii_list'].append(dict(
@@ -161,10 +170,12 @@ async def get_stop_medians(stop_id = -1):
     return stop_median_geojson_features
 
 
-# Returns a GeoJSON with HFP (door) observations which were used for analysis of that stop_id
-# OR which have NULL stop_id value but are located max nullStopIdDistanceInMeters around the stop
 @app.get("/hfp_points/{stop_id}")
 async def get_hfp_points(stop_id: str):
+    """
+    Returns a GeoJSON with HFP (door) observations which were used for analysis of that stop_id
+    OR which have NULL stop_id value but are located max nullStopIdDistanceInMeters around the stop
+    """
     with psycopg.connect(**get_conn_params()) as conn:
         with conn.cursor() as cur:
             cur.execute('SELECT row_to_json(row) FROM ( \
