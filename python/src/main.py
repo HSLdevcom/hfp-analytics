@@ -6,7 +6,6 @@ from run_analysis import main
 import psycopg
 from psycopg import sql
 import json
-from collections import Mapping, Sequence
 
 app = FastAPI()
 
@@ -42,7 +41,7 @@ async def get_jore_stops(stop_id = -1):
             if len(stops) == 0:
                 return 'Error: no stop data available. Have you ran Jore & HFP data imports and then analysis?'
 
-            stopGeoJSONFeatures = []
+            stop_geojson_features = []
 
             if stop_id != -1:
                 stops = list(filter(lambda item: str(item[0]['stop_id']) == stop_id, stops))
@@ -50,9 +49,9 @@ async def get_jore_stops(stop_id = -1):
                 if len(stops) == 0:
                     return f'Did not find stop with given stop_id: {stop_id}'
 
-            for stopTuple in stops:
-                stop = stopTuple[0]
-                stopFeature = get_geojson_point([stop['long'], stop['lat']], dict(
+            for stop_tuple in stops:
+                stop = stop_tuple[0]
+                stop_feature = get_geojson_point([stop['long'], stop['lat']], dict(
                     stop_id=stop['stop_id'],
                     stop_code=stop['stop_code'],
                     stop_name=stop['stop_name'],
@@ -61,9 +60,9 @@ async def get_jore_stops(stop_id = -1):
                     route_dirs_via_stop=stop['route_dirs_via_stop'],
                     date_imported=stop['date_imported']
                 ))
-                stopGeoJSONFeatures.append(stopFeature)
+                stop_geojson_features.append(stop_feature)
 
-    return stopGeoJSONFeatures
+    return stop_geojson_features
 
 
 @app.get("/stop_medians")
@@ -96,58 +95,58 @@ async def get_stop_medians(stop_id = -1):
             LEFT JOIN percentile_radii pr ON sm.stop_id = pr.stop_id"
             )
 
-            stopMedians = cur.fetchall()
+            stop_medians = cur.fetchall()
 
-            print(f'Found {len(stopMedians)} Jore stop medians.')
+            print(f'Found {len(stop_medians)} Jore stop medians.')
 
-            if len(stopMedians) == 0:
+            if len(stop_medians) == 0:
                 return 'Error: no stop median data available. Have you ran Jore & HFP data imports and then analysis?'
 
             if stop_id != -1:
-                stopMedians = list(filter(lambda item: str(item[0]['stop_id']) == stop_id, stopMedians))
-                if len(stopMedians) == 0:
+                stop_medians = list(filter(lambda item: str(item[0]['stop_id']) == stop_id, stop_medians))
+                if len(stop_medians) == 0:
                     return f'Did not find stop median with given stop_id: {stop_id}'
 
-            stopMedianDictionary = dict()
+            stop_median_dict = dict()
 
-            for stopMedianTuple in stopMedians:
-                stopMedian = stopMedianTuple[0]
-                currentKey = stopMedian['stop_id']
-                currentStopMedian = stopMedianDictionary.get(currentKey)
-                if currentStopMedian is None:
-                    currentStopMedian = get_geojson_point(stopMedian['geom']['coordinates'], dict(
-                        stop_id=stopMedian['stop_id'],
-                        from_date=stopMedian['from_date'],
-                        to_date=stopMedian['to_date'],
-                        n_stop_known=stopMedian['n_stop_known'],
-                        n_stop_guessed=stopMedian['n_stop_guessed'],
-                        n_stop_null_near=stopMedian['n_stop_null_near'],
-                        dist_to_jore_point_m=stopMedian['dist_to_jore_point_m'],
-                        observation_route_dirs=stopMedian['observation_route_dirs'],
-                        result_class=stopMedian['result_class'],
-                        recommended_min_radius_m=stopMedian['recommended_min_radius_m'],
-                        manual_acceptance_needed=stopMedian['manual_acceptance_needed'],
+            for stop_median_tuple in stop_medians:
+                stop_median = stop_median_tuple[0]
+                current_key = stop_median['stop_id']
+                current_stop_median = stop_median_dict.get(current_key)
+                if current_stop_median is None:
+                    current_stop_median = get_geojson_point(stop_median['geom']['coordinates'], dict(
+                        stop_id=stop_median['stop_id'],
+                        from_date=stop_median['from_date'],
+                        to_date=stop_median['to_date'],
+                        n_stop_known=stop_median['n_stop_known'],
+                        n_stop_guessed=stop_median['n_stop_guessed'],
+                        n_stop_null_near=stop_median['n_stop_null_near'],
+                        dist_to_jore_point_m=stop_median['dist_to_jore_point_m'],
+                        observation_route_dirs=stop_median['observation_route_dirs'],
+                        result_class=stop_median['result_class'],
+                        recommended_min_radius_m=stop_median['recommended_min_radius_m'],
+                        manual_acceptance_needed=stop_median['manual_acceptance_needed'],
                         percentile_radii_list=[dict(
-                            percentile=stopMedian['percentile_radii']['percentile'],
-                            radius_m=stopMedian['percentile_radii']['radius_m'],
-                            n_observations=stopMedian['percentile_radii']['n_observations']
+                            percentile=stop_median['percentile_radii']['percentile'],
+                            radius_m=stop_median['percentile_radii']['radius_m'],
+                            n_observations=stop_median['percentile_radii']['n_observations']
                         )]
                     ))
-                    stopMedianDictionary[currentKey] = currentStopMedian
+                    stop_median_dict[current_key] = current_stop_median
                 else:
-                    currentStopMedian['properties']['percentile_radii_list'].append(dict(
-                        percentile=stopMedian['percentile_radii']['percentile'],
-                        radius_m=stopMedian['percentile_radii']['radius_m'],
-                        n_observations=stopMedian['percentile_radii']['n_observations']
+                    current_stop_median['properties']['percentile_radii_list'].append(dict(
+                        percentile=stop_median['percentile_radii']['percentile'],
+                        radius_m=stop_median['percentile_radii']['radius_m'],
+                        n_observations=stop_median['percentile_radii']['n_observations']
                     ))
-                    stopMedianDictionary[currentKey] = currentStopMedian
+                    stop_median_dict[current_key] = current_stop_median
 
-            stopMedianGeoJSONFeatures = []
+            stop_median_geojson_features = []
 
-            for key in stopMedianDictionary:
-                stopMedianGeoJSONFeatures.append(stopMedianDictionary[key])
+            for key in stop_median_dict:
+                stop_median_geojson_features.append(stop_median_dict[key])
 
-    return stopMedianGeoJSONFeatures
+    return stop_median_geojson_features
 
 
 # Returns a GeoJSON with HFP (door) observations which were used for analysis of that stop_id
@@ -183,26 +182,26 @@ async def get_hfp_points(stop_id: str):
                 ) \
                 SELECT * FROM null_stop_ids_within_meters \
             ) row', {'stop_id': stop_id, 'nullStopIdDistanceInMeters': 100})
-            nullStopIdObservations = cur.fetchall()
+            null_stop_id_observations = cur.fetchall()
 
-            observations = observations + nullStopIdObservations
+            observations = observations + null_stop_id_observations
 
             print(f'Found {len(observations)} observations.')
 
             if len(observations) == 0:
                 return f'Did not find hfp data for given stop: {stop_id}'
 
-            hfpGeoJSONFeatures = []
+            hfp_geojson_features = []
 
-            for observationTuple in observations:
-                observation = observationTuple[0]
-                hfpFeature = get_geojson_point([observation['long'], observation['lat']], dict(
+            for observation_tuple in observations:
+                observation = observation_tuple[0]
+                hfp_feature = get_geojson_point([observation['long'], observation['lat']], dict(
                     stop_id=observation['stop_id'],
                     stop_id_guessed=observation['stop_id_guessed'],
                     event=observation['event'],
                     dist_to_jore_point_m=observation['dist_to_jore_point_m'],
                     dist_to_median_point_m=observation['dist_to_median_point_m']
                 ))
-                hfpGeoJSONFeatures.append(hfpFeature)
+                hfp_geojson_features.append(hfp_feature)
 
-    return hfpGeoJSONFeatures
+    return hfp_geojson_features
