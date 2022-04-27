@@ -26,6 +26,12 @@ def get_geojson_point(coordinates, properties):
       "properties": properties
     }
 
+def get_feature_collection(features):
+    return {
+        "type": "FeatureCollection",
+        "features": features
+    }
+
 def comma_separated_floats_to_list(val_str):
     res = val_str.split(',')
     res = [x.strip() for x in res]

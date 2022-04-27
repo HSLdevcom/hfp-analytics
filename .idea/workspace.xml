@@ -2,20 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="e4d3ad76-010d-4e7e-9293-461ceb5ef169" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/python/.funcignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/python/host.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/python/local.settings.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/python/src/function.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/python/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/python/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/python/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/python/requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/python/src/digitransit_import.py" beforeDir="false" afterPath="$PROJECT_DIR$/python/src/digitransit_import.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/python/src/hfp_import.py" beforeDir="false" afterPath="$PROJECT_DIR$/python/src/hfp_import.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/python/src/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/python/src/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/python/src/make_report.py" beforeDir="false" afterPath="$PROJECT_DIR$/python/src/make_report.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/python/src/run_analysis.py" beforeDir="false" afterPath="$PROJECT_DIR$/python/src/run_analysis.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/python/src/stopcorr/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/python/src/stopcorr/utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />

@@ -1,8 +1,11 @@
 """Stop correspondence REST API"""
 import azure.functions as func
-from fastapi import FastAPI, HTTPException
-from .stopcorr.utils import get_conn_params
-from .stopcorr.utils import get_geojson_point
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.openapi.docs import (
+    get_redoc_html,
+    get_swagger_ui_html,
+)
+from .stopcorr.utils import get_conn_params, get_geojson_point, get_feature_collection
 from .run_analysis import main as run_analysis_func
 import psycopg2 as psycopg
 from .hfp_import import main as run_hfp_import
@@ -22,7 +25,9 @@ app = FastAPI(
     license_info={
         "name": "MIT License",
         "url": "https://github.com/HSLdevcom/hfp-analytics/blob/main/LICENSE"
-    }
+    },
+    docs_url=None,
+    redoc_url=None,
 )
 
 def main(req: func.HttpRequest, context: func.Context) -> func.HttpResponse:
@@ -30,8 +35,32 @@ def main(req: func.HttpRequest, context: func.Context) -> func.HttpResponse:
 
 @app.get("/")
 async def root():
-    """Api root"""
+    """API root"""
     return "Welcome to HFP Analytics REST API root! The documentation can be found from /docs or /redoc"
+
+@app.get("/docs", include_in_schema=False)
+async def custom_swagger_ui_html(request: Request):
+    """
+    API documentation, taken from: https://fastapi.tiangolo.com/advanced/extending-openapi/
+    Note: to authenticate openapi, you can also check: https://github.com/tiangolo/fastapi/issues/364#issuecomment-890853577
+    """
+    code = request.query_params['code']
+    return get_swagger_ui_html(
+        openapi_url="/openapi.json?code=" + code,
+        title=app.title + " Swagger UI",
+    )
+
+@app.get("/redoc", include_in_schema=False)
+async def custom_swagger_ui_html(request: Request):
+    """
+    API documentation, taken from: https://fastapi.tiangolo.com/advanced/extending-openapi/
+    Note: to authenticate openapi, you can also check: https://github.com/tiangolo/fastapi/issues/364#issuecomment-890853577
+    """
+    code = request.query_params['code']
+    return get_redoc_html(
+        openapi_url="/openapi.json?code=" + code,
+        title=app.title + " ReDoc",
+    )
 
 @app.get("/run_import")
 async def run_import():
@@ -95,7 +124,7 @@ async def get_jore_stops(stop_id = -1):
                 ))
                 stop_geojson_features.append(stop_feature)
 
-    return stop_geojson_features
+    return get_feature_collection(stop_geojson_features)
 
 
 @app.get("/stop_medians")
@@ -191,7 +220,7 @@ async def get_stop_medians(stop_id = -1):
             for key in stop_median_dict:
                 stop_median_geojson_features.append(stop_median_dict[key])
 
-    return stop_median_geojson_features
+    return get_feature_collection(stop_median_geojson_features)
 
 
 @app.get("/hfp_points/{stop_id}")
@@ -254,4 +283,4 @@ async def get_hfp_points(stop_id: str):
                 ))
                 hfp_geojson_features.append(hfp_feature)
 
-    return hfp_geojson_features
+    return get_feature_collection(hfp_geojson_features)
