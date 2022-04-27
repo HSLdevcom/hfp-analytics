@@ -1,23 +1,46 @@
 """Stop correspondence REST API"""
-from subprocess import call
+import azure.functions as func
 from fastapi import FastAPI, HTTPException
-from stopcorr.utils import get_conn_params
-from stopcorr.utils import get_geojson_point
-from run_analysis import main
-import psycopg
+from .stopcorr.utils import get_conn_params
+from .stopcorr.utils import get_geojson_point
+from .run_analysis import main as run_analysis_func
+import psycopg2 as psycopg
+from .hfp_import import main as run_hfp_import
+from .digitransit_import import main as run_digitransit_import
 
-app = FastAPI()
+description = """
+   This REST API is used to get results from analytics done with Jore-data and HFP-data.
+"""
+
+app = FastAPI(
+    title="HSL Analytics REST API",
+    description=description,
+    contact={
+        "name": "HSL",
+        "url": "https://github.com/HSLdevcom/hfp-analytics"
+    },
+    license_info={
+        "name": "MIT License",
+        "url": "https://github.com/HSLdevcom/hfp-analytics/blob/main/LICENSE"
+    }
+)
+
+def main(req: func.HttpRequest, context: func.Context) -> func.HttpResponse:
+    return func.AsgiMiddleware(app).handle(req, context)
 
 @app.get("/")
 async def root():
     """Api root"""
-    return "Pysäkkianalyysi API:n root. Katso API:n dokumentaatio menemällä /docs tai /redoc"
+    return "Welcome to HFP Analytics REST API root! The documentation can be found from /docs or /redoc"
 
 @app.get("/run_import")
 async def run_import():
     """Runs data import"""
     print("Running import...")
-    call("./import_all.sh")
+
+    run_hfp_import()
+    run_digitransit_import()
+
     # TODO: update /job_status here?
     return "Import done."
 
@@ -25,7 +48,8 @@ async def run_import():
 async def run_analysis():
     """Runs analysis"""
     print("Running analysis...")
-    main()
+    run_analysis_func()
+
     # TODO: update /job_status here?
     return "Analysis done."
 
