@@ -1,4 +1,4 @@
-"""Stop correspondence REST API"""
+"""HFP Analytics REST API"""
 import azure.functions as func
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.openapi.docs import (
@@ -11,13 +11,9 @@ import psycopg2 as psycopg
 from .hfp_import import main as run_hfp_import
 from .digitransit_import import main as run_digitransit_import
 
-description = """
-   This REST API is used to get results from analytics done with Jore-data and HFP-data.
-"""
-
 app = FastAPI(
     title="HSL Analytics REST API",
-    description=description,
+    description="This REST API is used to get results from analytics done with Jore-data and HFP-data.",
     contact={
         "name": "HSL",
         "url": "https://github.com/HSLdevcom/hfp-analytics"
@@ -85,7 +81,7 @@ async def run_analysis():
 
 @app.get("/jore_stops")
 async def get_jore_stops(stop_id = -1):
-    """Returns either all jore stops or one jore stop found with given stop_id"""
+    """Returns a GeoJSON FeatureCollection of either all jore stops or one jore stop found with given stop_id"""
     with psycopg.connect(**get_conn_params()) as conn:
         with conn.cursor() as cur:
 
@@ -129,7 +125,7 @@ async def get_jore_stops(stop_id = -1):
 
 @app.get("/stop_medians")
 async def get_stop_medians(stop_id = -1):
-    """Returns stop medians and their percentile radii"""
+    """Returns a GeoJSON FeatureCollection of stop medians and their percentile radii"""
     with psycopg.connect(**get_conn_params()) as conn:
         with conn.cursor() as cur:
 
@@ -226,7 +222,7 @@ async def get_stop_medians(stop_id = -1):
 @app.get("/hfp_points/{stop_id}")
 async def get_hfp_points(stop_id: str):
     """
-    Returns a GeoJSON with HFP (door) observations which were used for analysis of that stop_id
+    Returns a GeoJSON FeatureCollection with HFP (door) observations which were used for analysis of that stop_id
     OR which have NULL stop_id value but are located max nullStopIdDistanceInMeters around the stop
     """
     with psycopg.connect(**get_conn_params()) as conn:
