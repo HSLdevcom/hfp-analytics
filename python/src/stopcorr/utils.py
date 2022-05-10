@@ -16,16 +16,6 @@ def env_with_default(var_name, default_value):
         print(f'{var_name} not set, falling back to default value {default_value}')
     return res
 
-def get_geojson_point(coordinates, properties):
-    return {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": coordinates
-      },
-      "properties": properties
-    }
-
 def get_feature_collection(features):
     return {
         "type": "FeatureCollection",
