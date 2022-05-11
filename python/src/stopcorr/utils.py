@@ -5,7 +5,7 @@ def get_conn_params():
         dbname = os.getenv('POSTGRES_DB'),
         user = os.getenv('POSTGRES_USER'),
         password = os.getenv('POSTGRES_PASSWORD'),
-        host = 'db',
+        host = os.getenv('POSTGRES_HOST'),
         port = 5432
     )
 
@@ -15,6 +15,12 @@ def env_with_default(var_name, default_value):
         res = default_value
         print(f'{var_name} not set, falling back to default value {default_value}')
     return res
+
+def get_feature_collection(features):
+    return {
+        "type": "FeatureCollection",
+        "features": features
+    }
 
 def comma_separated_floats_to_list(val_str):
     res = val_str.split(',')
