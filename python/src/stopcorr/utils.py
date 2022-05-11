@@ -5,7 +5,7 @@ def get_conn_params():
         dbname = os.getenv('POSTGRES_DB'),
         user = os.getenv('POSTGRES_USER'),
         password = os.getenv('POSTGRES_PASSWORD'),
-        host = 'db',
+        host = os.getenv('POSTGRES_HOST'),
         port = 5432
     )
 
@@ -16,14 +16,10 @@ def env_with_default(var_name, default_value):
         print(f'{var_name} not set, falling back to default value {default_value}')
     return res
 
-def get_geojson_point(coordinates, properties):
+def get_feature_collection(features):
     return {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": coordinates
-      },
-      "properties": properties
+        "type": "FeatureCollection",
+        "features": features
     }
 
 def comma_separated_floats_to_list(val_str):

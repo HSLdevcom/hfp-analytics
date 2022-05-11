@@ -2,14 +2,13 @@
 
 import psycopg2
 from datetime import datetime
-from stopcorr.utils import get_conn_params
+from .stopcorr.utils import get_conn_params
 
 def main():
     starttime = datetime.now()
     print(f'[{starttime}] Importing HFP events to database')
 
     conn = psycopg2.connect(**get_conn_params())
-
     try:
         with conn:
             with conn.cursor() as cur:
