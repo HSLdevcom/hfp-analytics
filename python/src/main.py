@@ -1,6 +1,5 @@
 """HFP Analytics REST API"""
 import azure.functions as func
-import json
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.openapi.docs import (
     get_redoc_html,
@@ -157,7 +156,7 @@ async def get_stop_medians(stop_id = -1):
 async def get_hfp_points(stop_id: str):
     """
     Returns a GeoJSON FeatureCollection with HFP (door) observations which were used for analysis of that stop_id
-    OR which have NULL stop_id value but are located max nullStopIdDistanceInMeters (currently 100) around the stop
+    OR which have NULL stop_id value but are located max search_distance_m (default 100) around the stop
     """
     with psycopg.connect(**get_conn_params()) as conn:
         with conn.cursor() as cur:
@@ -167,8 +166,8 @@ async def get_hfp_points(stop_id: str):
 
             print(f'Found {len(stopIdObservations)} observations with given stop_id: {stop_id}.')
 
-            nullStopIdDistanceInMeters = 100
-            cur.execute("SELECT api.get_observations_with_null_stop_id_4326(%(stop_id)s, %(nullStopIdDistanceInMeters)s)", {'stop_id': stop_id, 'nullStopIdDistanceInMeters': nullStopIdDistanceInMeters})
+            search_distance_m = 100
+            cur.execute("SELECT api.get_observations_with_null_stop_id_4326(%(stop_id)s, %(search_distance_m)s)", {'stop_id': stop_id, 'search_distance_m': search_distance_m})
             observationsWithNullStopIds = cur.fetchall()
 
             print(f'Found {len(observationsWithNullStopIds)} observations with NULL stop_id')

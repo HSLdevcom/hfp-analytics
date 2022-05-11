@@ -20,7 +20,7 @@ CREATE VIEW api.view_jore_stop_4326 AS (
   )
   SELECT cast(ST_AsGeoJSON(sc.*) AS json)
   FROM selected_cols AS sc
-)
+);
 
 -- Returns stop_medians as GeoJSON features
 CREATE VIEW api.view_stop_median_4326 AS (
@@ -50,7 +50,7 @@ CREATE VIEW api.view_stop_median_4326 AS (
   )
   SELECT cast(ST_AsGeoJSON(sc.*) AS json)
   FROM selected_cols AS sc
-)
+);
 
 -- Returns all observations as GeoJSON features
 CREATE VIEW api.view_observation_4326 AS (
@@ -66,10 +66,10 @@ CREATE VIEW api.view_observation_4326 AS (
   )
   SELECT cast(ST_AsGeoJSON(sc.*) AS json)
   FROM selected_cols AS sc
-)
+);
 
 -- Returns observations with null stop_id as GeoJSON features
-CREATE OR REPLACE FUNCTION api.get_observations_with_null_stop_id_4326(stop_id int, nullStopIdDistanceInMeters int)
+CREATE OR REPLACE FUNCTION api.get_observations_with_null_stop_id_4326(stop_id int, search_distance_m int default 100)
 RETURNS setof json as $$
   WITH selected_cols AS (
     SELECT
