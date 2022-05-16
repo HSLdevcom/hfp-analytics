@@ -122,6 +122,7 @@ CREATE TABLE hfp.hfp_point (
   odo               integer,
   drst              boolean,
   loc               public.location_source,
+  stop              integer,
   geom              geometry(POINT, 3067),
 
   PRIMARY KEY (event_timestamp, vehicle_id)
@@ -148,5 +149,7 @@ COMMENT ON COLUMN hfp.hfp_point.drst IS
 'Door status of the vehicle. TRUE if any door is open, FALSE if all closed, NULL if unknown.';
 COMMENT ON COLUMN hfp.hfp_point.loc IS
 'Source of the vehicle position information. Ideally GPS.';
+COMMENT ON COLUMN hfp.hfp_point.stop IS
+'Id of the stop that the HFP point was related to.';
 COMMENT ON COLUMN hfp.hfp_point.geom IS
 'Vehicle position point in ETRS-TM35 coordinates.';
