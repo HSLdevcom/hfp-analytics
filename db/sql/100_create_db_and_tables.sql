@@ -1,10 +1,14 @@
 CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS moddatetime;
 
 -- All objects will be created in the "public" schema.
 
 CREATE TYPE event_type AS enum(
-  'DOO', 'DOC'
+  'VP', 'DUE', 'ARR', 'DEP', 'ARS', 'PDE', 'PAS', 'WAIT',
+  'DOO', 'DOC', 'DA', 'DOUT', 'BA', 'BOUT', 'VJA', 'VJOUT'
 );
+COMMENT ON TYPE event_type IS
+'Basic HFP event types. TL and APC related events are omitted.';
 
 --
 -- HFP observations
