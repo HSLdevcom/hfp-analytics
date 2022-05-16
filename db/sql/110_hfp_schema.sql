@@ -46,13 +46,13 @@ CREATE TRIGGER set_moddatetime
 
 
 -- Journey model.
-CREATE TABLE hfp.planned_journey (
+CREATE TABLE hfp.observed_journey (
   journey_id            uuid      PRIMARY KEY,
   route_id              text,
   direction_id          smallint,
-  operating_date        date,
-  start_time            interval,
-  journey_operator_id   smallint,
+  oday                  date,
+  start                 interval,
+  planned_operator_id   smallint,
   modified_at           timestamptz
 );
 
@@ -65,13 +65,13 @@ COMMENT ON COLUMN hfp.planned_journey.route_id IS
 'Route identifier originating from Jore. `route_id` in HFP topic.';
 COMMENT ON COLUMN hfp.planned_journey.direction_id IS
 'Direction identifier originating from Jore: 1 or 2. `direction_id` in HFP topic.';
-COMMENT ON COLUMN hfp.planned_journey.operating_date IS
+COMMENT ON COLUMN hfp.planned_journey.oday IS
 'Operating date originating from Jore. `oday` in HFP payload.';
-COMMENT ON COLUMN hfp.planned_journey.start_time IS
+COMMENT ON COLUMN hfp.planned_journey.start IS
 'Start time on the operating date, HH:MM:SS. `start` in HFP payload.
 N.B. HFP uses 24h clock which can break journeys originally planned beyond >24:00:00.
 Interval type is used for future support of such start times.';
-COMMENT ON COLUMN hfp.planned_journey.journey_operator_id IS
+COMMENT ON COLUMN hfp.planned_journey.planned_operator_id IS
 'Id of the operator the journey was assigned to. `oper` in HFP payload.';
 
 CREATE TRIGGER set_moddatetime    
