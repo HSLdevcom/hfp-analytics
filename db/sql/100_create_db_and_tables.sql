@@ -10,6 +10,12 @@ CREATE TYPE event_type AS enum(
 COMMENT ON TYPE event_type IS
 'Basic HFP event types. TL and APC related events are omitted.';
 
+CREATE TYPE location_source AS enum(
+  'GPS', 'ODO', 'MAN', 'N/A'
+);
+COMMENT ON TYPE location_source IS
+'Source of the positioning information, see HFP documentation.';
+
 --
 -- HFP observations
 --
