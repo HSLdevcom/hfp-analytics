@@ -3,11 +3,24 @@ COMMENT ON SCHEMA hfp IS
 'Models transit vehicle state, position and event data (High-Frequency Positioning).';
 
 
+-- Transport modes.
+-- Not modelled as enum to allow more convenient queries;
+-- enum values are handy in big data tables
+-- but hfp.vehicle is not such one.
+CREATE TABLE hfp.transport_mode (
+  transport_mode        text          PRIMARY KEY
+);
+COMMENT ON TABLE hfp.transport_mode IS
+'Dimension table for allowed transport_mode values.';
+INSERT INTO hfp.transport_mode (transport_mode)
+VALUES ('bus'), ('tram'), ('metro'), ('train'), ('ferry'), ('ubus');
+
 -- Vehicle model.
 CREATE TABLE hfp.vehicle (
   vehicle_id            integer       PRIMARY KEY,
   vehicle_operator_id   smallint      NOT NULL,
   vehicle_number        smallint      NOT NULL,
+  transport_mode        text              NULL REFERENCES hfp.transport_mode(transport_mode),
   modified_at           timestamptz,
   CONSTRAINT vehicle_id_format CHECK (
     vehicle_id = (100000*vehicle_operator_id + vehicle_number)
@@ -22,6 +35,8 @@ COMMENT ON COLUMN hfp.vehicle.vehicle_operator_id IS
 'Id of the operator who owns the vehicle. `operator_id` in HFP topic.';
 COMMENT ON COLUMN hfp.vehicle.vehicle_number IS
 'Vehicle number, unique within operator. `vehicle_number` in HFP topic.';
+COMMENT ON COLUMN hfp.vehicle.transport_mode IS
+'Mode of the vehicle. `transport_mode` in HFP topic.';
 COMMENT ON COLUMN hfp.vehicle.modified_at IS
 'When the vehicle row was added or last modified.';
 CREATE TRIGGER set_moddatetime    
