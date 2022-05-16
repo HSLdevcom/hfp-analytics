@@ -1,0 +1,12 @@
+{
+  "scriptFile": "main.py",
+  "bindings": [
+    {
+      "name": "dataImporter",
+      "runOnStartup": true,
+      "schedule": "*/20 * * * *",
+      "type": "timerTrigger",
+      "direction": "in"
+    }
+  ]
+}

@@ -4,7 +4,6 @@
     "FUNCTIONS_WORKER_RUNTIME": "python",
     "AzureWebJobsStorage": "<connection-string>",
     "MyBindingConnection": "<binding-connection-string>",
-    "AzureWebJobs.HttpExample.Disabled": "true",
     "POSTGRES_HOST": "localhost",
     "POSTGRES_HOST_PORT": "5432",
     "POSTGRES_DB": "stopcorr",
@@ -29,8 +28,5 @@
     "LocalHttpPort": 7071,
     "CORS": "*",
     "CORSCredentials": false
-  },
-  "ConnectionStrings": {
-    "SQLConnectionString": "<sqlclient-connection-string>"
   }
 }
