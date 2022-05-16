@@ -126,7 +126,8 @@ CREATE TABLE hfp.hfp_point (
 
   PRIMARY KEY (event_timestamp, vehicle_id)
 );
-CREATE INDEX ON hfp.hfp_point USING GIN(special_events);
+CREATE INDEX ON hfp.hfp_point USING GIN(special_events)
+  WHERE special_events IS NOT NULL;
 CREATE INDEX ON hfp.hfp_point USING GIST(geom);
 
 COMMENT ON TABLE hfp.hfp_point IS
