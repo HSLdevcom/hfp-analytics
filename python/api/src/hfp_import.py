@@ -2,7 +2,7 @@
 
 import psycopg2
 from datetime import datetime
-from .stopcorr.utils import get_conn_params
+from .utils import get_conn_params
 
 def main():
     starttime = datetime.now()

@@ -5,7 +5,7 @@ import requests
 import csv
 from datetime import date
 from psycopg2 import sql
-from .stopcorr.utils import get_conn_params
+from .utils import get_conn_params
 
 GRAPHQL_URL = 'https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql'
 

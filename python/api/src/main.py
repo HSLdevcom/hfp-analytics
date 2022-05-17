@@ -5,7 +5,7 @@ from fastapi.openapi.docs import (
     get_redoc_html,
     get_swagger_ui_html,
 )
-from .stopcorr.utils import get_conn_params, get_feature_collection
+from .utils import get_conn_params, get_feature_collection
 from .run_analysis import main as run_analysis_func
 import psycopg2 as psycopg
 from .hfp_import import main as run_hfp_import
