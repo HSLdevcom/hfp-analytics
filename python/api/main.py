@@ -7,7 +7,6 @@ from fastapi.openapi.docs import (
 )
 from common.utils import get_conn_params, get_feature_collection
 import psycopg2 as psycopg
-from .hfp_import import main as run_hfp_import
 from .digitransit_import import main as run_digitransit_import
 
 app = FastAPI(
@@ -62,10 +61,8 @@ async def run_import():
     """Runs data import"""
     print("Running import...")
 
-    run_hfp_import()
     run_digitransit_import()
 
-    # TODO: update /job_status here?
     return "Import done."
 
 @app.get("/jore_stops")

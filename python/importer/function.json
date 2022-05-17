@@ -4,7 +4,7 @@
     {
       "name": "dataImporter",
       "runOnStartup": true,
-      "schedule": "*/20 * * * *",
+      "schedule": "0 6 * * *",
       "type": "timerTrigger",
       "direction": "in"
     }
