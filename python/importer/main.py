@@ -12,13 +12,23 @@ import psycopg2 as psycopg
 from common.utils import get_conn_params
 from .run_analysis import main as run_analysis
 
-def main(dataImporter: func.TimerRequest) -> None:
+def main(dataImporter: func.TimerRequest):
+    conn = psycopg.connect(**get_conn_params())
+    try:
+        with conn:
+            imported_successfully = import_data_to_db(conn=conn)
+            print(f' imported_successfully {imported_successfully}')
+            if imported_successfully == True:
+                print("Import done successfully, running analysis.")
+                run_analysis()
+    finally:
+        conn.close()
+
+def import_data_to_db(conn):
     yesterday = datetime.now() - timedelta(1)
     yesterday = datetime.strftime(yesterday, '%Y-%m-%d')
     hfp_storage_container_name = os.getenv('HFP_STORAGE_CONTAINER_NAME')
     hfp_storage_connection_string = os.getenv('HFP_STORAGE_CONNECTION_STRING')
-    print(hfp_storage_container_name)
-    print(hfp_storage_connection_string)
     service = BlobServiceClient.from_connection_string(conn_str=hfp_storage_connection_string)
     result = service.find_blobs_by_tags(f"@container='{hfp_storage_container_name}' AND min_oday <= '{yesterday}' AND max_oday >= '{yesterday}'")
 
@@ -30,47 +40,38 @@ def main(dataImporter: func.TimerRequest) -> None:
         if type == 'VP' or type == 'DOC' or type == 'DOO':
             blob_names.append(r.name)
 
-    print(blob_names[0])
-
+    # TODO: we want to download all of the blobs, not just blob_names[0]
     blob_client = service.get_blob_client(container="hfp-v2-test", blob=blob_names[0])
-    import_succeeded = True
+    imported_successfully = True
     try:
         stream = blob_client.download_blob()
-
-        for chunk in stream.chunks():
-            reader = zstandard.ZstdDecompressor().stream_reader(chunk)
-            bytes = reader.readall()
-            dict_reader = csv.DictReader(StringIO(bytes.decode('utf-8')))
-
-            ind = 0
-            for row in dict_reader:
-                if ind == 0:
-                    # TODO: remove if - insert all rows when insert_hfp_row works.
-                    insert_hfp_row(row)
-                    ind = 1
+        read_imported_data_to_db(conn=conn, stream=stream)
 
     except Exception as e:
-        import_succeeded = False
+        imported_successfully = False
         print(f'Error in reading blob chunks: {e}')
 
-    if import_succeeded == True:
-        print("Import done successfully, running analysis.")
-        run_analysis()
+    return imported_successfully
 
-def insert_hfp_row(hfp):
-    conn = psycopg.connect(**get_conn_params())
+def read_imported_data_to_db(conn, stream):
+    # Read data in chunks to avoid loading all into memory at once
+    for chunk in stream.chunks():
+        reader = zstandard.ZstdDecompressor().stream_reader(chunk)
+        bytes = reader.readall()
+        hfp_dict_reader = csv.DictReader(StringIO(bytes.decode('utf-8')))
 
-    tst_with_timezone = parser.parse(hfp["tst"])
-    start_time_with_milliseconds = parser.parse(hfp["start"] + ":00")
-    try:
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute(f'INSERT INTO observation \
-                (tst,event,oper,veh,route,dir,oday,start,stop_id,stop_id_guessed,long,lat) \
-                    VALUES ({tst_with_timezone.timestamp()}, {hfp["eventType"]}, {hfp["oper"]}, {hfp["veh"]}, \
-                            {hfp["route"]}, {hfp["dir"]}, {hfp["oday"]}, {start_time_with_milliseconds}, \
-                            {hfp["stop"]}, {hfp["stop"]}, {hfp["longitude"]}, {hfp["latitude"]});')
-    except Exception as e:
-        print(f'Error in inserting hfp row: {e}')
-    finally:
-        conn.close()
+        import_io = StringIO()
+
+        ind = 0
+        for hfp in hfp_dict_reader:
+            if ind == 0:
+                if hfp["longitude"] != None and hfp["latitude"] != None:
+                    tst_with_timezone = parser.parse(hfp["tst"])
+                    start_time_with_milliseconds = parser.parse(hfp["start"] + ":00")
+                    import_io.write(
+                        f'{tst_with_timezone},{hfp["eventType"]},{hfp["oper"]},{hfp["veh"]},{hfp["route"]},{hfp["dir"]}, {hfp["oday"]},{start_time_with_milliseconds},{hfp["stop"]},{hfp["longitude"]},{hfp["latitude"]}')
+                ind = + 1
+
+        with conn.cursor() as cur:
+            import_io.seek(0)
+            cur.copy_from(file=import_io, table='observation', columns=('tst', 'event', 'oper', 'veh', 'route', 'dir', 'oday', 'start','stop_id','long','lat'))
