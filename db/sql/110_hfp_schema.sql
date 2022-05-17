@@ -56,26 +56,26 @@ CREATE TABLE hfp.observed_journey (
   modified_at           timestamptz
 );
 
-COMMENT ON TABLE hfp.planned_journey IS
+COMMENT ON TABLE hfp.observed_journey IS
 'Planned service operation through network path and pattern of stops.
 Implicitly read from HFP (route_id, direction_id, oday, start, oper).';
-COMMENT ON COLUMN hfp.planned_journey.journey_id IS
+COMMENT ON COLUMN hfp.observed_journey.journey_id IS
 'Surrogate key for unique journeys. Generated as MD5 uuid from other columns separated with _.';
-COMMENT ON COLUMN hfp.planned_journey.route_id IS
+COMMENT ON COLUMN hfp.observed_journey.route_id IS
 'Route identifier originating from Jore. `route_id` in HFP topic.';
-COMMENT ON COLUMN hfp.planned_journey.direction_id IS
+COMMENT ON COLUMN hfp.observed_journey.direction_id IS
 'Direction identifier originating from Jore: 1 or 2. `direction_id` in HFP topic.';
-COMMENT ON COLUMN hfp.planned_journey.oday IS
+COMMENT ON COLUMN hfp.observed_journey.oday IS
 'Operating date originating from Jore. `oday` in HFP payload.';
-COMMENT ON COLUMN hfp.planned_journey.start IS
+COMMENT ON COLUMN hfp.observed_journey.start IS
 'Start time on the operating date, HH:MM:SS. `start` in HFP payload.
 N.B. HFP uses 24h clock which can break journeys originally planned beyond >24:00:00.
 Interval type is used for future support of such start times.';
-COMMENT ON COLUMN hfp.planned_journey.planned_operator_id IS
+COMMENT ON COLUMN hfp.observed_journey.planned_operator_id IS
 'Id of the operator the journey was assigned to. `oper` in HFP payload.';
 
 CREATE TRIGGER set_moddatetime    
-  BEFORE INSERT OR UPDATE ON hfp.planned_journey
+  BEFORE INSERT OR UPDATE ON hfp.observed_journey
   FOR EACH ROW
   EXECUTE PROCEDURE moddatetime(modified_at);
 
@@ -101,7 +101,7 @@ COMMENT ON FUNCTION hfp.tg_set_journey_id() IS
 'Forces journey_id uuid value deterministically based on the other values.';
 
 CREATE TRIGGER set_journey_id
-  BEFORE INSERT OR UPDATE ON hfp.planned_journey
+  BEFORE INSERT OR UPDATE ON hfp.observed_journey
   FOR EACH ROW
   EXECUTE PROCEDURE hfp.tg_set_journey_id();
 
