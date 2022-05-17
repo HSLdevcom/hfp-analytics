@@ -108,16 +108,12 @@ CREATE TRIGGER set_journey_id
 
 -- HFP observation model.
 -- Some notes:
--- - For signed-off vehicles, journey_id should be NULL.
--- - Since we can assume that every event is also a VP vehicle position event,
---   this information need not be stored explicitly.
---   special_events shall only be populated if non-VP events were available
---   for that vehicle and second.
+-- - journey_id can be NULL, meaning the vehicle was not signed in to any journey.
 CREATE TABLE hfp.hfp_point (
   event_timestamp   timestamptz NOT NULL,
   vehicle_id        integer     NOT NULL REFERENCES hfp.vehicle(vehicle_id),
   journey_id        uuid            NULL REFERENCES hfp.observed_journey(journey_id),
-  special_events    public.event_type[],
+  hfp_events        public.event_type[],
   received_at       timestamptz,
   odo               integer,
   drst              boolean,
@@ -127,8 +123,7 @@ CREATE TABLE hfp.hfp_point (
 
   PRIMARY KEY (event_timestamp, vehicle_id)
 );
-CREATE INDEX ON hfp.hfp_point USING GIN(special_events)
-  WHERE special_events IS NOT NULL;
+CREATE INDEX ON hfp.hfp_point USING GIN(hfp_events);
 CREATE INDEX ON hfp.hfp_point USING GIST(geom);
 
 COMMENT ON TABLE hfp.hfp_point IS
@@ -139,7 +134,7 @@ COMMENT ON COLUMN hfp.hfp_point.vehicle_id IS
 'Unique id of the vehicle.';
 COMMENT ON COLUMN hfp.hfp_point.journey_id IS
 'Unique id of the journey the vehicle was possibly signed on.';
-COMMENT ON COLUMN hfp.hfp_point.special_events IS
+COMMENT ON COLUMN hfp.hfp_point.hfp_events IS
 'Possible non-VP events triggered by the vehicle during that second.';
 COMMENT ON COLUMN hfp.hfp_point.received_at IS
 'Absolute timestamp when the underlying VP observation was received by server.';
