@@ -89,7 +89,7 @@ CREATE TABLE hfp.hfp_point (
   journey_id        uuid            NULL REFERENCES hfp.observed_journey(journey_id),
   hfp_events        public.event_type[],
   received_at       timestamptz,
-  odo               integer,
+  odo               real,
   drst              boolean,
   loc               public.location_source,
   stop              integer,
