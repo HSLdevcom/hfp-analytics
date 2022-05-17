@@ -122,3 +122,116 @@ COMMENT ON COLUMN hfp.hfp_point.stop IS
 'Id of the stop that the HFP point was related to.';
 COMMENT ON COLUMN hfp.hfp_point.geom IS
 'Vehicle position point in ETRS-TM35 coordinates.';
+
+
+CREATE VIEW hfp.view_as_original_hfp_event AS (
+  SELECT
+    hp.event_timestamp                AS tst,
+    unnest(hp.hfp_events)             AS event_type,
+    hp.received_at,
+    ve.vehicle_operator_id,
+    ve.vehicle_number,
+    ve.transport_mode,
+    oj.route_id,
+    oj.direction_id,
+    oj.oday,
+    oj.start,
+    oj.planned_operator_id,
+    hp.odo,
+    hp.drst,
+    hp.loc,
+    hp.stop,
+    ST_X(ST_Transform(hp.geom, 4326)) AS longitude,
+    ST_Y(ST_Transform(hp.geom, 4326)) AS latitude
+  FROM
+    hfp.hfp_point                   AS hp
+    INNER JOIN hfp.vehicle          AS ve
+      ON (hp.vehicle_id = ve.vehicle_id)
+    LEFT JOIN hfp.observed_journey  AS oj
+      ON (hp.journey_id = oj.journey_id)
+);
+COMMENT ON VIEW hfp.view_as_original_hfp_event IS
+'Exposes HFP points with event types decomposed into separate rows
+and with vehicle and journey attributes, like in original HFP data.
+Used primarily for data imports through INSTEAD OF INSERT trigger.';
+
+CREATE FUNCTION hfp.tg_hfp_insertor()
+RETURNS trigger
+AS $$
+DECLARE
+  vehid integer;
+  jrnid uuid;
+BEGIN
+  -- Use variables for these to avoid repeated calculations in further steps.
+  vehid := 100000*NEW.vehicle_operator_id + NEW.vehicle_number;
+
+  jrnid := md5(concat_ws('_',
+    NEW.route_id, NEW.direction_id, NEW.oday, 
+    NEW.start, NEW.planned_operator_id
+  ))::uuid;
+
+  -- Insert the vehicle row, do nothing if exists.
+  INSERT INTO hfp.vehicle (vehicle_id, vehicle_operator_id, vehicle_number, transport_mode)
+  VALUES (vehid, NEW.vehicle_operator_id, NEW.vehicle_number, NEW.transport_mode)
+  ON CONFLICT ON CONSTRAINT vehicle_pkey DO NOTHING;
+
+  -- Insert the journey row but only with non-null journey attributes, do nothing if exists.
+  -- NOTE: Even if some journey attributes are null (e.g. route&dir available but the others not),
+  --       we still want to catch them as a "journey" existing in HFP data
+  --       so we're able to monitor whether such incomplete journeys occur.
+  -- "(foo, bar, baz) IS NULL" returns TRUE only if foo, bar AND baz are all NULL.
+  IF NOT ((NEW.route_id, NEW.direction_id, NEW.oday, NEW.start, NEW.planned_operator_id) IS NULL) THEN
+    INSERT INTO hfp.observed_journey (journey_id, route_id, direction_id, oday, start, planned_operator_id)
+    VALUES (jrnid, NEW.route_id, NEW.direction_id, NEW.oday, NEW.start, NEW.planned_operator_id)
+    ON CONFLICT ON CONSTRAINT observed_journey_pkey DO NOTHING;
+  END IF;
+
+  -- Insert the hfp_point row, making the following transformations:
+  -- - Timestamp, originally tst, is truncated to full second.
+  -- - Event type is added as single-element array, except as null if VP event.
+  -- - WGS84 long and lat are converted to ETRS-TM35 point geometry.
+  -- For existing data, by (event_timestamp, vehicle_id):
+  -- - Event type array is appended with the new non-VP event, though only if that type did not exist there.
+  -- - Other fields are updated only if they were previously NULL (coalesce(old_value, new_candidate)).
+  INSERT INTO hfp.hfp_point AS hp (
+    event_timestamp, vehicle_id, journey_id, hfp_events, received_at, odo, drst, loc, stop, geom
+  )
+  VALUES (
+    date_trunc('second', NEW.tst),
+    vehid,
+    jrnid,
+    array[NEW.event_type],
+    NEW.received_at,
+    NEW.odo,
+    NEW.drst,
+    NEW.loc,
+    NEW.stop,
+    ST_Transform( ST_SetSRID( ST_MakePoint(NEW.longitude, NEW.latitude), 4326), 3067)
+  )
+  ON CONFLICT ON CONSTRAINT hfp_point_pkey DO UPDATE 
+  SET
+    journey_id = coalesce(jrnid, EXCLUDED.journey_id),
+    hfp_events = array_distinct( array_cat(hp.hfp_events, EXCLUDED.hfp_events)),
+    received_at = coalesce(hp.received_at, EXCLUDED.received_at),
+    odo = coalesce(hp.odo, EXCLUDED.odo),
+    drst = coalesce(hp.drst, EXCLUDED.drst),
+    loc = coalesce(hp.loc, EXCLUDED.loc),
+    stop = coalesce(hp.stop, EXCLUDED.stop),
+    geom = coalesce(hp.geom, EXCLUDED.geom)
+  ;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+COMMENT ON FUNCTION hfp.tg_hfp_insertor() IS
+'When data is imported against view_as_original_hfp_event view,
+this function populates the actual data tables hfp_point, vehicle,
+and journey, and merges different events of same second and vehicle
+to one row. For already existing data, only missing values are filled.
+Any row that is inserted first becomes the "root" data of that hfp_point
+and related rows in other tables.';
+
+CREATE TRIGGER insert_hfp_data_through_view
+  INSTEAD OF INSERT ON hfp.view_as_original_hfp_event
+  FOR EACH ROW 
+  EXECUTE FUNCTION hfp.tg_hfp_insertor();
