@@ -79,32 +79,6 @@ CREATE TRIGGER set_moddatetime
   FOR EACH ROW
   EXECUTE PROCEDURE moddatetime(modified_at);
 
-CREATE FUNCTION hfp.tg_set_journey_id()
-RETURNS trigger
-AS $$
-BEGIN
-  -- E.g. ('1015', 2, '2020-04-04', '12:03:00', 19)
-  -- is converted to '1015_2_2020-04-04_12:03:00_19'
-  -- and then to md5 uuid '914e114a-86db-021d-d922-35d080f73387'.
-  -- NULLs are skipped:
-  -- ('1015', 2, '2020-04-04', NULL, 19)
-  -- -> '1015_2_2020-04-04_19'
-  -- -> '106d1bd4-260f-5a97-4618-04f823a3235f'.
-  NEW.journey_id := md5(concat_ws('_',
-    NEW.route_id, NEW.direction_id, NEW.operating_date, 
-    NEW.start_time, NEW.journey_operator_id
-  ))::uuid;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-COMMENT ON FUNCTION hfp.tg_set_journey_id() IS
-'Forces journey_id uuid value deterministically based on the other values.';
-
-CREATE TRIGGER set_journey_id
-  BEFORE INSERT OR UPDATE ON hfp.observed_journey
-  FOR EACH ROW
-  EXECUTE PROCEDURE hfp.tg_set_journey_id();
-
 
 -- HFP observation model.
 -- Some notes:
