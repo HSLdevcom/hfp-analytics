@@ -2,10 +2,10 @@
 
 import psycopg2
 from psycopg2 import sql
-from .utils import get_conn_params
-from .utils import env_with_default
-from .utils import comma_separated_floats_to_list
-from .utils import comma_separated_integers_to_list
+from common.utils import get_conn_params
+from common.utils import env_with_default
+from common.utils import comma_separated_floats_to_list
+from common.utils import comma_separated_integers_to_list
 
 def main():
     stop_near_limit_m = env_with_default('STOP_NEAR_LIMIT_M', 50.0)

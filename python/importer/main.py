@@ -9,14 +9,16 @@ from datetime import datetime, timedelta
 import pytz
 from dateutil import parser
 import psycopg2 as psycopg
-from .utils import get_conn_params
+from common.utils import get_conn_params
+from .run_analysis import main as run_analysis
 
 def main(dataImporter: func.TimerRequest) -> None:
     yesterday = datetime.now() - timedelta(1)
     yesterday = datetime.strftime(yesterday, '%Y-%m-%d')
-
     hfp_storage_container_name = os.getenv('HFP_STORAGE_CONTAINER_NAME')
     hfp_storage_connection_string = os.getenv('HFP_STORAGE_CONNECTION_STRING')
+    print(hfp_storage_container_name)
+    print(hfp_storage_connection_string)
     service = BlobServiceClient.from_connection_string(conn_str=hfp_storage_connection_string)
     result = service.find_blobs_by_tags(f"@container='{hfp_storage_container_name}' AND min_oday <= '{yesterday}' AND max_oday >= '{yesterday}'")
 
@@ -31,6 +33,7 @@ def main(dataImporter: func.TimerRequest) -> None:
     print(blob_names[0])
 
     blob_client = service.get_blob_client(container="hfp-v2-test", blob=blob_names[0])
+    import_succeeded = True
     try:
         stream = blob_client.download_blob()
 
@@ -47,8 +50,12 @@ def main(dataImporter: func.TimerRequest) -> None:
                     ind = 1
 
     except Exception as e:
+        import_succeeded = False
         print(f'Error in reading blob chunks: {e}')
 
+    if import_succeeded == True:
+        print("Import done successfully, running analysis.")
+        run_analysis()
 
 def insert_hfp_row(hfp):
     conn = psycopg.connect(**get_conn_params())

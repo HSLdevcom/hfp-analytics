@@ -18,4 +18,4 @@ fi
 
 # Now we can start the function.
 
-func start --port 7072
+func start

@@ -9,8 +9,7 @@ qgis/out/
 results/
 docker-compose.yml
 .idea/
-python/api/venv
-python/api/local.settings.json
-python/importer/venv
-python/importer/local.settings.json
+python/venv
+python/.venv
+python/local.settings.json
 testdata/import/hfp.csv

@@ -4,8 +4,8 @@ import pptx
 import psycopg2
 import os
 from datetime import date
-from .utils import get_conn_params
-from .utils import env_with_default
+from common.utils import get_conn_params
+from common.utils import env_with_default
 
 def main():
     min_observations_per_stop = env_with_default('MIN_OBSERVATIONS_PER_STOP', 100)
