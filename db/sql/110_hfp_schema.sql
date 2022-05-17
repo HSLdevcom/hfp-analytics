@@ -21,7 +21,7 @@ CREATE TABLE hfp.vehicle (
   vehicle_operator_id   smallint      NOT NULL,
   vehicle_number        smallint      NOT NULL,
   transport_mode        text              NULL REFERENCES hfp.transport_mode(transport_mode),
-  modified_at           timestamptz,
+  modified_at           timestamptz   DEFAULT now(),
   CONSTRAINT vehicle_id_format CHECK (
     vehicle_id = (100000*vehicle_operator_id + vehicle_number)
   )
@@ -40,20 +40,20 @@ COMMENT ON COLUMN hfp.vehicle.transport_mode IS
 COMMENT ON COLUMN hfp.vehicle.modified_at IS
 'When the vehicle row was added or last modified.';
 CREATE TRIGGER set_moddatetime    
-  BEFORE INSERT OR UPDATE ON hfp.vehicle
+  BEFORE UPDATE ON hfp.vehicle
   FOR EACH ROW
   EXECUTE PROCEDURE moddatetime(modified_at);
 
 
 -- Journey model.
 CREATE TABLE hfp.observed_journey (
-  journey_id            uuid      PRIMARY KEY,
+  journey_id            uuid          PRIMARY KEY,
   route_id              text,
   direction_id          smallint,
   oday                  date,
   start                 interval,
   planned_operator_id   smallint,
-  modified_at           timestamptz
+  modified_at           timestamptz   DEFAULT now()
 );
 
 COMMENT ON TABLE hfp.observed_journey IS
@@ -75,7 +75,7 @@ COMMENT ON COLUMN hfp.observed_journey.planned_operator_id IS
 'Id of the operator the journey was assigned to. `oper` in HFP payload.';
 
 CREATE TRIGGER set_moddatetime    
-  BEFORE INSERT OR UPDATE ON hfp.observed_journey
+  BEFORE UPDATE ON hfp.observed_journey
   FOR EACH ROW
   EXECUTE PROCEDURE moddatetime(modified_at);
 
