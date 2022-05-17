@@ -116,7 +116,7 @@ CREATE TRIGGER set_journey_id
 CREATE TABLE hfp.hfp_point (
   event_timestamp   timestamptz NOT NULL,
   vehicle_id        integer     NOT NULL REFERENCES hfp.vehicle(vehicle_id),
-  journey_id        uuid            NULL REFERENCES hfp.planned_journey(journey_id),
+  journey_id        uuid            NULL REFERENCES hfp.observed_journey(journey_id),
   special_events    public.event_type[],
   received_at       timestamptz,
   odo               integer,
