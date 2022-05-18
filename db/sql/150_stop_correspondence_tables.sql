@@ -1,17 +1,17 @@
-CREATE EXTENSION IF NOT EXISTS postgis;
-
--- All objects will be created in the "public" schema.
-
-CREATE TYPE event_type AS enum(
-  'DOO', 'DOC'
-);
+-- 
+-- Tables for stop correspondence analysis.
+-- TODO: Move these tables later to a separate schema,
+--       e.g. CREATE SCHEMA stopcorr; CREATE TABLE stopcorr.observation ... etc.
+--       This way, objects related to particular business cases
+--       are easy to group and identify together on db side.
+-- 
 
 --
 -- HFP observations
 --
 CREATE TABLE observation (
   tst timestamptz NOT NULL,
-  event event_type NOT NULL,
+  event text NOT NULL,
   oper integer NOT NULL,
   veh integer NOT NULL,
   route text,
