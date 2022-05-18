@@ -3,19 +3,6 @@ CREATE EXTENSION IF NOT EXISTS moddatetime;
 
 -- All objects will be created in the "public" schema.
 
-CREATE TYPE event_type AS enum(
-  'VP', 'DUE', 'ARR', 'DEP', 'ARS', 'PDE', 'PAS', 'WAIT',
-  'DOO', 'DOC', 'DA', 'DOUT', 'BA', 'BOUT', 'VJA', 'VJOUT'
-);
-COMMENT ON TYPE event_type IS
-'Basic HFP event types. TL and APC related events are omitted.';
-
-CREATE TYPE location_source AS enum(
-  'GPS', 'ODO', 'MAN', 'N/A'
-);
-COMMENT ON TYPE location_source IS
-'Source of the positioning information, see HFP documentation.';
-
 CREATE FUNCTION array_distinct(anyarray) 
 RETURNS anyarray 
 AS $f$
@@ -33,7 +20,7 @@ COMMENT ON FUNCTION array_distinct IS
 --
 CREATE TABLE observation (
   tst timestamptz NOT NULL,
-  event event_type NOT NULL,
+  event text NOT NULL,
   oper integer NOT NULL,
   veh integer NOT NULL,
   route text,
