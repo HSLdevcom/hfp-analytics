@@ -109,7 +109,7 @@ COMMENT ON COLUMN hfp.hfp_point.vehicle_id IS
 COMMENT ON COLUMN hfp.hfp_point.journey_id IS
 'Unique id of the journey the vehicle was possibly signed on.';
 COMMENT ON COLUMN hfp.hfp_point.hfp_events IS
-'Possible non-VP events triggered by the vehicle during that second.';
+'HFP events triggered by the vehicle during that second.';
 COMMENT ON COLUMN hfp.hfp_point.received_at IS
 'Absolute timestamp when the underlying VP observation was received by server.';
 COMMENT ON COLUMN hfp.hfp_point.odo IS
