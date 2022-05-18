@@ -11,3 +11,4 @@ docker-compose.yml
 .idea/
 python/venv/
 testdata/import/hfp.csv
+.vscode/
