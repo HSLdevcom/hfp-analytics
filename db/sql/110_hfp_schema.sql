@@ -52,7 +52,7 @@ CREATE TABLE hfp.observed_journey (
   direction_id          smallint,
   oday                  date,
   start                 interval,
-  planned_operator_id   smallint,
+  observed_operator_id  smallint,
   modified_at           timestamptz   DEFAULT now()
 );
 
@@ -71,7 +71,7 @@ COMMENT ON COLUMN hfp.observed_journey.start IS
 'Start time on the operating date, HH:MM:SS. `start` in HFP payload.
 N.B. HFP uses 24h clock which can break journeys originally planned beyond >24:00:00.
 Interval type is used for future support of such start times.';
-COMMENT ON COLUMN hfp.observed_journey.planned_operator_id IS
+COMMENT ON COLUMN hfp.observed_journey.observed_operator_id IS
 'Id of the operator the journey was assigned to. `oper` in HFP payload.';
 
 CREATE TRIGGER set_moddatetime    
@@ -136,7 +136,7 @@ CREATE VIEW hfp.view_as_original_hfp_event AS (
     oj.direction_id,
     oj.oday,
     oj.start,
-    oj.planned_operator_id,
+    oj.observed_operator_id,
     hp.odo,
     hp.drst,
     hp.loc,
@@ -167,7 +167,7 @@ BEGIN
 
   jrnid := md5(concat_ws('_',
     NEW.route_id, NEW.direction_id, NEW.oday, 
-    NEW.start, NEW.planned_operator_id
+    NEW.start, NEW.observed_operator_id
   ))::uuid;
 
   -- Insert the vehicle row, do nothing if exists.
@@ -180,9 +180,9 @@ BEGIN
   --       we still want to catch them as a "journey" existing in HFP data
   --       so we're able to monitor whether such incomplete journeys occur.
   -- "(foo, bar, baz) IS NULL" returns TRUE only if foo, bar AND baz are all NULL.
-  IF NOT ((NEW.route_id, NEW.direction_id, NEW.oday, NEW.start, NEW.planned_operator_id) IS NULL) THEN
-    INSERT INTO hfp.observed_journey (journey_id, route_id, direction_id, oday, start, planned_operator_id)
-    VALUES (jrnid, NEW.route_id, NEW.direction_id, NEW.oday, NEW.start, NEW.planned_operator_id)
+  IF NOT ((NEW.route_id, NEW.direction_id, NEW.oday, NEW.start, NEW.observed_operator_id) IS NULL) THEN
+    INSERT INTO hfp.observed_journey (journey_id, route_id, direction_id, oday, start, observed_operator_id)
+    VALUES (jrnid, NEW.route_id, NEW.direction_id, NEW.oday, NEW.start, NEW.observed_operator_id)
     ON CONFLICT ON CONSTRAINT observed_journey_pkey DO NOTHING;
   END IF;
 
