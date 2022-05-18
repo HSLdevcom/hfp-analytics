@@ -84,7 +84,7 @@ CREATE TRIGGER set_moddatetime
 -- Some notes:
 -- - journey_id can be NULL, meaning the vehicle was not signed in to any journey.
 CREATE TABLE hfp.hfp_point (
-  event_timestamp   timestamptz NOT NULL,
+  point_timestamp   timestamptz NOT NULL,
   vehicle_id        integer     NOT NULL REFERENCES hfp.vehicle(vehicle_id),
   journey_id        uuid            NULL REFERENCES hfp.observed_journey(journey_id),
   hfp_events        text[],
@@ -95,14 +95,14 @@ CREATE TABLE hfp.hfp_point (
   stop              integer,
   geom              geometry(POINT, 3067),
 
-  PRIMARY KEY (event_timestamp, vehicle_id)
+  PRIMARY KEY (point_timestamp, vehicle_id)
 );
 CREATE INDEX ON hfp.hfp_point USING GIN(hfp_events);
 CREATE INDEX ON hfp.hfp_point USING GIST(geom);
 
 COMMENT ON TABLE hfp.hfp_point IS
 'State of a transit vehicle at a time instant, based on HFP.';
-COMMENT ON COLUMN hfp.hfp_point.event_timestamp IS
+COMMENT ON COLUMN hfp.hfp_point.point_timestamp IS
 'Absolute timestamp of the observation, at full second precision.';
 COMMENT ON COLUMN hfp.hfp_point.vehicle_id IS
 'Unique id of the vehicle.';
@@ -126,7 +126,7 @@ COMMENT ON COLUMN hfp.hfp_point.geom IS
 
 CREATE VIEW hfp.view_as_original_hfp_event AS (
   SELECT
-    hp.event_timestamp                AS tst,
+    hp.point_timestamp                AS tst,
     unnest(hp.hfp_events)             AS event_type,
     hp.received_at,
     ve.vehicle_operator_id,
@@ -189,11 +189,11 @@ BEGIN
   -- Insert the hfp_point row, making the following transformations:
   -- - Timestamp, originally tst, is truncated to full second.
   -- - WGS84 long and lat are converted to ETRS-TM35 point geometry.
-  -- For existing data, by (event_timestamp, vehicle_id):
+  -- For existing data, by (point_timestamp, vehicle_id):
   -- - Event type array is appended with the new event, though only if that type did not exist there.
   -- - Other fields are updated only if they were previously NULL (coalesce(old_value, new_candidate)).
   INSERT INTO hfp.hfp_point AS hp (
-    event_timestamp, vehicle_id, journey_id, hfp_events, received_at, odo, drst, loc, stop, geom
+    point_timestamp, vehicle_id, journey_id, hfp_events, received_at, odo, drst, loc, stop, geom
   )
   VALUES (
     date_trunc('second', NEW.tst),
