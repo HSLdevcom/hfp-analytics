@@ -209,7 +209,7 @@ BEGIN
   )
   ON CONFLICT ON CONSTRAINT hfp_point_pkey DO UPDATE 
   SET
-    journey_id = coalesce(jrnid, EXCLUDED.journey_id),
+    journey_id = coalesce(hp.journey_id, EXCLUDED.journey_id),
     hfp_events = array_distinct( array_cat(hp.hfp_events, EXCLUDED.hfp_events)),
     received_at = coalesce(hp.received_at, EXCLUDED.received_at),
     odo = coalesce(hp.odo, EXCLUDED.odo),
