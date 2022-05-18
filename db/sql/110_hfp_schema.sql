@@ -188,10 +188,9 @@ BEGIN
 
   -- Insert the hfp_point row, making the following transformations:
   -- - Timestamp, originally tst, is truncated to full second.
-  -- - Event type is added as single-element array, except as null if VP event.
   -- - WGS84 long and lat are converted to ETRS-TM35 point geometry.
   -- For existing data, by (event_timestamp, vehicle_id):
-  -- - Event type array is appended with the new non-VP event, though only if that type did not exist there.
+  -- - Event type array is appended with the new event, though only if that type did not exist there.
   -- - Other fields are updated only if they were previously NULL (coalesce(old_value, new_candidate)).
   INSERT INTO hfp.hfp_point AS hp (
     event_timestamp, vehicle_id, journey_id, hfp_events, received_at, odo, drst, loc, stop, geom
