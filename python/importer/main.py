@@ -66,12 +66,15 @@ def read_imported_data_to_db(conn, stream):
         for hfp in hfp_dict_reader:
             if ind == 0:
                 if hfp["longitude"] != None and hfp["latitude"] != None:
-                    tst_with_timezone = parser.parse(hfp["tst"])
-                    start_time_with_milliseconds = parser.parse(hfp["start"] + ":00")
                     import_io.write(
-                        f'{tst_with_timezone},{hfp["eventType"]},{hfp["oper"]},{hfp["veh"]},{hfp["route"]},{hfp["dir"]}, {hfp["oday"]},{start_time_with_milliseconds},{hfp["stop"]},{hfp["longitude"]},{hfp["latitude"]}')
+                        f'{hfp["tst"]},{hfp["eventType"]},{hfp["receivedAt"]}{hfp["ownerOperatorId"]},{hfp["vehicleNumber"]},{hfp["mode"]}{hfp["routeId"]},{hfp["dir"]}, {hfp["oday"]},{hfp["start"]},{hfp["oper"]}{hfp["odo"]}{hfp["drst"]},{hfp["locationQualityMethod"]}{hfp["stop"]}{hfp["longitude"]},{hfp["latitude"]}')
                 ind = + 1
 
         with conn.cursor() as cur:
             import_io.seek(0)
-            cur.copy_from(file=import_io, table='observation', columns=('tst', 'event', 'oper', 'veh', 'route', 'dir', 'oday', 'start','stop_id','long','lat'))
+            cur.copy_from(
+                file=import_io,
+                table='hfp.view_as_original_hfp_event',
+                columns=('tst','event_type','received_at','vehicle_operator_id','vehicle_number','transport_mode','route_id','direction_id','oday','start','observed_operator_id','odo','drst','loc','stop','longitude','latitude')
+            )
+
