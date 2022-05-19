@@ -20,8 +20,8 @@ def main(dataImporter: func.TimerRequest):
     conn = psycopg.connect(**get_conn_params())
     try:
         with conn:
-            with conn.cursor() as cur:
-                imported_successfully = import_data_to_db(cur=cur)
+            with conn.cursor() as pg_cursor:
+                imported_successfully = import_data_to_db(pg_cursor=pg_cursor)
                 print(f' imported_successfully {imported_successfully}')
     finally:
         conn.close()
@@ -29,7 +29,7 @@ def main(dataImporter: func.TimerRequest):
             print("Import done successfully, running analysis.")
             run_analysis()
 
-def import_data_to_db(cur):
+def import_data_to_db(pg_cursor):
     yesterday = datetime.now() - timedelta(1)
     yesterday = datetime.strftime(yesterday, '%Y-%m-%d')
     hfp_storage_container_name = os.getenv('HFP_STORAGE_CONTAINER_NAME')
@@ -54,7 +54,7 @@ def import_data_to_db(cur):
             print(f'Importing blob: {blob}')
             blob_client = service.get_blob_client(container="hfp-v2-test", blob=blob)
             storage_stream_downloader = blob_client.download_blob()
-            read_imported_data_to_db(cur=cur, downloader=storage_stream_downloader)
+            read_imported_data_to_db(pg_cursor=pg_cursor, downloader=storage_stream_downloader)
             blob_index += 1
             # Limit downloading all the blobs when developing.
             if os.getenv('IS_DEBUG') == 'True' and blob_index > 5:
@@ -65,7 +65,7 @@ def import_data_to_db(cur):
 
     return imported_successfully
 
-def read_imported_data_to_db(cur, downloader):
+def read_imported_data_to_db(pg_cursor, downloader):
     compressed_content = downloader.content_as_bytes()
     reader = zstandard.ZstdDecompressor().stream_reader(compressed_content)
     bytes = reader.readall()
@@ -82,5 +82,5 @@ def read_imported_data_to_db(cur, downloader):
     # TODO: log invalid row count into db
     print(f'Import invalid row count: {invalid_row_count}')
     import_io.seek(0)
-    cur.copy_expert(sql="COPY hfp.view_as_original_hfp_event FROM STDIN WITH CSV HEADER",
+    pg_cursor.copy_expert(sql="COPY hfp.view_as_original_hfp_event FROM STDIN WITH CSV",
                     file=import_io)
