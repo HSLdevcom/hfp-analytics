@@ -73,14 +73,19 @@ def read_imported_data_to_db(pg_cursor, downloader):
     import_io = StringIO()
 
     invalid_row_count = 0
-    for hfp in hfp_dict_reader:
-        if hfp["vehicleNumber"] != None:
-            row = f'{hfp["tst"]},{hfp["eventType"]},{hfp["receivedAt"]},{hfp["ownerOperatorId"]},{hfp["vehicleNumber"]},{hfp["mode"]},{hfp["routeId"]},{hfp["dir"]},{hfp["oday"]},{hfp["start"]},{hfp["oper"]},{hfp["odo"]},{hfp["drst"]},{hfp["locationQualityMethod"]},{hfp["stop"]},{hfp["longitude"]},{hfp["latitude"]}\n'
-            import_io.write(row)
+    selected_fields = ["tst", "eventType", "receivedAt", "ownerOperatorId", "vehicleNumber", "mode",
+                       "routeId", "dir", "oday", "start", "oper", "odo", "drst", "locationQualityMethod",
+                        "stop", "longitude", "latitude"]
+    writer = csv.DictWriter(import_io, fieldnames=selected_fields)
+    for old_row in hfp_dict_reader:
+        new_row = {key: old_row[key] for key in selected_fields}
+        if not any(old_row[key] is None for key in ["tst", "oper", "vehicleNumber"]):
+            writer.writerow(new_row)
         else:
             invalid_row_count += 1
     # TODO: log invalid row count into db
-    print(f'Import invalid row count: {invalid_row_count}')
+    if invalid_row_count > 0:
+        print(f'Import invalid row count: {invalid_row_count}')
     import_io.seek(0)
     pg_cursor.copy_expert(sql="COPY hfp.view_as_original_hfp_event FROM STDIN WITH CSV",
                     file=import_io)
