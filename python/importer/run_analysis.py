@@ -30,6 +30,16 @@ def main():
     try:
         with conn:
             with conn.cursor() as cur:
+                cur.execute('SELECT stopcorr.refresh_observation()')
+                print(
+                    f'{cur.fetchone()[0]} observations inserted.')
+
+                cur.execute(
+                    'UPDATE observation \
+                    SET stop_id_guessed = false \
+                    WHERE stop_id IS NOT NULL'
+                )
+
                 cur.execute('SELECT * FROM guess_missing_stop_ids(%s)',
                             (stop_near_limit_m, ))
                 print(f'{cur.fetchone()[0]} observations updated with guessed stop_id')

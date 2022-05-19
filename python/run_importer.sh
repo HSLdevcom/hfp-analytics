@@ -18,4 +18,4 @@ fi
 
 # Now we can start the function.
 
-func start
+func start --functions importer --port 7072

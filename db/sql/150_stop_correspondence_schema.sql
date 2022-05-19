@@ -1,13 +1,15 @@
--- 
--- Tables for stop correspondence analysis.
--- TODO: Move these tables later to a separate schema,
---       e.g. CREATE SCHEMA stopcorr; CREATE TABLE stopcorr.observation ... etc.
---       This way, objects related to particular business cases
---       are easy to group and identify together on db side.
--- 
+---
+--- Tables for stop correspondence analysis.
+--- TODO: Move all tables under stopcorr schema
+---       This way, objects related to particular business cases
+---       are easy to group and identify together on db side.
+---
+CREATE SCHEMA stopcorr;
+COMMENT ON SCHEMA stopcorr IS
+'For stop correspondence analysis';
 
 --
--- HFP observations
+-- HFP observations (DOC / DOO events)
 --
 CREATE TABLE observation (
   tst timestamptz NOT NULL,
@@ -49,6 +51,41 @@ COMMENT ON COLUMN observation.lat IS
 'WGS84 latitude (from import file).';
 COMMENT ON COLUMN observation.geom IS
 'Observation POINT geometry in ETRS-TM35 coordinate system, generated from long & lat.';
+
+CREATE OR REPLACE FUNCTION stopcorr.refresh_observation() RETURNS bigint AS $func$
+DECLARE
+  n_inserted bigint;
+BEGIN
+  DELETE FROM observation;
+  WITH ins AS (
+    INSERT INTO observation (tst, event, oper, veh, route, dir, oday, start, stop_id, long, lat)
+    SELECT
+      hfp.tst,
+      hfp.event_type,
+      hfp.observed_operator_id,
+      hfp.vehicle_number,
+      hfp.route_id,
+      hfp.direction_id,
+      hfp.oday,
+      hfp.start,
+      hfp.stop,
+      hfp.longitude,
+      hfp.latitude
+    FROM hfp.view_as_original_hfp_event hfp
+    WHERE (
+      hfp.event_type = 'DOO' OR
+      hfp.event_type = 'DOC'
+    ) AND
+    hfp.longitude IS NOT NULL AND
+    hfp.latitude IS NOT NULL
+    ON CONFLICT DO NOTHING
+    RETURNING 1
+  )
+  SELECT INTO n_inserted count(*) FROM ins;
+  RETURN n_inserted;
+END;
+$func$
+LANGUAGE plpgsql VOLATILE;
 
 --
 -- Jore / Digitransit stops
