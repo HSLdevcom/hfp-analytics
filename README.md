@@ -1,4 +1,4 @@
-# stop-correspondence
+# HFP-Analytics
 
 ![stopcorr db relations and procedures](img/stopcorr-relations-and-procedures.png)
 

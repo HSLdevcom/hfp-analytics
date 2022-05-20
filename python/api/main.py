@@ -5,10 +5,8 @@ from fastapi.openapi.docs import (
     get_redoc_html,
     get_swagger_ui_html,
 )
-from .stopcorr.utils import get_conn_params, get_feature_collection
-from .run_analysis import main as run_analysis_func
+from common.utils import get_conn_params, get_feature_collection
 import psycopg2 as psycopg
-from .hfp_import import main as run_hfp_import
 from .digitransit_import import main as run_digitransit_import
 
 app = FastAPI(
@@ -63,21 +61,9 @@ async def run_import():
     """Runs data import"""
     print("Running import...")
 
-    run_hfp_import()
     run_digitransit_import()
 
-    # TODO: update /job_status here?
     return "Import done."
-
-@app.get("/run_analysis")
-async def run_analysis():
-    """Runs analysis"""
-    print("Running analysis...")
-    run_analysis_func()
-
-    # TODO: update /job_status here?
-    return "Analysis done."
-
 
 @app.get("/jore_stops")
 async def get_jore_stops(stop_id = -1):
