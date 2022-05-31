@@ -30,6 +30,7 @@ def main():
     try:
         with conn:
             with conn.cursor() as cur:
+                print(f'###   Running analysis   ###')
                 cur.execute('SELECT stopcorr.refresh_observation()')
                 print(
                     f'{cur.fetchone()[0]} observations inserted.')
@@ -84,6 +85,7 @@ def main():
                 cur.execute('SELECT count(*) FROM stop_median WHERE result_class IS NOT NULL')
                 print(f'{cur.fetchone()[0]} "stop_median" updated with "result_class", "recommended_min_radius_m" and "manual_acceptance_needed"')
 
+                print(f'###   Analysis complete!   ###')
     finally:
         conn.close()
 

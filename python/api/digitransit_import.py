@@ -104,12 +104,14 @@ def import_dataset(query_type, to_table, conn):
     print(f'{query_type} done')
 
 def main():
+    conn = None
     try:
         with psycopg2.connect(**get_conn_params()) as conn:
             import_dataset(query_type='stations', to_table='jore_station', conn=conn)
             import_dataset(query_type='stops', to_table='jore_stop', conn=conn)
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
 if __name__ == '__main__':
     main()

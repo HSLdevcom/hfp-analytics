@@ -6,6 +6,15 @@
         "isEnabled": true,
         "excludedTypes": "Request"
       }
+    },
+    "logLevel": {
+      "default": "Information",
+      "Host.Results": "Error",
+      "Function": "Error",
+      "Host.Aggregator": "Trace"
+    },
+    "tracing": {
+      "consoleLevel": "verbose"
     }
   },
   "extensionBundle": {

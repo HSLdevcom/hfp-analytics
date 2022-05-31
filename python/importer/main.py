@@ -6,27 +6,26 @@ import os
 import csv
 import zstandard
 from datetime import datetime, timedelta
-import pytz
-from dateutil import parser
 import psycopg2 as psycopg
-from common.utils import get_conn_params
+from common.utils import get_conn_params, get_logger
 from .run_analysis import main as run_analysis
 
 # TODO: import other event types as well when needed.
 event_types_to_import = ['DOC', 'DOO']
 
 def main(dataImporter: func.TimerRequest):
+    logger = get_logger()
+    logger.debug("###   Going to run importer.   ###")
     imported_successfully = False
     conn = psycopg.connect(**get_conn_params())
     try:
         with conn:
             with conn.cursor() as pg_cursor:
                 imported_successfully = import_data_to_db(pg_cursor=pg_cursor)
-                print(f' imported_successfully {imported_successfully}')
     finally:
         conn.close()
         if imported_successfully == True:
-            print("Import done successfully, running analysis.")
+            print("###   Import done successfully.   ###")
             run_analysis()
 
 def import_data_to_db(pg_cursor):
@@ -51,13 +50,12 @@ def import_data_to_db(pg_cursor):
     blob_index = 0
     try:
         for blob in blob_names:
-            print(f'Importing blob: {blob}')
             blob_client = service.get_blob_client(container="hfp-v2-test", blob=blob)
             storage_stream_downloader = blob_client.download_blob()
             read_imported_data_to_db(pg_cursor=pg_cursor, downloader=storage_stream_downloader)
             blob_index += 1
             # Limit downloading all the blobs when developing.
-            if os.getenv('IS_DEBUG') == 'True' and blob_index > 5:
+            if os.getenv('IS_DEBUG') == 'True' and blob_index > 1:
                 return imported_successfully
     except Exception as e:
         imported_successfully = False
