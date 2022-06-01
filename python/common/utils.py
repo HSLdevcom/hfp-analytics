@@ -1,15 +1,17 @@
 import os
 import logging
 from sys import stdout
+import pptx
+
+logger = logging.getLogger('logger')
+logger.setLevel(logging.DEBUG)  # set logger level
+logFormatter = logging.Formatter \
+    ("%(name)-12s %(asctime)s %(levelname)-8s %(filename)s:%(funcName)s %(message)s")
+consoleHandler = logging.StreamHandler(stdout)  # set streamhandler to stdout
+consoleHandler.setFormatter(logFormatter)
+logger.addHandler(consoleHandler)
 
 def get_logger():
-    logger = logging.getLogger('logger')
-    logger.setLevel(logging.DEBUG)  # set logger level
-    logFormatter = logging.Formatter \
-        ("%(name)-12s %(asctime)s %(levelname)-8s %(filename)s:%(funcName)s %(message)s")
-    consoleHandler = logging.StreamHandler(stdout)  # set streamhandler to stdout
-    consoleHandler.setFormatter(logFormatter)
-    logger.addHandler(consoleHandler)
     return logger
 
 def get_conn_params():
@@ -52,6 +54,7 @@ def analyze_pptx(input_pptx, output_pptx):
     The output file contains marked up information to make it easier
     for generating future powerpoint templates.
     """
+    logger = get_logger()
     prs = pptx.Presentation(input_pptx)
     for index, _ in enumerate(prs.slide_layouts):
         slide = prs.slides.add_slide(prs.slide_layouts[index])
@@ -59,7 +62,7 @@ def analyze_pptx(input_pptx, output_pptx):
             title = slide.shapes.title
             title.text = 'Title for Layout {}'.format(index)
         except AttributeError:
-            print("No Title for Layout {}".format(index))
+            logger.info("No Title for Layout {}".format(index))
         for shape in slide.placeholders:
             if shape.is_placeholder:
                 phf = shape.placeholder_format
@@ -67,6 +70,6 @@ def analyze_pptx(input_pptx, output_pptx):
                     if 'Title' not in shape.text:
                         shape.text = 'Placeholder index:{} type:{}'.format(phf.idx, shape.name)
                 except AttributeError:
-                    print("{} has no text attribute".format(phf.type))
-                print('{} {}'.format(phf.idx, shape.name))
+                    logger.info("{} has no text attribute".format(phf.type))
+                logger.info('{} {}'.format(phf.idx, shape.name))
     prs.save(output_pptx)
