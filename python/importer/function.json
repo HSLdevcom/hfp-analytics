@@ -2,11 +2,12 @@
   "scriptFile": "main.py",
   "bindings": [
     {
-      "name": "dataImporter",
-      "runOnStartup": true,
-      "schedule": "0 6 * * *",
+      "authLevel": "function",
       "type": "timerTrigger",
-      "direction": "in"
+      "direction": "in",
+      "name": "dataImporter",
+      "runOnStartup": false,
+      "schedule": "45 6 * * *"
     }
   ]
 }

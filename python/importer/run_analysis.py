@@ -1,11 +1,7 @@
 # Call analysis functions in the db.
 
 import psycopg2
-from psycopg2 import sql
-from common.utils import get_conn_params
-from common.utils import env_with_default
-from common.utils import comma_separated_floats_to_list
-from common.utils import comma_separated_integers_to_list
+from common.utils import env_with_default, comma_separated_floats_to_list, comma_separated_integers_to_list, get_conn_params, get_logger
 
 def main():
     stop_near_limit_m = env_with_default('STOP_NEAR_LIMIT_M', 50.0)
@@ -30,8 +26,10 @@ def main():
     try:
         with conn:
             with conn.cursor() as cur:
+                logger = get_logger()
+                logger.info("### Running analysis. ###")
                 cur.execute('SELECT stopcorr.refresh_observation()')
-                print(
+                logger.info(
                     f'{cur.fetchone()[0]} observations inserted.')
 
                 cur.execute(
@@ -42,34 +40,34 @@ def main():
 
                 cur.execute('SELECT * FROM guess_missing_stop_ids(%s)',
                             (stop_near_limit_m, ))
-                print(f'{cur.fetchone()[0]} observations updated with guessed stop_id')
+                logger.info(f'{cur.fetchone()[0]} observations updated with guessed stop_id')
 
                 cur.execute('SELECT stop_id FROM observed_stop_not_in_jore_stop')
                 res = [str(x[0]) for x in cur.fetchall()]
                 n_stops = len(res)
                 if n_stops > 10:
-                    print(f'{n_stops} stop_id values in "observation" not found in "jore_stop"')
+                    logger.info(f'{n_stops} stop_id values in "observation" not found in "jore_stop"')
                 elif n_stops > 0:
                     stops_str = ', '.join(res)
-                    print(f'stop_id values in "observation" not found in "jore_stop": {stops_str}')
+                    logger.info(f'stop_id values in "observation" not found in "jore_stop": {stops_str}')
 
                 cur.execute('SELECT * FROM calculate_jore_distances()')
-                print(f'{cur.fetchone()[0]} observations updated with dist_to_jore_point_m')
+                logger.info(f'{cur.fetchone()[0]} observations updated with dist_to_jore_point_m')
 
                 cur.execute('WITH deleted AS (DELETE FROM stop_median RETURNING 1)\
                             SELECT count(*) FROM deleted')
-                print(f'{cur.fetchone()[0]} rows deleted from "stop_median"')
+                logger.info(f'{cur.fetchone()[0]} rows deleted from "stop_median"')
 
                 cur.execute('SELECT * FROM calculate_medians(%s, %s)',
                             (min_observations_per_stop, max_null_stop_dist_m))
-                print(f'{cur.fetchone()[0]} rows inserted into "stop_median"')
+                logger.info(f'{cur.fetchone()[0]} rows inserted into "stop_median"')
 
                 cur.execute('SELECT * FROM calculate_median_distances()')
-                print(f'{cur.fetchone()[0]} observations updated with dist_to_median_point_m')
+                logger.info(f'{cur.fetchone()[0]} observations updated with dist_to_median_point_m')
 
                 cur.execute('SELECT * FROM calculate_percentile_radii(%s)',
                             (radius_percentiles, ))
-                print(f'{cur.fetchone()[0]} "percentile_radii" created using percentiles {radius_percentiles_str}')
+                logger.info(f'{cur.fetchone()[0]} "percentile_radii" created using percentiles {radius_percentiles_str}')
 
                 cur.execute('CALL classify_medians(%s, %s, %s, %s, %s, %s, %s, %s)',
                             (min_radius_percentiles_to_sum,
@@ -82,8 +80,9 @@ def main():
                              terminal_ids)
                             )
                 cur.execute('SELECT count(*) FROM stop_median WHERE result_class IS NOT NULL')
-                print(f'{cur.fetchone()[0]} "stop_median" updated with "result_class", "recommended_min_radius_m" and "manual_acceptance_needed"')
+                logger.info(f'{cur.fetchone()[0]} "stop_median" updated with "result_class", "recommended_min_radius_m" and "manual_acceptance_needed"')
 
+                logger.info(f'### Analysis complete. ###')
     finally:
         conn.close()
 

@@ -2,6 +2,7 @@
 # TEST compose file for continuous services.
 version: "3.8"
 services:
+  # Database for local development
   db:
     image: postgis/postgis:13-3.1-alpine
     restart: unless-stopped
@@ -12,9 +13,8 @@ services:
       - ./db/sql:/docker-entrypoint-initdb.d:ro
       # Change to an actual import volume for production:
       - ./testdata/import:/import:ro
-      # Change to a persistent volume for production:
-      - type: tmpfs
-        target: /var/lib/postgresql/data
+      # Persistent storage
+      - ./analytics-postgis-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-q", "-U", "${POSTGRES_USER}"]
       interval: 5s
@@ -22,16 +22,42 @@ services:
       timeout: 20s
       retries: 3
   api:
-    image: stopcorr/api:latest
-    build: ./python
+    image: hfp-analytics/api:latest
+    build:
+      context: ./python
+      dockerfile: Dockerfile.api
     depends_on:
       db:
         condition: service_healthy
-    env_file: .env
-    volumes:
-      - ./python/src:/code:ro
     ports:
-      - "8001:8000"
+      - "127.0.0.1:7071:80"
+    env_file: .env
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./python/api:/home/site/wwwroot/api/:ro
+      - ./python/common:/home/site/wwwroot/common/:ro
+      - ./python/host.json:/home/site/wwwroot/host.json:ro
+      - ./python/requirements.txt:/home/site/wwwroot/requirements.txt:ro
+    restart: on-failure
+  importer:
+    image: hfp-analytics/importer:latest
+    build:
+      context: ./python
+      dockerfile: Dockerfile.importer
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:7072:80"
+    env_file: .env
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./python/importer:/home/site/wwwroot/importer/:ro
+      - ./python/common:/home/site/wwwroot/common/:ro
+      - ./python/host.json:/home/site/wwwroot/host.json:ro
+      - ./python/requirements.txt:/home/site/wwwroot/requirements.txt:ro
     restart: on-failure
   #worker:
   #  image: stopcorr/stopcorr-python:latest
@@ -58,5 +84,5 @@ services:
 
 networks:
   default:
-    external: false
-    name: stopcorr_nw
+    external: true
+    name: hfp_analytics_nw
