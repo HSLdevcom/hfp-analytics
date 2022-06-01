@@ -33,9 +33,9 @@ conditional_mkdir results
 
 docker-compose build
 
-if [ ! "$(docker network ls | grep stopcorr_nw)" ]; then
-  docker network create --attachable stopcorr_nw
-  echo "stopcorr_nw docker network created"
+if [ ! "$(docker network ls | grep hfp_analytics_nw)" ]; then
+  docker network create --attachable hfp_analytics_nw
+  echo "hfp_analytics_nw docker network created"
 else
-  echo "stopcorr_nw docker network already exists"
+  echo "hfp_analytics_nw docker network already exists"
 fi
