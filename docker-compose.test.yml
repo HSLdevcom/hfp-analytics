@@ -32,6 +32,8 @@ services:
     ports:
       - "127.0.0.1:7071:80"
     env_file: .env
+    environment:
+      - PYTHONUNBUFFERED=1
     volumes:
       - ./python/api:/home/site/wwwroot/api/:ro
       - ./python/common:/home/site/wwwroot/common/:ro
@@ -49,6 +51,8 @@ services:
     ports:
       - "127.0.0.1:7072:80"
     env_file: .env
+    environment:
+      - PYTHONUNBUFFERED=1
     volumes:
       - ./python/importer:/home/site/wwwroot/importer/:ro
       - ./python/common:/home/site/wwwroot/common/:ro
