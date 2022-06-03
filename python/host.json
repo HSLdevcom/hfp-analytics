@@ -10,7 +10,7 @@
     "logLevel": {
       "default": "Information",
       "Host.Results": "Error",
-      "Function": "Error",
+      "Function": "Information",
       "Host.Aggregator": "Trace"
     },
     "tracing": {

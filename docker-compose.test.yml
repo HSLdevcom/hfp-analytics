@@ -14,7 +14,7 @@ services:
       # Change to an actual import volume for production:
       - ./testdata/import:/import:ro
       # Persistent storage
-      - ./analytics-postgis-data:/var/lib/postgresql/data
+      - ../analytics-postgis-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-q", "-U", "${POSTGRES_USER}"]
       interval: 5s
@@ -25,7 +25,7 @@ services:
     image: hfp-analytics/api:latest
     build:
       context: ./python
-      dockerfile: Dockerfile.api
+      dockerfile: Dockerfile.api_local
     depends_on:
       db:
         condition: service_healthy
@@ -44,7 +44,7 @@ services:
     image: hfp-analytics/importer:latest
     build:
       context: ./python
-      dockerfile: Dockerfile.importer
+      dockerfile: Dockerfile.importer_local
     depends_on:
       db:
         condition: service_healthy
