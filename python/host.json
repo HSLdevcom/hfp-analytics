@@ -1,5 +1,15 @@
 {
   "version": "2.0",
+  "extensionBundle": {
+    "id": "Microsoft.Azure.Functions.ExtensionBundle",
+    "version": "[2.*, 3.0.0)"
+  },
+  "extensions": {
+    "http": {
+        "routePrefix": ""
+    }
+  },
+  "functionTimeout": "08:00:00",
   "logging": {
     "applicationInsights": {
       "samplingSettings": {
@@ -15,15 +25,6 @@
     },
     "tracing": {
       "consoleLevel": "verbose"
-    }
-  },
-  "extensionBundle": {
-    "id": "Microsoft.Azure.Functions.ExtensionBundle",
-    "version": "[2.*, 3.0.0)"
-  },
-  "extensions": {
-    "http": {
-        "routePrefix": ""
     }
   }
 }

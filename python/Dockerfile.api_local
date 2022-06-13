@@ -3,9 +3,10 @@ FROM mcr.microsoft.com/azure-functions/python:4-python3.10
 ENV AzureWebJobsScriptRoot=/home/site/wwwroot
 ENV AzureFunctionsJobHost__Logging__Console__IsEnabled=true
 ENV FUNCTIONS_SECRETS_PATH=/etc/secrets
+ENV TZ="Europe/Helsinki"
 
 ENV AzureWebJobsSecretStorageType=Files
-RUN mkdir /etc/secrets/
+RUN mkdir -p /etc/secrets/
 ADD host_secrets.json /etc/secrets/host.json
 
 COPY requirements.txt /
