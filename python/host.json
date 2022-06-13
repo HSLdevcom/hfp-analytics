@@ -1,5 +1,15 @@
 {
   "version": "2.0",
+  "extensionBundle": {
+    "id": "Microsoft.Azure.Functions.ExtensionBundle",
+    "version": "[2.*, 3.0.0)"
+  },
+  "extensions": {
+    "http": {
+        "routePrefix": ""
+    }
+  },
+  "functionTimeout": "08:00:00",
   "logging": {
     "applicationInsights": {
       "samplingSettings": {
@@ -10,20 +20,11 @@
     "logLevel": {
       "default": "Information",
       "Host.Results": "Error",
-      "Function": "Error",
+      "Function": "Information",
       "Host.Aggregator": "Trace"
     },
     "tracing": {
       "consoleLevel": "verbose"
-    }
-  },
-  "extensionBundle": {
-    "id": "Microsoft.Azure.Functions.ExtensionBundle",
-    "version": "[2.*, 3.0.0)"
-  },
-  "extensions": {
-    "http": {
-        "routePrefix": ""
     }
   }
 }

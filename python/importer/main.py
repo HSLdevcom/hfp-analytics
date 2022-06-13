@@ -16,17 +16,15 @@ event_types_to_import = ['DOC', 'DOO']
 def main(dataImporter: func.TimerRequest):
     logger = get_logger()
     logger.info("### Going to run importer. ###")
-    imported_successfully = False
     conn = psycopg.connect(**get_conn_params())
     try:
         with conn:
             with conn.cursor() as pg_cursor:
-                imported_successfully = import_data_to_db(pg_cursor=pg_cursor)
+                import_data_to_db(pg_cursor=pg_cursor)
     finally:
         conn.close()
-        if imported_successfully == True:
-            logger.info("### Import done successfully. ###")
-            run_analysis()
+        logger.info("### Import done. ###")
+        run_analysis()
 
 def import_data_to_db(pg_cursor):
     logger = get_logger()
@@ -45,23 +43,18 @@ def import_data_to_db(pg_cursor):
         if type in event_types_to_import:
             blob_names.append(r.name)
 
-    imported_successfully = True
-
     blob_index = 0
-    try:
-        for blob in blob_names:
+    for blob in blob_names:
+        try:
             blob_client = service.get_blob_client(container="hfp-v2-test", blob=blob)
             storage_stream_downloader = blob_client.download_blob()
             read_imported_data_to_db(pg_cursor=pg_cursor, downloader=storage_stream_downloader)
             blob_index += 1
             # Limit downloading all the blobs when developing.
             if os.getenv('IS_DEBUG') == 'True' and blob_index > 1:
-                return imported_successfully
-    except Exception as e:
-        imported_successfully = False
-        logger.error(f'Error in reading blob chunks: {e}')
-
-    return imported_successfully
+               return
+        except Exception as e:
+            logger.error(f'Error in reading blob chunks: {e}')
 
 def read_imported_data_to_db(pg_cursor, downloader):
     logger = get_logger()
