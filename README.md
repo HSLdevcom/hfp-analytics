@@ -28,7 +28,7 @@ See further descriptions from the links.
 
 ## Deployment
 
-The API is hosted in [Azure Functions](), and the database in [Azure Database for PostgreSQL](https://azure.microsoft.com/en-us/services/postgresql/)
+The API is hosted in [Azure Functions](https://docs.microsoft.com/en-us/azure/azure-functions/), and the database in [Azure Database for PostgreSQL](https://azure.microsoft.com/en-us/services/postgresql/)
 
 > **TODO:** Deployment in Azure at a general level (and how to get detailed instructions not published here).
 
