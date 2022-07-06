@@ -1,14 +1,6 @@
 # HFP-Analytics
 
-![stopcorr db relations and procedures](img/stopcorr-relations-and-procedures.png)
 
-This tool produces a report of HSL transit stops whose geographical position and/or stop detection radius may require adjustments.
-By using the report, HSL personnel can adjust the coordinates and parameters of Jore stops to better reflect the real world, improving on the accuracy of stop area detection of transit vehicles in operation (and thus the operation data quality) as well as passenger information in Reittiopas and other info channels.
-
-The analysis is made with the current stop data from Jore (via Digitransit; the same data as what's used in Reittiopas) and a sample of HFP events.
-Results are combined into a PowerPoint file that can be further distributed, modified and commented on.
-
-The stop-HFP correspondence analysis is a one-off task run a few times per year and requires some manual effort every time.
 
 ## Usage & development
 
