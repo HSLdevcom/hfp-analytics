@@ -9,6 +9,8 @@ services:
     env_file: .env
     ports:
       - 127.0.0.1:${POSTGRES_HOST_PORT}:5432
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - ./db/sql:/docker-entrypoint-initdb.d:ro
       # Change to an actual import volume for production:
