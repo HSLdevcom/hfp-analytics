@@ -9,12 +9,14 @@ services:
     env_file: .env
     ports:
       - 127.0.0.1:${POSTGRES_HOST_PORT}:5432
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - ./db/sql:/docker-entrypoint-initdb.d:ro
       # Change to an actual import volume for production:
       - ./testdata/import:/import:ro
       # Persistent storage
-      - ./analytics-postgis-data:/var/lib/postgresql/data
+      - ../analytics-postgis-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-q", "-U", "${POSTGRES_USER}"]
       interval: 5s
@@ -25,26 +27,28 @@ services:
     image: hfp-analytics/api:latest
     build:
       context: ./python
-      dockerfile: Dockerfile.api
+      dockerfile: Dockerfile.api_local
     depends_on:
       db:
         condition: service_healthy
     ports:
-      - "127.0.0.1:7071:80"
+      - "127.0.0.1:7071:8000"
     env_file: .env
+    working_dir: /code
+    command: uvicorn api.main:app --host 0.0.0.0 --reload
     environment:
       - PYTHONUNBUFFERED=1
     volumes:
-      - ./python/api:/home/site/wwwroot/api/:ro
-      - ./python/common:/home/site/wwwroot/common/:ro
-      - ./python/host.json:/home/site/wwwroot/host.json:ro
-      - ./python/requirements.txt:/home/site/wwwroot/requirements.txt:ro
+      - ./python/api:/code/api:ro
+      - ./python/common:/code/common/:ro
+      - ./python/host.json:/code/host.json:ro
+      - ./python/requirements.txt:/code/requirements.txt:ro
     restart: on-failure
   importer:
     image: hfp-analytics/importer:latest
     build:
       context: ./python
-      dockerfile: Dockerfile.importer
+      dockerfile: Dockerfile.importer_local
     depends_on:
       db:
         condition: service_healthy
@@ -54,8 +58,8 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
     volumes:
-      - ./python/importer:/home/site/wwwroot/importer/:ro
-      - ./python/common:/home/site/wwwroot/common/:ro
+      - ./python/importer:/home/site/wwwroot/importer:ro
+      - ./python/common:/home/site/wwwroot/common:ro
       - ./python/host.json:/home/site/wwwroot/host.json:ro
       - ./python/requirements.txt:/home/site/wwwroot/requirements.txt:ro
     restart: on-failure
