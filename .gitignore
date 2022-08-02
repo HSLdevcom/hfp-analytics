@@ -15,4 +15,4 @@ python/local.settings.json
 testdata/import/hfp.csv
 .vscode/
 analytics-postgis-data
-python/host_secrets.json
+python/local_host_secrets.json

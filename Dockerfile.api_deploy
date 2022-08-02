@@ -1,0 +1,14 @@
+FROM mcr.microsoft.com/azure-functions/python:4-python3.10
+
+ENV TZ="Europe/Helsinki"
+ENV AzureWebJobsScriptRoot=/home/site/wwwroot
+ENV AzureFunctionsJobHost__Logging__Console__IsEnabled=true
+ENV PYTHONUNBUFFERED=1
+
+COPY ./python/requirements.txt /
+RUN pip install -r /requirements.txt
+
+COPY ./python/api /home/site/wwwroot/api/
+COPY ./python/common /home/site/wwwroot/common/
+COPY ./python/host.json home/site/wwwroot/host.json
+COPY ./python/requirements.txt home/site/wwwroot/requirements.txt
