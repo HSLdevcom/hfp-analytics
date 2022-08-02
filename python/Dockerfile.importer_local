@@ -4,6 +4,10 @@ ENV AzureWebJobsScriptRoot=/home/site/wwwroot
 ENV AzureFunctionsJobHost__Logging__Console__IsEnabled=true
 ENV TZ="Europe/Helsinki"
 
+ENV FUNCTIONS_SECRETS_PATH=/etc/secrets
+ENV AzureWebJobsSecretStorageType=Files
+RUN mkdir -p /etc/secrets/
+ADD local_host_secrets.json /etc/secrets/host.json
+
 COPY requirements.txt /
 RUN pip install -r /requirements.txt
-
