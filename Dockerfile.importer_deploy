@@ -3,7 +3,6 @@ FROM mcr.microsoft.com/azure-functions/python:4-python3.10
 ENV TZ="Europe/Helsinki"
 ENV AzureWebJobsScriptRoot=/home/site/wwwroot
 ENV AzureFunctionsJobHost__Logging__Console__IsEnabled=true
-ENV AzureWebJobsSecretStorageType=Files
 ENV PYTHONUNBUFFERED=1
 
 COPY ./python/requirements.txt /
