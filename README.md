@@ -24,13 +24,80 @@ See further descriptions from the links.
 
 ## Development
 
-> **TODO:** OS and tool requirements, setting up a dev environment, running tests, getting and using test data, inspecting local dev and remote Azure databases as well as generating migration scripts with Migra, etc.
+### Requirements
+
+**Preferred OS**: Linux, haven't tried with Windows or Mac yet.\
+**Required tools**: docker, docker-compose and Python 3, Postgresql.
+
+### Set up development environment
+```
+./setup.sh
+./run-local.sh
+```
+
+`setup.sh` creates the required files for local development.\
+`run-local.sh` builds api, importer and DB service docker images and runs them.
+
+After running those scripts, you need to fill in some secret values into `.env` file:
+```
+HFP_STORAGE_CONTAINER_NAME=secret
+HFP_STORAGE_CONNECTION_STRING=secret
+```
+Values to these can be found from Azure Portal -> hfp-analytics-dev rg -> hfp-analytics-importer -> configuration
+
+### Get test data
+
+Go to `http://localhost:7071/run_import?<local_api_key>`
+You can get local_api_key used for development from `python/local_host_secrets.json`.
+```
+
+```
+
+### Inspect local database
+```
+PGPASSWORD=postgres PGOPTIONS=--search_path=public,api,hfp,stopcorr psql -h localhost -p 5432 -d analytics -U postgres
+```
+
+### Inspect remote database
+```
+PGPASSWORD=<db_password> PGOPTIONS=--search_path=public,api,hfp,stopcorr psql -h <db_host> -p 5432 -d analytics -U <db_username>
+```
+
+Get the required secrets from Azure portal.
+
+### Run Migra
+```
+TODO
+```
+
+### Run tests
+```
+TODO
+```
 
 ## Deployment
 
 The API is hosted in [Azure Functions](https://docs.microsoft.com/en-us/azure/azure-functions/), and the database in [Azure Database for PostgreSQL](https://azure.microsoft.com/en-us/services/postgresql/)
 
-> **TODO:** Deployment in Azure at a general level (and how to get detailed instructions not published here).
+### Deploy api
+```
+./deploy_api.sh
+```
+
+After this, restart `api` function from Azure portal. After we have a working CI, this step shouldn't be no longer needed.
+
+You can get the API key used to access to the API from Azure Portal -> hfp-analytics rg -> hfp-analytics-api function ->  App keys -> default. See instructions for using the API from `<API url>/docs?code=<API key>`. 
+
+### Deploy importer
+```
+./deploy_importer.sh
+```
+
+After this, restart `importer` function from Azure portal. After we have a working CI, this step shouldn't be no longer needed.
+
+### View logs
+
+From Azure Portal select a function app and open logstream view.
 
 ## Contact
 

@@ -11,17 +11,13 @@
   },
   "functionTimeout": "08:00:00",
   "logging": {
-    "applicationInsights": {
-      "samplingSettings": {
-        "isEnabled": true,
-        "excludedTypes": "Request"
-      }
-    },
     "logLevel": {
       "default": "Information",
       "Host.Results": "Error",
-      "Function": "Information",
-      "Host.Aggregator": "Trace"
+      "Host.Aggregator": "Trace",
+      "Function": "Trace",
+      "Function.api": "Information",
+      "Function.importer": "Information"
     },
     "tracing": {
       "consoleLevel": "verbose"
