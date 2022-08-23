@@ -4,7 +4,7 @@ version: "3.8"
 services:
   # Database for local development
   db:
-    image: postgis/postgis:13-3.1-alpine
+    image: timescale/timescaledb-ha:pg14-latest
     restart: unless-stopped
     env_file: .env
     ports:
@@ -16,7 +16,7 @@ services:
       # Change to an actual import volume for production:
       - ./testdata/import:/import:ro
       # Persistent storage
-      - ../analytics-postgis-data:/var/lib/postgresql/data
+      - ./analytics-data:/var/lib/postgresql/data:z
     healthcheck:
       test: ["CMD", "pg_isready", "-q", "-U", "${POSTGRES_USER}"]
       interval: 5s
