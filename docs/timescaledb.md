@@ -30,7 +30,7 @@ TRUNCATE hfp_point, observed_journey, observation;
 ```
 and import it again.
 
-### See existing intervals
+### Check existing interval settings
 
 ```
 SELECT h.table_name, c.interval_length
