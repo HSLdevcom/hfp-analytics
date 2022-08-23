@@ -1,9 +1,17 @@
 # Call analysis functions in the db.
 
 import psycopg2
+import time
 from common.utils import env_with_default, comma_separated_floats_to_list, comma_separated_integers_to_list, get_conn_params, get_logger
 
+start_time = 0
+
+def get_time():
+    return f'[{round(time.time() - start_time)}s]'
+
 def main():
+    global start_time
+
     stop_near_limit_m = env_with_default('STOP_NEAR_LIMIT_M', 50.0)
     min_observations_per_stop = env_with_default('MIN_OBSERVATIONS_PER_STOP', 10)
     max_null_stop_dist_m = env_with_default('MAX_NULL_STOP_DIST_M', 100.0)
@@ -27,10 +35,11 @@ def main():
         with conn:
             with conn.cursor() as cur:
                 logger = get_logger()
+                start_time = time.time()
                 logger.info("### Running analysis. ###")
                 cur.execute('SELECT stopcorr.refresh_observation()')
                 logger.info(
-                    f'{cur.fetchone()[0]} observations inserted.')
+                    f'{get_time()} {cur.fetchone()[0]} observations inserted.')
 
                 cur.execute(
                     'UPDATE observation \
@@ -40,7 +49,7 @@ def main():
 
                 cur.execute('SELECT * FROM guess_missing_stop_ids(%s)',
                             (stop_near_limit_m, ))
-                logger.info(f'{cur.fetchone()[0]} observations updated with guessed stop_id')
+                logger.info(f'{get_time()} {cur.fetchone()[0]} observations updated with guessed stop_id')
 
                 cur.execute('SELECT stop_id FROM observed_stop_not_in_jore_stop')
                 res = [str(x[0]) for x in cur.fetchall()]
@@ -52,22 +61,22 @@ def main():
                     logger.info(f'stop_id values in "observation" not found in "jore_stop": {stops_str}')
 
                 cur.execute('SELECT * FROM calculate_jore_distances()')
-                logger.info(f'{cur.fetchone()[0]} observations updated with dist_to_jore_point_m')
+                logger.info(f'{get_time()} {cur.fetchone()[0]} observations updated with dist_to_jore_point_m')
 
                 cur.execute('WITH deleted AS (DELETE FROM stop_median RETURNING 1)\
                             SELECT count(*) FROM deleted')
-                logger.info(f'{cur.fetchone()[0]} rows deleted from "stop_median"')
+                logger.info(f'{get_time()} {cur.fetchone()[0]} rows deleted from "stop_median"')
 
                 cur.execute('SELECT * FROM calculate_medians(%s, %s)',
                             (min_observations_per_stop, max_null_stop_dist_m))
-                logger.info(f'{cur.fetchone()[0]} rows inserted into "stop_median"')
+                logger.info(f'{get_time()} {cur.fetchone()[0]} rows inserted into "stop_median"')
 
                 cur.execute('SELECT * FROM calculate_median_distances()')
-                logger.info(f'{cur.fetchone()[0]} observations updated with dist_to_median_point_m')
+                logger.info(f'{get_time()} {cur.fetchone()[0]} observations updated with dist_to_median_point_m')
 
                 cur.execute('SELECT * FROM calculate_percentile_radii(%s)',
                             (radius_percentiles, ))
-                logger.info(f'{cur.fetchone()[0]} "percentile_radii" created using percentiles {radius_percentiles_str}')
+                logger.info(f'{get_time()} {cur.fetchone()[0]} "percentile_radii" created using percentiles {radius_percentiles_str}')
 
                 cur.execute('CALL classify_medians(%s, %s, %s, %s, %s, %s, %s, %s)',
                             (min_radius_percentiles_to_sum,
@@ -80,7 +89,7 @@ def main():
                              terminal_ids)
                             )
                 cur.execute('SELECT count(*) FROM stop_median WHERE result_class IS NOT NULL')
-                logger.info(f'{cur.fetchone()[0]} "stop_median" updated with "result_class", "recommended_min_radius_m" and "manual_acceptance_needed"')
+                logger.info(f'{get_time()} {cur.fetchone()[0]} "stop_median" updated with "result_class", "recommended_min_radius_m" and "manual_acceptance_needed"')
 
                 logger.info(f'### Analysis complete. ###')
     finally:

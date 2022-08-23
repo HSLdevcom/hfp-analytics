@@ -20,20 +20,30 @@ def main(dataImporter: func.TimerRequest):
     try:
         with conn:
             with conn.cursor() as pg_cursor:
-                import_data_to_db(pg_cursor=pg_cursor)
+                print("### Running import_day_data_from_past ###")
+                # import_day_data_from_past(1, pg_cursor)
+                # import_day_data_from_past(2, pg_cursor)
+                # import_day_data_from_past(3, pg_cursor)
+                # import_day_data_from_past(4, pg_cursor)
+                # import_day_data_from_past(5, pg_cursor)
+                # import_day_data_from_past(6, pg_cursor)
+                # import_day_data_from_past(7, pg_cursor)
     finally:
         conn.close()
         logger.info("### Import done. ###")
         run_analysis()
 
-def import_data_to_db(pg_cursor):
+def import_day_data_from_past(day_since_today, pg_cursor):
+    import_date = datetime.now() - timedelta(day_since_today)
+    import_date = datetime.strftime(import_date, '%Y-%m-%d')
+    import_data(pg_cursor=pg_cursor, import_date=import_date)
+
+def import_data(pg_cursor, import_date):
     logger = get_logger()
-    yesterday = datetime.now() - timedelta(1)
-    yesterday = datetime.strftime(yesterday, '%Y-%m-%d')
     hfp_storage_container_name = os.getenv('HFP_STORAGE_CONTAINER_NAME')
     hfp_storage_connection_string = os.getenv('HFP_STORAGE_CONNECTION_STRING')
     service = BlobServiceClient.from_connection_string(conn_str=hfp_storage_connection_string)
-    result = service.find_blobs_by_tags(f"@container='{hfp_storage_container_name}' AND min_oday <= '{yesterday}' AND max_oday >= '{yesterday}'")
+    result = service.find_blobs_by_tags(f"@container='{hfp_storage_container_name}' AND min_oday <= '{import_date}' AND max_oday >= '{import_date}'")
 
     blob_names = []
     for i, r in enumerate(result):
@@ -50,9 +60,9 @@ def import_data_to_db(pg_cursor):
             storage_stream_downloader = blob_client.download_blob()
             read_imported_data_to_db(pg_cursor=pg_cursor, downloader=storage_stream_downloader)
             blob_index += 1
-            # Limit downloading all the blobs when developing.
-            if os.getenv('IS_DEBUG') == 'True' and blob_index > 1:
-               return
+            # Limit downloading all the blobs when developing. Enable if needed.
+            # if os.getenv('IS_DEBUG') == 'True' and blob_index > 1:
+            #   return
         except Exception as e:
             logger.error(f'Error in reading blob chunks: {e}')
 

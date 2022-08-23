@@ -2,6 +2,7 @@
 
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS moddatetime;
+CREATE EXTENSION IF NOT EXISTS timescaledb;
 
 CREATE FUNCTION array_distinct(anyarray) 
 RETURNS anyarray 
