@@ -3,6 +3,7 @@
 import psycopg2
 import time
 from common.utils import env_with_default, comma_separated_floats_to_list, comma_separated_integers_to_list, get_conn_params, get_logger
+import common.constants as constants
 
 start_time = 0
 
@@ -36,7 +37,18 @@ def main():
             with conn.cursor() as cur:
                 logger = get_logger()
                 start_time = time.time()
-                logger.info("### Running analysis. ###")
+
+                cur.execute(f"SELECT is_lock_enabled({int(constants.IMPORTER_LOCK_ID)})")
+                is_importer_locked = cur.fetchone()[0]
+
+                if is_importer_locked == False:
+                    logger.info("### Running analysis. ###")
+                    cur.execute(f"SELECT lock_importer({int(constants.IMPORTER_LOCK_ID)})")
+                else:
+                    logger.info("Importer is LOCKED which means that importer should be already running. You can get"
+                                "rid of the lock by restarting the database if needed.")
+                    return
+
                 cur.execute('SELECT stopcorr.refresh_observation()')
                 logger.info(
                     f'{get_time()} {cur.fetchone()[0]} observations inserted.')
@@ -91,8 +103,9 @@ def main():
                 cur.execute('SELECT count(*) FROM stop_median WHERE result_class IS NOT NULL')
                 logger.info(f'{get_time()} {cur.fetchone()[0]} "stop_median" updated with "result_class", "recommended_min_radius_m" and "manual_acceptance_needed"')
 
-                logger.info(f'### Analysis complete. ###')
+                logger.info(f'{get_time()} Analysis complete.')
     finally:
+        conn.cursor().execute(f"SELECT unlock_importer({int(constants.IMPORTER_LOCK_ID)})")
         conn.close()
 
 if __name__ == '__main__':

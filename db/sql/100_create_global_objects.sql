@@ -16,3 +16,29 @@ COMMENT ON FUNCTION array_distinct IS
 ═════════════════
   {1,2}';
 
+CREATE OR REPLACE FUNCTION lock_importer(lock_id int)
+RETURNS void
+VOLATILE
+LANGUAGE SQL
+AS $func$
+  SELECT pg_advisory_lock(lock_id)
+$func$;
+
+CREATE OR REPLACE FUNCTION unlock_importer(lock_id int)
+RETURNS void
+VOLATILE
+LANGUAGE SQL
+AS $func$
+  SELECT pg_advisory_unlock(lock_id)
+$func$;
+
+CREATE OR REPLACE FUNCTION is_lock_enabled(lock_id int)
+RETURNS boolean
+VOLATILE
+LANGUAGE SQL
+AS $func$
+  SELECT EXISTS (
+    SELECT mode, classid, objid FROM pg_locks
+    WHERE locktype = 'advisory' AND objid = lock_id
+  )
+$func$;
