@@ -4,7 +4,6 @@ from azure.storage.blob import BlobServiceClient, BlobBlock
 from io import StringIO
 import os
 import csv
-import time
 import zstandard
 from datetime import datetime, timedelta
 import psycopg2 as psycopg
