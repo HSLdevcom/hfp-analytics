@@ -1,9 +1,7 @@
+import os
 import logging
 from sys import stdout
 import psycopg2 as psycopg
-from common.utils import get_conn_params
-
-importer_log_table = 'logs.importer_log'
 
 class LogDBHandler(logging.Handler):
     """"
@@ -47,14 +45,23 @@ consoleHandler.setFormatter(logFormatter)
 logger.addHandler(consoleHandler)
 
 is_db_logger_initialized = False
-global log_conn
 # Call this at the start of the function
 def init_logger(function_name):
     global is_db_logger_initialized
     if not function_name:
         print("init_logger(): function_name has to be given.")
     # Make the connection to database for the logger
-    log_conn = psycopg.connect(**get_conn_params())
+
+    conn_params = dict(
+        dbname = os.getenv('POSTGRES_DB'),
+        user = os.getenv('POSTGRES_USER'),
+        password = os.getenv('POSTGRES_PASSWORD'),
+        host = os.getenv('POSTGRES_HOST'),
+        port = 5432
+    )
+
+    # TODO: call flush() or close the connection after function exits
+    log_conn = psycopg.connect(**conn_params)
     log_cursor = log_conn.cursor()
     log_db_handler = LogDBHandler(log_conn, log_cursor, function_name)
     logging.getLogger('logger').addHandler(log_db_handler)
@@ -64,8 +71,3 @@ def get_logger():
     if is_db_logger_initialized == False:
         print("get_logger() error: did you forget to call init_logger()?")
     return logger
-
-# Remember to call this function in the end of Azure Function.
-def close_logger_conn():
-    log_conn.close()
-
