@@ -1,20 +1,22 @@
 """HFP Analytics data importer"""
 import azure.functions as func
-from azure.storage.blob import BlobServiceClient, BlobBlock
+from azure.storage.blob import BlobServiceClient
 from io import StringIO
 import os
 import csv
 import zstandard
 from datetime import datetime, timedelta
 import psycopg2 as psycopg
-from common.utils import get_conn_params, get_logger
+from common.utils import get_conn_params
+from common.logger_util import init_logger, get_logger, close_logger_conn
 import common.constants as constants
 from .run_analysis import main as run_analysis
 
 # TODO: import other event types as well when needed.
 event_types_to_import = ['DOC', 'DOO']
 
-def main(dataImporter: func.TimerRequest):
+def main(importer: func.TimerRequest, context: func.Context):
+    init_logger('importer')
     logger = get_logger()
 
     conn = psycopg.connect(**get_conn_params())
@@ -28,14 +30,17 @@ def main(dataImporter: func.TimerRequest):
                 is_importer_locked = pg_cursor.fetchone()[0]
 
                 if is_importer_locked == False:
-                    logger.info("### Going to run importer. ###")
+                    logger.info("Going to run importer.")
                     pg_cursor.execute(f"SELECT lock_importer({int(constants.IMPORTER_LOCK_ID)})")
                 else:
                     logger.info("Importer is LOCKED which means that importer should be already running. You can get"
                                 "rid of the lock by restarting the database if needed.")
                     return
-
-                print("Running import_day_data_from_past")
+                logger.info("Info test")
+                logger.warning("Warning test")
+                logger.error("Error test")
+                logger.debug("Debug test")
+                # print("Running import_day_data_from_past")
                 # import_day_data_from_past(1, pg_cursor)
                 # import_day_data_from_past(2, pg_cursor)
                 # import_day_data_from_past(3, pg_cursor)
@@ -43,16 +48,19 @@ def main(dataImporter: func.TimerRequest):
                 # import_day_data_from_past(5, pg_cursor)
                 # import_day_data_from_past(6, pg_cursor)
                 # import_day_data_from_past(7, pg_cursor)
-                logger.info("### Import done. ###")
+                logger.info("Importing done - next up: analysis.")
     finally:
         conn.cursor().execute(f"SELECT unlock_importer({int(constants.IMPORTER_LOCK_ID)})")
         conn.close()
 
         if is_importer_locked == False:
-            logger.info("### Going to run analysis. ###")
+            logger.info("Going to run analysis.")
             run_analysis()
         else:
             logger.info("Skipping analysis - importer is locked.")
+
+        logger.info("Importer done.")
+        close_logger_conn()
 
 def import_day_data_from_past(day_since_today, pg_cursor):
     import_date = datetime.now() - timedelta(day_since_today)

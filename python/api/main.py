@@ -5,7 +5,8 @@ from fastapi.openapi.docs import (
     get_redoc_html,
     get_swagger_ui_html,
 )
-from common.utils import get_conn_params, get_feature_collection, get_logger
+from common.utils import get_conn_params, get_feature_collection
+from common.logger_util import get_logger
 import psycopg2 as psycopg
 from .digitransit_import import main as run_digitransit_import
 

@@ -2,7 +2,8 @@
 
 import psycopg2
 import time
-from common.utils import env_with_default, comma_separated_floats_to_list, comma_separated_integers_to_list, get_conn_params, get_logger
+from common.utils import env_with_default, comma_separated_floats_to_list, comma_separated_integers_to_list, get_conn_params
+from common.logger_util import  get_logger
 import common.constants as constants
 
 start_time = 0
@@ -42,7 +43,7 @@ def main():
                 is_importer_locked = cur.fetchone()[0]
 
                 if is_importer_locked == False:
-                    logger.info("### Running analysis. ###")
+                    logger.info("Running analysis.")
                     cur.execute(f"SELECT lock_importer({int(constants.IMPORTER_LOCK_ID)})")
                 else:
                     logger.info("Importer is LOCKED which means that importer should be already running. You can get"

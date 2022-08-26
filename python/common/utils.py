@@ -1,18 +1,6 @@
 import os
-import logging
-from sys import stdout
 import pptx
-
-logger = logging.getLogger('logger')
-logger.setLevel(logging.INFO)  # set logger level
-logFormatter = logging.Formatter \
-    ("%(name)-12s %(asctime)s %(levelname)-8s %(filename)s:%(funcName)s %(message)s")
-consoleHandler = logging.StreamHandler(stdout)  # set streamhandler to stdout
-consoleHandler.setFormatter(logFormatter)
-logger.addHandler(consoleHandler)
-
-def get_logger():
-    return logger
+from common.logger_util import get_logger
 
 def get_conn_params():
     return dict(
