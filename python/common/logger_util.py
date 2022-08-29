@@ -5,8 +5,10 @@ import psycopg2 as psycopg
 
 class LogDBHandler(logging.Handler):
     """"
-    Taken from https://stackoverflow.com/a/43843623/4282381
+    Taken from: https://stackoverflow.com/a/43843623/4282381
     Customized logging handler that puts logs to the database.
+
+    Logging library docs: https://docs.python.org/3/library/logging.html
     """
     def __init__(self, sql_conn, sql_cursor, function_name):
         logging.Handler.__init__(self)
@@ -33,9 +35,8 @@ class LogDBHandler(logging.Handler):
             print(f"Logging to database failed: {e}")
 
 logger = logging.getLogger('logger')
-logger.setLevel(logging.INFO)
-logger.setLevel(logging.WARNING)
-logger.setLevel(logging.ERROR)
+# Sets the threshold for this logger to level.
+# Logging messages which are less severe than level will be ignored
 logger.setLevel(logging.DEBUG)
 
 logFormatter = logging.Formatter \
@@ -45,12 +46,15 @@ consoleHandler.setFormatter(logFormatter)
 logger.addHandler(consoleHandler)
 
 is_db_logger_initialized = False
+global log_conn
+global log_db_handler
 # Call this at the start of the function
 def init_logger(function_name):
     global is_db_logger_initialized
+    global log_conn
+    global log_db_handler
     if not function_name:
         print("init_logger(): function_name has to be given.")
-    # Make the connection to database for the logger
 
     conn_params = dict(
         dbname = os.getenv('POSTGRES_DB'),
@@ -60,7 +64,6 @@ def init_logger(function_name):
         port = 5432
     )
 
-    # TODO: call flush() or close the connection after function exits
     log_conn = psycopg.connect(**conn_params)
     log_cursor = log_conn.cursor()
     log_db_handler = LogDBHandler(log_conn, log_cursor, function_name)
@@ -71,3 +74,8 @@ def get_logger():
     if is_db_logger_initialized == False:
         print("get_logger() error: did you forget to call init_logger()?")
     return logger
+
+# Remember to cleanup logger by all this method at the end of an Azure Function.
+def cleanup_logger():
+    logging.getLogger('logger').removeHandler(log_db_handler)
+    log_conn.close()
