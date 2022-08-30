@@ -43,7 +43,7 @@ def main():
 
                 if is_importer_locked == False:
                     logger.info("### Running analysis. ###")
-                    cur.execute("SELECT lock_importer(%s)", (constants.IMPORTER_LOCK_ID))
+                    cur.execute("SELECT lock_importer(%s)", (constants.IMPORTER_LOCK_ID,))
                 else:
                     logger.info("Importer is LOCKED which means that importer should be already running. You can get"
                                 "rid of the lock by restarting the database if needed.")
