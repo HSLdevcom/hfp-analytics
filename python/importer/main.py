@@ -24,14 +24,14 @@ def main(importer: func.TimerRequest, context: func.Context):
     try:
         with conn:
             with conn.cursor() as pg_cursor:
-                # Check if importer is locked or not. We use locking strategy to prevent
-                # executing importer and analysis more than once at a time
-                pg_cursor.execute(f"SELECT is_lock_enabled({int(constants.IMPORTER_LOCK_ID)})")
+                # Check if importer is locked or not. We use lock strategy to prevent executing importer
+                # and analysis more than once at a time
+                pg_cursor.execute("SELECT is_lock_enabled(%s)", (constants.IMPORTER_LOCK_ID,))
                 is_importer_locked = pg_cursor.fetchone()[0]
 
                 if is_importer_locked == False:
                     logger.info("Going to run importer.")
-                    pg_cursor.execute(f"SELECT lock_importer({int(constants.IMPORTER_LOCK_ID)})")
+                    pg_cursor.execute("SELECT pg_advisory_lock(%s)", (constants.IMPORTER_LOCK_ID,))
                 else:
                     logger.info("Importer is LOCKED which means that importer should be already running. You can get"
                                 "rid of the lock by restarting the database if needed.")
@@ -46,7 +46,7 @@ def main(importer: func.TimerRequest, context: func.Context):
                 # import_day_data_from_past(7, pg_cursor)
                 logger.info("Importing done - next up: analysis.")
     finally:
-        conn.cursor().execute(f"SELECT unlock_importer({int(constants.IMPORTER_LOCK_ID)})")
+        conn.cursor().execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
         conn.close()
 
         if is_importer_locked == False:

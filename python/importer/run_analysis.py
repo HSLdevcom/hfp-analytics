@@ -39,12 +39,12 @@ def main():
                 logger = get_logger()
                 start_time = time.time()
 
-                cur.execute(f"SELECT is_lock_enabled({int(constants.IMPORTER_LOCK_ID)})")
+                cur.execute("SELECT is_lock_enabled(%s)", (constants.IMPORTER_LOCK_ID,))
                 is_importer_locked = cur.fetchone()[0]
 
                 if is_importer_locked == False:
                     logger.info("Running analysis.")
-                    cur.execute(f"SELECT lock_importer({int(constants.IMPORTER_LOCK_ID)})")
+                    cur.execute("SELECT lock_importer(%s)", (constants.IMPORTER_LOCK_ID,))
                 else:
                     logger.info("Importer is LOCKED which means that importer should be already running. You can get"
                                 "rid of the lock by restarting the database if needed.")
@@ -106,7 +106,7 @@ def main():
 
                 logger.info(f'{get_time()} Analysis complete.')
     finally:
-        conn.cursor().execute(f"SELECT unlock_importer({int(constants.IMPORTER_LOCK_ID)})")
+        conn.cursor().execute("SELECT unlock_importer(%s)", (constants.IMPORTER_LOCK_ID))
         conn.close()
 
 if __name__ == '__main__':
