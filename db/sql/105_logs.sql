@@ -13,10 +13,9 @@ COMMENT ON TABLE logs.log_level IS
 INSERT INTO logs.log_level (log_level)
 VALUES ('info'), ('warning'), ('error'), ('debug');
 
---
 CREATE TABLE logs.importer_log (
   id bigserial PRIMARY KEY,
-  log_timestamp timestamptz DEFAULT now(),
+  timestamp timestamptz DEFAULT now(),
   log_level text NULL REFERENCES logs.log_level(log_level),
   log_text text
 );
@@ -25,7 +24,7 @@ COMMENT ON TABLE logs.importer_log IS
 
 CREATE TABLE logs.api_log (
   id bigserial PRIMARY KEY,
-  log_timestamp timestamptz DEFAULT now(),
+  timestamp timestamptz DEFAULT now(),
   log_level text NULL REFERENCES logs.log_level(log_level),
   log_text text
 );
