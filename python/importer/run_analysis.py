@@ -2,8 +2,8 @@
 
 import psycopg2
 import time
-from common.utils import env_with_default, comma_separated_floats_to_list, comma_separated_integers_to_list, get_conn_params
 from common.logger_util import  get_logger
+from common.utils import env_with_default, comma_separated_floats_to_list, comma_separated_integers_to_list, get_conn_params
 import common.constants as constants
 
 start_time = 0

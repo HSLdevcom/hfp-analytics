@@ -7,8 +7,8 @@ import csv
 import zstandard
 from datetime import datetime, timedelta
 import psycopg2 as psycopg
-from common.utils import get_conn_params
-from common.logger_util import init_logger, get_logger, cleanup_logger
+from common.logger_util import init_logger, cleanup_logger
+from common.utils import get_conn_params, get_logger
 import common.constants as constants
 from .run_analysis import main as run_analysis
 
@@ -36,7 +36,7 @@ def main(importer: func.TimerRequest, context: func.Context):
                     logger.info("Importer is LOCKED which means that importer should be already running. You can get"
                                 "rid of the lock by restarting the database if needed.")
                     return
-                # print("Running import_day_data_from_past")
+                print("Running import_day_data_from_past")
                 # import_day_data_from_past(1, pg_cursor)
                 # import_day_data_from_past(2, pg_cursor)
                 # import_day_data_from_past(3, pg_cursor)
@@ -51,7 +51,7 @@ def main(importer: func.TimerRequest, context: func.Context):
 
         if is_importer_locked == False:
             logger.info("Going to run analysis.")
-            run_analysis()
+            # run_analysis()
         else:
             logger.info("Skipping analysis - importer is locked.")
 
