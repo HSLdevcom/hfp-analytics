@@ -24,8 +24,8 @@ def main(importer: func.TimerRequest, context: func.Context):
     try:
         with conn:
             with conn.cursor() as pg_cursor:
-                # Check if importer is locked or not. We use lock strategy to prevent executing importer
-                # and analysis more than once at a time
+                # Check if importer is locked or not. We use locking strategy to prevent
+                # executing importer and analysis more than once at a time
                 pg_cursor.execute(f"SELECT is_lock_enabled({int(constants.IMPORTER_LOCK_ID)})")
                 is_importer_locked = pg_cursor.fetchone()[0]
 

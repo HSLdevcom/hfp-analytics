@@ -18,7 +18,7 @@ class LogDBHandler(logging.Handler):
 
     def emit(self, record):
         log_level = record.levelname.lower()
-        # Clear the log message so it can be put to db via sql (escape quotes)
+        # Clear the log message so that they can be inserted into db (escape quotes).
         self.log_msg = record.msg
         self.log_msg = self.log_msg.strip()
         self.log_msg = self.log_msg.replace('\'', '\'\'')
@@ -30,13 +30,14 @@ class LogDBHandler(logging.Handler):
             self.sql_cursor.execute(sql)
             self.sql_conn.commit()
         # If error - print it out on screen. Since DB is not working - there's
-        # no point making a log about it to the database.
+        # no point making a log about it to the db.
         except Exception as e:
             print(f"Logging to database failed: {e}")
 
 logger = logging.getLogger('logger')
-# Sets the threshold for this logger to level.
-# Logging messages which are less severe than level will be ignored
+# Sets the threshold for this logger.
+# Those logging messages will be ignored that are less severe
+# than the log level set by setLevel().
 logger.setLevel(logging.DEBUG)
 
 logFormatter = logging.Formatter \
@@ -48,7 +49,7 @@ logger.addHandler(consoleHandler)
 is_db_logger_initialized = False
 global log_conn
 global log_db_handler
-# Call this at the start of the function
+# This function should be called at the start of every Azure Function.
 def init_logger(function_name):
     global is_db_logger_initialized
     global log_conn
@@ -75,7 +76,7 @@ def get_logger():
         print("get_logger() error: did you forget to call init_logger()?")
     return logger
 
-# Remember to cleanup logger by all this method at the end of an Azure Function.
+# This function should be called at the end of every Azure Function.
 def cleanup_logger():
     logging.getLogger('logger').removeHandler(log_db_handler)
     log_conn.close()
