@@ -207,7 +207,7 @@ BEGIN
     NEW.stop,
     ST_Transform( ST_SetSRID( ST_MakePoint(NEW.longitude, NEW.latitude), 4326), 3067)
   )
-  ON CONFLICT ON CONSTRAINT hfp_point_pkey DO UPDATE 
+  ON CONFLICT (point_timestamp, vehicle_id) DO UPDATE
   SET
     journey_id = coalesce(hp.journey_id, EXCLUDED.journey_id),
     hfp_events = array_distinct( array_cat(hp.hfp_events, EXCLUDED.hfp_events)),

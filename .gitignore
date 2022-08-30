@@ -14,4 +14,4 @@ python/.venv
 python/local.settings.json
 testdata/import/hfp.csv
 .vscode/
-analytics-postgis-data
+analytics-data

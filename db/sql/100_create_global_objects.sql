@@ -2,6 +2,7 @@
 
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS moddatetime;
+CREATE EXTENSION IF NOT EXISTS timescaledb;
 
 CREATE FUNCTION array_distinct(anyarray) 
 RETURNS anyarray 
@@ -15,3 +16,13 @@ COMMENT ON FUNCTION array_distinct IS
 ═════════════════
   {1,2}';
 
+CREATE OR REPLACE FUNCTION is_lock_enabled(lock_id int)
+RETURNS boolean
+VOLATILE
+LANGUAGE SQL
+AS $func$
+  SELECT EXISTS (
+    SELECT mode, classid, objid FROM pg_locks
+    WHERE locktype = 'advisory' AND objid = lock_id
+  )
+$func$;

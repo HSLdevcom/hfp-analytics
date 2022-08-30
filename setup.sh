@@ -30,6 +30,7 @@ conditional_cp .env.test .env
 conditional_mkdir data/import
 conditional_mkdir qgis/out
 conditional_mkdir results
+conditional_mkdir analytics-data
 
 docker-compose build
 

@@ -8,6 +8,7 @@ import zstandard
 from datetime import datetime, timedelta
 import psycopg2 as psycopg
 from common.utils import get_conn_params, get_logger
+import common.constants as constants
 from .run_analysis import main as run_analysis
 
 # TODO: import other event types as well when needed.
@@ -15,25 +16,55 @@ event_types_to_import = ['DOC', 'DOO']
 
 def main(dataImporter: func.TimerRequest):
     logger = get_logger()
-    logger.info("### Going to run importer. ###")
+
     conn = psycopg.connect(**get_conn_params())
+    global is_importer_locked
     try:
         with conn:
             with conn.cursor() as pg_cursor:
-                import_data_to_db(pg_cursor=pg_cursor)
-    finally:
-        conn.close()
-        logger.info("### Import done. ###")
-        run_analysis()
+                # Check if importer is locked or not. We use lock strategy to prevent executing importer
+                # and analysis more than once at a time
+                pg_cursor.execute("SELECT is_lock_enabled(%s)", (constants.IMPORTER_LOCK_ID,))
+                is_importer_locked = pg_cursor.fetchone()[0]
 
-def import_data_to_db(pg_cursor):
+                if is_importer_locked == False:
+                    logger.info("### Going to run importer. ###")
+                    pg_cursor.execute("SELECT pg_advisory_lock(%s)", (constants.IMPORTER_LOCK_ID,))
+                else:
+                    logger.info("Importer is LOCKED which means that importer should be already running. You can get"
+                                "rid of the lock by restarting the database if needed.")
+                    return
+
+                print("Running import_day_data_from_past")
+                # import_day_data_from_past(1, pg_cursor)
+                # import_day_data_from_past(2, pg_cursor)
+                # import_day_data_from_past(3, pg_cursor)
+                # import_day_data_from_past(4, pg_cursor)
+                # import_day_data_from_past(5, pg_cursor)
+                # import_day_data_from_past(6, pg_cursor)
+                # import_day_data_from_past(7, pg_cursor)
+                logger.info("### Import done. ###")
+    finally:
+        conn.cursor().execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
+        conn.close()
+
+        if is_importer_locked == False:
+            logger.info("### Going to run analysis. ###")
+            run_analysis()
+        else:
+            logger.info("Skipping analysis - importer is locked.")
+
+def import_day_data_from_past(day_since_today, pg_cursor):
+    import_date = datetime.now() - timedelta(day_since_today)
+    import_date = datetime.strftime(import_date, '%Y-%m-%d')
+    import_data(pg_cursor=pg_cursor, import_date=import_date)
+
+def import_data(pg_cursor, import_date):
     logger = get_logger()
-    yesterday = datetime.now() - timedelta(1)
-    yesterday = datetime.strftime(yesterday, '%Y-%m-%d')
     hfp_storage_container_name = os.getenv('HFP_STORAGE_CONTAINER_NAME')
     hfp_storage_connection_string = os.getenv('HFP_STORAGE_CONNECTION_STRING')
     service = BlobServiceClient.from_connection_string(conn_str=hfp_storage_connection_string)
-    result = service.find_blobs_by_tags(f"@container='{hfp_storage_container_name}' AND min_oday <= '{yesterday}' AND max_oday >= '{yesterday}'")
+    result = service.find_blobs_by_tags(f"@container='{hfp_storage_container_name}' AND min_oday <= '{import_date}' AND max_oday >= '{import_date}'")
 
     blob_names = []
     for i, r in enumerate(result):
@@ -50,9 +81,9 @@ def import_data_to_db(pg_cursor):
             storage_stream_downloader = blob_client.download_blob()
             read_imported_data_to_db(pg_cursor=pg_cursor, downloader=storage_stream_downloader)
             blob_index += 1
-            # Limit downloading all the blobs when developing.
-            if os.getenv('IS_DEBUG') == 'True' and blob_index > 1:
-               return
+            # Limit downloading all the blobs when developing. Enable if needed.
+            # if os.getenv('IS_DEBUG') == 'True' and blob_index > 1:
+            #   return
         except Exception as e:
             logger.error(f'Error in reading blob chunks: {e}')
 

@@ -47,11 +47,14 @@ Values to these can be found from Azure Portal -> hfp-analytics-dev rg -> hfp-an
 
 ### Get test data
 
-Go to `http://localhost:7071/run_import?<local_api_key>`
-You can get local_api_key used for development from `python/local_host_secrets.json`.
-```
+To import data from Digitransit, go to `http://localhost:7071/run_import`
+Check that test data exists `http://localhost:7071/jore_stops`
 
+Import HFP data (from yesterday) with running
 ```
+./trigger-importer-local.sh
+```
+Check logs from `importer` to see when the import finishes.
 
 ### Inspect local database
 ```
