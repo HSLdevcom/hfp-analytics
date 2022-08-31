@@ -1,6 +1,6 @@
 import os
 import pptx
-from common.logger_util import get_logger
+# from common.logger_util import get_logger
 
 def get_conn_params():
     return dict(
@@ -42,7 +42,6 @@ def analyze_pptx(input_pptx, output_pptx):
     The output file contains marked up information to make it easier
     for generating future powerpoint templates.
     """
-    logger = get_logger()
     prs = pptx.Presentation(input_pptx)
     for index, _ in enumerate(prs.slide_layouts):
         slide = prs.slides.add_slide(prs.slide_layouts[index])
@@ -50,7 +49,8 @@ def analyze_pptx(input_pptx, output_pptx):
             title = slide.shapes.title
             title.text = 'Title for Layout {}'.format(index)
         except AttributeError:
-            logger.info("No Title for Layout {}".format(index))
+            print("TODO:")
+            # logger.info("No Title for Layout {}".format(index))
         for shape in slide.placeholders:
             if shape.is_placeholder:
                 phf = shape.placeholder_format
@@ -58,6 +58,7 @@ def analyze_pptx(input_pptx, output_pptx):
                     if 'Title' not in shape.text:
                         shape.text = 'Placeholder index:{} type:{}'.format(phf.idx, shape.name)
                 except AttributeError:
-                    logger.info("{} has no text attribute".format(phf.type))
-                logger.info('{} {}'.format(phf.idx, shape.name))
+                    print("TODO:")
+                    # logger.info("{} has no text attribute".format(phf.type))
+                # logger.info('{} {}'.format(phf.idx, shape.name))
     prs.save(output_pptx)

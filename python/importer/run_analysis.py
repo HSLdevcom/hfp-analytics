@@ -2,7 +2,7 @@
 
 import psycopg2
 import time
-from common.logger_util import  get_logger
+from common.logger_util import Logger
 from common.utils import env_with_default, comma_separated_floats_to_list, comma_separated_integers_to_list, get_conn_params
 import common.constants as constants
 
@@ -32,82 +32,81 @@ def main():
     terminal_ids = comma_separated_integers_to_list(terminal_ids_str)
 
     conn = psycopg2.connect(**get_conn_params())
+    with Logger(conn, 'importer') as logger:
+        try:
+            with conn:
+                with conn.cursor() as cur:
+                    start_time = time.time()
 
-    try:
-        with conn:
-            with conn.cursor() as cur:
-                logger = get_logger()
-                start_time = time.time()
+                    cur.execute("SELECT is_lock_enabled(%s)", (constants.IMPORTER_LOCK_ID,))
+                    is_importer_locked = cur.fetchone()[0]
 
-                cur.execute("SELECT is_lock_enabled(%s)", (constants.IMPORTER_LOCK_ID,))
-                is_importer_locked = cur.fetchone()[0]
+                    if is_importer_locked == False:
+                        logger.info("Running analysis.")
+                        cur.execute("SELECT lock_importer(%s)", (constants.IMPORTER_LOCK_ID,))
+                    else:
+                        logger.info("Importer is LOCKED which means that importer should be already running. You can get"
+                                    "rid of the lock by restarting the database if needed.")
+                        return
 
-                if is_importer_locked == False:
-                    logger.info("Running analysis.")
-                    cur.execute("SELECT lock_importer(%s)", (constants.IMPORTER_LOCK_ID,))
-                else:
-                    logger.info("Importer is LOCKED which means that importer should be already running. You can get"
-                                "rid of the lock by restarting the database if needed.")
-                    return
+                    cur.execute('SELECT stopcorr.refresh_observation()')
+                    logger.info(
+                        f'{get_time()} {cur.fetchone()[0]} observations inserted.')
 
-                cur.execute('SELECT stopcorr.refresh_observation()')
-                logger.info(
-                    f'{get_time()} {cur.fetchone()[0]} observations inserted.')
+                    cur.execute(
+                        'UPDATE observation \
+                        SET stop_id_guessed = false \
+                        WHERE stop_id IS NOT NULL'
+                    )
 
-                cur.execute(
-                    'UPDATE observation \
-                    SET stop_id_guessed = false \
-                    WHERE stop_id IS NOT NULL'
-                )
+                    cur.execute('SELECT * FROM guess_missing_stop_ids(%s)',
+                                (stop_near_limit_m, ))
+                    logger.info(f'{get_time()} {cur.fetchone()[0]} observations updated with guessed stop_id')
 
-                cur.execute('SELECT * FROM guess_missing_stop_ids(%s)',
-                            (stop_near_limit_m, ))
-                logger.info(f'{get_time()} {cur.fetchone()[0]} observations updated with guessed stop_id')
+                    cur.execute('SELECT stop_id FROM observed_stop_not_in_jore_stop')
+                    res = [str(x[0]) for x in cur.fetchall()]
+                    n_stops = len(res)
+                    if n_stops > 10:
+                        logger.info(f'{n_stops} stop_id values in "observation" not found in "jore_stop"')
+                    elif n_stops > 0:
+                        stops_str = ', '.join(res)
+                        logger.info(f'stop_id values in "observation" not found in "jore_stop": {stops_str}')
 
-                cur.execute('SELECT stop_id FROM observed_stop_not_in_jore_stop')
-                res = [str(x[0]) for x in cur.fetchall()]
-                n_stops = len(res)
-                if n_stops > 10:
-                    logger.info(f'{n_stops} stop_id values in "observation" not found in "jore_stop"')
-                elif n_stops > 0:
-                    stops_str = ', '.join(res)
-                    logger.info(f'stop_id values in "observation" not found in "jore_stop": {stops_str}')
+                    cur.execute('SELECT * FROM calculate_jore_distances()')
+                    logger.info(f'{get_time()} {cur.fetchone()[0]} observations updated with dist_to_jore_point_m')
 
-                cur.execute('SELECT * FROM calculate_jore_distances()')
-                logger.info(f'{get_time()} {cur.fetchone()[0]} observations updated with dist_to_jore_point_m')
+                    cur.execute('WITH deleted AS (DELETE FROM stop_median RETURNING 1)\
+                                SELECT count(*) FROM deleted')
+                    logger.info(f'{get_time()} {cur.fetchone()[0]} rows deleted from "stop_median"')
 
-                cur.execute('WITH deleted AS (DELETE FROM stop_median RETURNING 1)\
-                            SELECT count(*) FROM deleted')
-                logger.info(f'{get_time()} {cur.fetchone()[0]} rows deleted from "stop_median"')
+                    cur.execute('SELECT * FROM calculate_medians(%s, %s)',
+                                (min_observations_per_stop, max_null_stop_dist_m))
+                    logger.info(f'{get_time()} {cur.fetchone()[0]} rows inserted into "stop_median"')
 
-                cur.execute('SELECT * FROM calculate_medians(%s, %s)',
-                            (min_observations_per_stop, max_null_stop_dist_m))
-                logger.info(f'{get_time()} {cur.fetchone()[0]} rows inserted into "stop_median"')
+                    cur.execute('SELECT * FROM calculate_median_distances()')
+                    logger.info(f'{get_time()} {cur.fetchone()[0]} observations updated with dist_to_median_point_m')
 
-                cur.execute('SELECT * FROM calculate_median_distances()')
-                logger.info(f'{get_time()} {cur.fetchone()[0]} observations updated with dist_to_median_point_m')
+                    cur.execute('SELECT * FROM calculate_percentile_radii(%s)',
+                                (radius_percentiles, ))
+                    logger.info(f'{get_time()} {cur.fetchone()[0]} "percentile_radii" created using percentiles {radius_percentiles_str}')
 
-                cur.execute('SELECT * FROM calculate_percentile_radii(%s)',
-                            (radius_percentiles, ))
-                logger.info(f'{get_time()} {cur.fetchone()[0]} "percentile_radii" created using percentiles {radius_percentiles_str}')
+                    cur.execute('CALL classify_medians(%s, %s, %s, %s, %s, %s, %s, %s)',
+                                (min_radius_percentiles_to_sum,
+                                 default_min_radius_m,
+                                 manual_acceptance_min_radius_m,
+                                 large_scatter_percentile,
+                                 large_scatter_radius_m,
+                                 large_jore_dist_m,
+                                 stop_guessed_percentage,
+                                 terminal_ids)
+                                )
+                    cur.execute('SELECT count(*) FROM stop_median WHERE result_class IS NOT NULL')
+                    logger.info(f'{get_time()} {cur.fetchone()[0]} "stop_median" updated with "result_class", "recommended_min_radius_m" and "manual_acceptance_needed"')
 
-                cur.execute('CALL classify_medians(%s, %s, %s, %s, %s, %s, %s, %s)',
-                            (min_radius_percentiles_to_sum,
-                             default_min_radius_m,
-                             manual_acceptance_min_radius_m,
-                             large_scatter_percentile,
-                             large_scatter_radius_m,
-                             large_jore_dist_m,
-                             stop_guessed_percentage,
-                             terminal_ids)
-                            )
-                cur.execute('SELECT count(*) FROM stop_median WHERE result_class IS NOT NULL')
-                logger.info(f'{get_time()} {cur.fetchone()[0]} "stop_median" updated with "result_class", "recommended_min_radius_m" and "manual_acceptance_needed"')
-
-                logger.info(f'{get_time()} Analysis complete.')
-    finally:
-        conn.cursor().execute("SELECT unlock_importer(%s)", (constants.IMPORTER_LOCK_ID))
-        conn.close()
+                    logger.info(f'{get_time()} Analysis complete.')
+        finally:
+            conn.cursor().execute("SELECT unlock_importer(%s)", (constants.IMPORTER_LOCK_ID))
+            conn.close()
 
 if __name__ == '__main__':
     main()

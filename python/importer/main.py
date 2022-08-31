@@ -7,8 +7,8 @@ import csv
 import zstandard
 from datetime import datetime, timedelta
 import psycopg2 as psycopg
-from common.logger_util import init_logger, cleanup_logger
-from common.utils import get_conn_params, get_logger
+from common.logger_util import Logger
+from common.utils import get_conn_params
 import common.constants as constants
 from .run_analysis import main as run_analysis
 
@@ -16,55 +16,52 @@ from .run_analysis import main as run_analysis
 event_types_to_import = ['DOC', 'DOO']
 
 def main(importer: func.TimerRequest, context: func.Context):
-    init_logger('importer')
-    logger = get_logger()
-
     conn = psycopg.connect(**get_conn_params())
-    global is_importer_locked
-    try:
-        with conn:
-            with conn.cursor() as pg_cursor:
-                # Check if importer is locked or not. We use lock strategy to prevent executing importer
-                # and analysis more than once at a time
-                pg_cursor.execute("SELECT is_lock_enabled(%s)", (constants.IMPORTER_LOCK_ID,))
-                is_importer_locked = pg_cursor.fetchone()[0]
+    with Logger(conn, 'importer') as logger:
+        global is_importer_locked
+        try:
+            with conn:
+                with conn.cursor() as cur:
+                    # Check if importer is locked or not. We use lock strategy to prevent executing importer
+                    # and analysis more than once at a time
+                    cur.execute("SELECT is_lock_enabled(%s)", (constants.IMPORTER_LOCK_ID,))
+                    is_importer_locked = cur.fetchone()[0]
 
-                if is_importer_locked == False:
-                    logger.info("Going to run importer.")
-                    pg_cursor.execute("SELECT pg_advisory_lock(%s)", (constants.IMPORTER_LOCK_ID,))
-                else:
-                    logger.info("Importer is LOCKED which means that importer should be already running. You can get"
-                                "rid of the lock by restarting the database if needed.")
-                    return
-                print("Running import_day_data_from_past")
-                # import_day_data_from_past(1, pg_cursor)
-                # import_day_data_from_past(2, pg_cursor)
-                # import_day_data_from_past(3, pg_cursor)
-                # import_day_data_from_past(4, pg_cursor)
-                # import_day_data_from_past(5, pg_cursor)
-                # import_day_data_from_past(6, pg_cursor)
-                # import_day_data_from_past(7, pg_cursor)
-                logger.info("Importing done - next up: analysis.")
-    finally:
-        conn.cursor().execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
-        conn.close()
+                    if is_importer_locked == False:
+                        logger.info("Going to run importer.")
+                        cur.execute("SELECT pg_advisory_lock(%s)", (constants.IMPORTER_LOCK_ID,))
+                    else:
+                        logger.info("Importer is LOCKED which means that importer should be already running. You can get"
+                                    "rid of the lock by restarting the database if needed.")
+                        return
+                    print("Running import_day_data_from_past")
+                    # import_day_data_from_past(1, cur, logger)
+                    # import_day_data_from_past(2, cur, logger)
+                    # import_day_data_from_past(3, cur, logger)
+                    # import_day_data_from_past(4, cur, logger)
+                    # import_day_data_from_past(5, cur, logger)
+                    # import_day_data_from_past(6, cur, logger)
+                    # import_day_data_from_past(7, cur, logger)
+                    logger.info("Importing done - next up: analysis.")
+        finally:
+            conn.cursor().execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
 
-        if is_importer_locked == False:
-            logger.info("Going to run analysis.")
-            # run_analysis()
-        else:
-            logger.info("Skipping analysis - importer is locked.")
+            if is_importer_locked == False:
+                logger.info("Going to run analysis.")
+                # run_analysis()
+            else:
+                logger.info("Skipping analysis - importer is locked.")
 
-        logger.info("Importer done.")
-        cleanup_logger()
+            logger.info("Importer done.")
 
-def import_day_data_from_past(day_since_today, pg_cursor):
+            conn.close()
+
+def import_day_data_from_past(day_since_today, cur, logger):
     import_date = datetime.now() - timedelta(day_since_today)
     import_date = datetime.strftime(import_date, '%Y-%m-%d')
-    import_data(pg_cursor=pg_cursor, import_date=import_date)
+    import_data(cur=cur, import_date=import_date, logger=logger)
 
-def import_data(pg_cursor, import_date):
-    logger = get_logger()
+def import_data(cur, import_date, logger):
     hfp_storage_container_name = os.getenv('HFP_STORAGE_CONTAINER_NAME')
     hfp_storage_connection_string = os.getenv('HFP_STORAGE_CONNECTION_STRING')
     service = BlobServiceClient.from_connection_string(conn_str=hfp_storage_connection_string)
@@ -83,7 +80,7 @@ def import_data(pg_cursor, import_date):
         try:
             blob_client = service.get_blob_client(container="hfp-v2-test", blob=blob)
             storage_stream_downloader = blob_client.download_blob()
-            read_imported_data_to_db(pg_cursor=pg_cursor, downloader=storage_stream_downloader)
+            read_imported_data_to_db(cur=cur, downloader=storage_stream_downloader, logger=logger)
             blob_index += 1
             # Limit downloading all the blobs when developing. Enable if needed.
             # if os.getenv('IS_DEBUG') == 'True' and blob_index > 1:
@@ -91,8 +88,7 @@ def import_data(pg_cursor, import_date):
         except Exception as e:
             logger.error(f'Error in reading blob chunks: {e}')
 
-def read_imported_data_to_db(pg_cursor, downloader):
-    logger = get_logger()
+def read_imported_data_to_db(cur, downloader, logger):
     compressed_content = downloader.content_as_bytes()
     reader = zstandard.ZstdDecompressor().stream_reader(compressed_content)
     bytes = reader.readall()
@@ -114,5 +110,5 @@ def read_imported_data_to_db(pg_cursor, downloader):
     if invalid_row_count > 0:
         logger.info(f'Import invalid row count: {invalid_row_count}')
     import_io.seek(0)
-    pg_cursor.copy_expert(sql="COPY hfp.view_as_original_hfp_event FROM STDIN WITH CSV",
+    cur.copy_expert(sql="COPY hfp.view_as_original_hfp_event FROM STDIN WITH CSV",
                     file=import_io)
