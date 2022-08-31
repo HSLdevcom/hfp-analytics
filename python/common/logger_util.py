@@ -50,7 +50,6 @@ class Logger(object):
         console_handler.setFormatter(log_formatter)
         logger.addHandler(console_handler)
 
-        print("setting log_db_handler to self.")
         log_db_handler = self.LogDBHandler(log_conn, function_name)
         logger.addHandler(log_db_handler)
 
