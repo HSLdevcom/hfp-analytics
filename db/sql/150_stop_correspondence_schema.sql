@@ -208,3 +208,17 @@ COMMENT ON COLUMN percentile_radii.radius_m IS
 'Radius size in meters.';
 COMMENT ON COLUMN percentile_radii.n_observations IS
 'Number of observations that the radius encloses.';
+
+CREATE VIEW stopcorr.view_percentile_circles AS (
+  SELECT
+    pr.stop_id,
+    pr.percentile,
+    pr.radius_m,
+    pr.n_observations,
+    ST_Buffer(sm.geom, pr.radius_m, 'quad_segs=16') AS geom
+  FROM percentile_radii AS pr
+  INNER JOIN stop_median AS sm
+    ON (pr.stop_id = sm.stop_id)
+);
+COMMENT ON VIEW stopcorr.view_percentile_circles IS
+'Percentile circles with "radius_m" radii around "stop_median" points.';

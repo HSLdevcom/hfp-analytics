@@ -167,9 +167,26 @@ async def get_hfp_points(stop_id: str):
                 )
 
             observation_geojson_features = []
-
             for observation_tuple in totalObservations:
                 observation = observation_tuple[0]
                 observation_geojson_features.append(observation)
 
     return get_feature_collection(observation_geojson_features)
+
+
+@app.get("/percentile_circles/{stop_id}")
+async def get_percentile_circles(stop_id: str):
+    """
+    Returns a GeoJSON FeatureCollection of percentile circles with given stop_id.
+    """
+    with psycopg.connect(**get_conn_params()) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT api.get_percentile_circles_with_stop_id(%(stop_id)s)", {'stop_id': stop_id })
+            percentile_circles = cur.fetchall()
+
+            percentile_circle_geojson_features = []
+            for percentile_circle_tuple in percentile_circles:
+                percentile_circle = percentile_circle_tuple[0]
+                percentile_circle_geojson_features.append(percentile_circle)
+
+        return get_feature_collection(percentile_circle_geojson_features)
