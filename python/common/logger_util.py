@@ -1,6 +1,6 @@
 import logging
 import psycopg2
-
+from psycopg2 import sql
 
 class PostgresDBHandler(logging.Handler):
     """
@@ -20,20 +20,16 @@ class PostgresDBHandler(logging.Handler):
         except psycopg2.OperationalError as err:
             self.sql_conn, self.sql_cursor = None, None
             print(f"Could not initialize PostgresDBHandler for logging: {err}")
-        self.function_name = function_name
+        self.target_table = f"{function_name}_log"
+        self.query_template = sql.SQL(
+            "INSERT INTO logs.{table} (log_level, log_text) VALUES (%s, %s)"
+        ).format(table=sql.Identifier(self.target_table))
 
     def emit(self, record):
         log_level = record.levelname.lower()
-        # Clear the log message so that they can be inserted into db (escape quotes).
-        self.log_msg = record.msg
-        self.log_msg = self.log_msg.strip()
-        self.log_msg = self.log_msg.replace('\'', '\'\'')
-
-        sql = f"INSERT INTO logs.{self.function_name}_log (log_level, log_text) \
-            VALUES ('{log_level}', '{self.log_msg}')"
-
+        log_msg = record.msg.strip()
         try:
-            self.sql_cursor.execute(sql)
+            self.sql_cursor.execute(self.query_template, (log_level, log_msg))
             self.sql_conn.commit()
         # If error - print it out on screen. Since DB is not working - there's
         # no point making a log about it to the db.
