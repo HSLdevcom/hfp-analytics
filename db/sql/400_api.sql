@@ -21,7 +21,7 @@ CREATE VIEW api.view_jore_stop_4326 AS (
   FROM selected_cols AS sc
 );
 COMMENT ON VIEW api.view_jore_stop_4326 IS
-'Returns jore_stops as GeoJSON features';
+'Returns all jore_stops as GeoJSON features';
 
 CREATE VIEW api.view_stop_median_4326 AS (
   WITH selected_cols AS (
@@ -52,7 +52,7 @@ CREATE VIEW api.view_stop_median_4326 AS (
   FROM selected_cols AS sc
 );
 COMMENT ON VIEW api.view_stop_median_4326 IS
-'Returns stop_medians as GeoJSON features';
+'Returns all stop_medians as GeoJSON features';
 
 CREATE VIEW api.view_observation_4326 AS (
   WITH selected_cols AS (
@@ -92,9 +92,9 @@ RETURNS setof json as $$
   )
   SELECT cast(ST_AsGeoJSON(sc.*) AS json)
   FROM selected_cols AS sc;
-$$ LANGUAGE SQL VOLATILE;
+$$ LANGUAGE SQL STABLE;
 COMMENT ON FUNCTION api.get_observations_with_null_stop_id_4326 IS
-'Returns observations with null stop_id as GeoJSON features';
+'Returns observations with no stop_id value, but located within search_distance_m from the given stop_id, as GeoJSON features';
 
 CREATE OR REPLACE FUNCTION api.get_percentile_circles_with_stop_id(stop_id int)
 RETURNS setof json as $$
@@ -103,6 +103,6 @@ RETURNS setof json as $$
   )
   SELECT cast(ST_AsGeoJSON(sc.*) AS json)
   FROM selected_cols AS sc;
-$$ LANGUAGE SQL VOLATILE;
+$$ LANGUAGE SQL STABLE;
 COMMENT ON FUNCTION api.get_percentile_circles_with_stop_id IS
-'Returns percentile circles with stop_id as GeoJSON features';
+'Returns percentile circles around given stop_id as GeoJSON features';
