@@ -2,7 +2,7 @@
 
 import psycopg2
 import time
-from common.logger_util import Logger
+# from common.logger_util import Logger
 from common.utils import env_with_default, comma_separated_floats_to_list, comma_separated_integers_to_list, get_conn_params
 import common.constants as constants
 

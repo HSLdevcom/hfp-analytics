@@ -4,10 +4,11 @@ from azure.storage.blob import BlobServiceClient
 from io import StringIO
 import os
 import csv
+import logging
 import zstandard
 from datetime import datetime, timedelta
 import psycopg2 as psycopg
-from common.logger_util import Logger
+from common.logger_util import PostgresDBHandler
 from common.utils import get_conn_params
 import common.constants as constants
 from .run_analysis import main as run_analysis
@@ -16,45 +17,57 @@ from .run_analysis import main as run_analysis
 event_types_to_import = ['DOC', 'DOO']
 
 def main(importer: func.TimerRequest, context: func.Context):
+    
+    logger = logging.getLogger()
+    fmt = logging.Formatter("%(name)-12s %(asctime)s %(levelname)-8s %(filename)s:%(funcName)s %(message)s")
+    console_log_handler = logging.StreamHandler()
+    console_log_handler.setFormatter(fmt)
+    logger.addHandler(console_log_handler)
+
+    db_log_handler = PostgresDBHandler(function_name='importer', conn_params=get_conn_params())
+    db_log_handler.setFormatter(fmt)
+    logger.addHandler(db_log_handler)
+
+    global is_importer_locked
     conn = psycopg.connect(**get_conn_params())
-    with Logger(conn, 'importer') as logger:
-        global is_importer_locked
-        try:
-            with conn:
-                with conn.cursor() as cur:
-                    # Check if importer is locked or not. We use lock strategy to prevent executing importer
-                    # and analysis more than once at a time
-                    cur.execute("SELECT is_lock_enabled(%s)", (constants.IMPORTER_LOCK_ID,))
-                    is_importer_locked = cur.fetchone()[0]
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                # Check if importer is locked or not. We use lock strategy to prevent executing importer
+                # and analysis more than once at a time
+                cur.execute("SELECT is_lock_enabled(%s)", (constants.IMPORTER_LOCK_ID,))
+                is_importer_locked = cur.fetchone()[0]
 
-                    if is_importer_locked == False:
-                        logger.info("Going to run importer.")
-                        cur.execute("SELECT pg_advisory_lock(%s)", (constants.IMPORTER_LOCK_ID,))
-                    else:
-                        logger.info("Importer is LOCKED which means that importer should be already running. You can get"
-                                    "rid of the lock by restarting the database if needed.")
-                        return
-                    print("Running import_day_data_from_past")
-                    # import_day_data_from_past(1, cur, logger)
-                    # import_day_data_from_past(2, cur, logger)
-                    # import_day_data_from_past(3, cur, logger)
-                    # import_day_data_from_past(4, cur, logger)
-                    # import_day_data_from_past(5, cur, logger)
-                    # import_day_data_from_past(6, cur, logger)
-                    # import_day_data_from_past(7, cur, logger)
-                    logger.info("Importing done - next up: analysis.")
-        finally:
-            conn.cursor().execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
+                if is_importer_locked == False:
+                    logger.info("Going to run importer.")
+                    cur.execute("SELECT pg_advisory_lock(%s)", (constants.IMPORTER_LOCK_ID,))
+                else:
+                    logger.info("Importer is LOCKED which means that importer should be already running. You can get"
+                                "rid of the lock by restarting the database if needed.")
+                    return
+                print("Running import_day_data_from_past")
+                # import_day_data_from_past(1, cur, logger)
+                # import_day_data_from_past(2, cur, logger)
+                # import_day_data_from_past(3, cur, logger)
+                # import_day_data_from_past(4, cur, logger)
+                # import_day_data_from_past(5, cur, logger)
+                # import_day_data_from_past(6, cur, logger)
+                # import_day_data_from_past(7, cur, logger)
+                logger.info("Importing done - next up: analysis.")
+    finally:
+        conn.cursor().execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
 
-            if is_importer_locked == False:
-                logger.info("Going to run analysis.")
-                # run_analysis()
-            else:
-                logger.info("Skipping analysis - importer is locked.")
+        if is_importer_locked == False:
+            logger.info("Going to run analysis.")
+            # run_analysis()
+        else:
+            logger.info("Skipping analysis - importer is locked.")
 
-            logger.info("Importer done.")
+        logger.info("Importer done.")
+        logger.removeHandler(console_log_handler)
+        logger.removeHandler(db_log_handler)
 
-            conn.close()
+        conn.close()
 
 def import_day_data_from_past(day_since_today, cur, logger):
     import_date = datetime.now() - timedelta(day_since_today)
