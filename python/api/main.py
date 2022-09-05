@@ -5,7 +5,7 @@ from fastapi.openapi.docs import (
     get_redoc_html,
     get_swagger_ui_html,
 )
-from common.utils import get_conn_params, get_feature_collection, get_logger
+from common.utils import get_conn_params, get_feature_collection, tuples_to_feature_collection
 import psycopg2 as psycopg
 from .digitransit_import import main as run_digitransit_import
 
@@ -82,7 +82,6 @@ async def get_jore_stops(stop_id = -1):
                     detail="Have you ran Jore & HFP data imports and then analysis?"
                 )
 
-            stop_geojson_features = []
 
             if stop_id != -1:
                 stops = list(filter(lambda item: str(item[0]['properties']['stop_id']) == stop_id, stops))
@@ -93,11 +92,7 @@ async def get_jore_stops(stop_id = -1):
                         detail=f'Did not find stop with given stop_id: {stop_id}'
                     )
 
-            for stop_tuple in stops:
-                stop = stop_tuple[0]
-                stop_geojson_features.append(stop)
-
-    return get_feature_collection(stop_geojson_features)
+            return tuples_to_feature_collection(geom_tuples=stops)
 
 @app.get("/stop_medians")
 async def get_stop_medians(stop_id = -1):
@@ -129,13 +124,7 @@ async def get_stop_medians(stop_id = -1):
                         detail=f'Did not find stop median with given stop_id: {stop_id}'
                     )
 
-            stop_median_geojson_features = []
-
-            for stop_median_tuple in stop_medians:
-                stop_median = stop_median_tuple[0]
-                stop_median_geojson_features.append(stop_median)
-
-    return get_feature_collection(stop_median_geojson_features)
+            return tuples_to_feature_collection(geom_tuples=stop_medians)
 
 
 @app.get("/hfp_points/{stop_id}")
@@ -148,28 +137,34 @@ async def get_hfp_points(stop_id: str):
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM api.view_observation_4326 \
                 WHERE st_asgeojson -> 'properties' ->> 'stop_id' = %(stop_id)s", {'stop_id': stop_id})
-            stopIdObservations = cur.fetchall()
+            stop_id_observations = cur.fetchall()
 
-            print(f'Found {len(stopIdObservations)} observations with given stop_id: {stop_id}.')
+            print(f'Found {len(stop_id_observations)} observations with given stop_id: {stop_id}.')
 
             search_distance_m = 100
             cur.execute("SELECT api.get_observations_with_null_stop_id_4326(%(stop_id)s, %(search_distance_m)s)", {'stop_id': stop_id, 'search_distance_m': search_distance_m})
-            observationsWithNullStopIds = cur.fetchall()
+            observations_with_null_stop_ids = cur.fetchall()
 
-            print(f'Found {len(observationsWithNullStopIds)} observations with NULL stop_id')
+            print(f'Found {len(observations_with_null_stop_ids)} observations with NULL stop_id')
 
-            totalObservations = stopIdObservations + observationsWithNullStopIds
+            total_observations = stop_id_observations + observations_with_null_stop_ids
 
-            if len(totalObservations) == 0:
+            if len(total_observations) == 0:
                 raise HTTPException(
                     status_code=404,
                     detail=f'Did not find hfp data for given stop: {stop_id}'
                 )
 
-            observation_geojson_features = []
+            return tuples_to_feature_collection(geom_tuples=total_observations)
 
-            for observation_tuple in totalObservations:
-                observation = observation_tuple[0]
-                observation_geojson_features.append(observation)
+@app.get("/percentile_circles/{stop_id}")
+async def get_percentile_circles(stop_id: str):
+    """
+    Returns a GeoJSON FeatureCollection of percentile circles around the given stop by stop_id.
+    """
+    with psycopg.connect(**get_conn_params()) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT api.get_percentile_circles_with_stop_id(%(stop_id)s)", {'stop_id': stop_id })
+            percentile_circles = cur.fetchall()
 
-    return get_feature_collection(observation_geojson_features)
+        return tuples_to_feature_collection(geom_tuples=percentile_circles)

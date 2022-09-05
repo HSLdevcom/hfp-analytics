@@ -4,7 +4,6 @@
 
 CREATE SCHEMA api;
 
--- Returns jore_stops as GeoJSON features
 CREATE VIEW api.view_jore_stop_4326 AS (
   WITH selected_cols AS (
     SELECT
@@ -21,8 +20,9 @@ CREATE VIEW api.view_jore_stop_4326 AS (
   SELECT cast(ST_AsGeoJSON(sc.*) AS json)
   FROM selected_cols AS sc
 );
+COMMENT ON VIEW api.view_jore_stop_4326 IS
+'Returns all jore_stops as GeoJSON features';
 
--- Returns stop_medians as GeoJSON features
 CREATE VIEW api.view_stop_median_4326 AS (
   WITH selected_cols AS (
     SELECT
@@ -51,8 +51,9 @@ CREATE VIEW api.view_stop_median_4326 AS (
   SELECT cast(ST_AsGeoJSON(sc.*) AS json)
   FROM selected_cols AS sc
 );
+COMMENT ON VIEW api.view_stop_median_4326 IS
+'Returns all stop_medians as GeoJSON features';
 
--- Returns all observations as GeoJSON features
 CREATE VIEW api.view_observation_4326 AS (
   WITH selected_cols AS (
     SELECT
@@ -67,8 +68,9 @@ CREATE VIEW api.view_observation_4326 AS (
   SELECT cast(ST_AsGeoJSON(sc.*) AS json)
   FROM selected_cols AS sc
 );
+COMMENT ON VIEW api.view_observation_4326 IS
+'Returns all observations as GeoJSON features';
 
--- Returns observations with null stop_id as GeoJSON features
 CREATE OR REPLACE FUNCTION api.get_observations_with_null_stop_id_4326(stop_id int, search_distance_m int default 100)
 RETURNS setof json as $$
   WITH selected_cols AS (
@@ -90,5 +92,17 @@ RETURNS setof json as $$
   )
   SELECT cast(ST_AsGeoJSON(sc.*) AS json)
   FROM selected_cols AS sc;
-$$ LANGUAGE SQL VOLATILE;
+$$ LANGUAGE SQL STABLE;
+COMMENT ON FUNCTION api.get_observations_with_null_stop_id_4326 IS
+'Returns observations with no stop_id value, but located within search_distance_m from the given stop_id, as GeoJSON features';
 
+CREATE OR REPLACE FUNCTION api.get_percentile_circles_with_stop_id(stop_id int)
+RETURNS setof json as $$
+  WITH selected_cols AS (
+    SELECT * FROM stopcorr.view_percentile_circles pc WHERE pc.stop_id = $1
+  )
+  SELECT cast(ST_AsGeoJSON(sc.*) AS json)
+  FROM selected_cols AS sc;
+$$ LANGUAGE SQL STABLE;
+COMMENT ON FUNCTION api.get_percentile_circles_with_stop_id IS
+'Returns percentile circles around given stop_id as GeoJSON features';

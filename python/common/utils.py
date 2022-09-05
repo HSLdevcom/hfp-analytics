@@ -36,6 +36,14 @@ def get_feature_collection(features):
         "features": features
     }
 
+def tuples_to_feature_collection(geom_tuples: list[tuple]) -> dict:
+    """Transforms GeoJSON tuples returned by psycopg into a FeatureCollection dict for REST API."""
+    features = [tp[0] for tp in geom_tuples]
+    return {
+        "type": "FeatureCollection",
+        "features": features
+    }
+
 def comma_separated_floats_to_list(val_str):
     res = val_str.split(',')
     res = [x.strip() for x in res]
