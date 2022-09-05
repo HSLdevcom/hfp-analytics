@@ -1,6 +1,6 @@
 import os
 import pptx
-# from common.logger_util import get_logger
+import logging as logger
 
 def get_conn_params():
     return dict(
@@ -49,8 +49,7 @@ def analyze_pptx(input_pptx, output_pptx):
             title = slide.shapes.title
             title.text = 'Title for Layout {}'.format(index)
         except AttributeError:
-            print("TODO:")
-            # logger.info("No Title for Layout {}".format(index))
+            logger.info("No Title for Layout {}".format(index))
         for shape in slide.placeholders:
             if shape.is_placeholder:
                 phf = shape.placeholder_format
@@ -58,7 +57,6 @@ def analyze_pptx(input_pptx, output_pptx):
                     if 'Title' not in shape.text:
                         shape.text = 'Placeholder index:{} type:{}'.format(phf.idx, shape.name)
                 except AttributeError:
-                    print("TODO:")
-                    # logger.info("{} has no text attribute".format(phf.type))
-                # logger.info('{} {}'.format(phf.idx, shape.name))
+                    logger.info("{} has no text attribute".format(phf.type))
+                logger.info('{} {}'.format(phf.idx, shape.name))
     prs.save(output_pptx)
