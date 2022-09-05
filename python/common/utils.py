@@ -18,7 +18,9 @@ def env_with_default(var_name, default_value):
         print(f'{var_name} not set, falling back to default value {default_value}')
     return res
 
-def get_feature_collection(features):
+def tuples_to_feature_collection(geom_tuples: list[tuple]) -> dict:
+    """Transforms GeoJSON tuples returned by psycopg into a FeatureCollection dict for REST API."""
+    features = [tp[0] for tp in geom_tuples]
     return {
         "type": "FeatureCollection",
         "features": features
