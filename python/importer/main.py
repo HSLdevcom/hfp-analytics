@@ -17,13 +17,8 @@ from .run_analysis import main as run_analysis
 event_types_to_import = ['DOC', 'DOO']
 
 def main(importer: func.TimerRequest, context: func.Context):
-    # Taken from: https://stackoverflow.com/a/879937/4282381
-    class AnalyticsLoggingFilter(logging.Filter):
-        def filter(self, record):
-            # TODO: find a better way to filter than using funcName
-            return record.funcName == 'main'
-
-    logger = logging.getLogger()
+    logger = logging.getLogger('importer')
+    logger.setLevel('DEBUG')
     # TODO: move logging boilerplate to a single place like so:
     # custom_db_log_handler = get_custom_db_log_handler(function_name='importer', conn_params=get_conn_params())
     # logger = custom_db_log_handler.get_logger()
@@ -32,12 +27,12 @@ def main(importer: func.TimerRequest, context: func.Context):
 
     console_log_handler = logging.StreamHandler()
     console_log_handler.setFormatter(logging_formatter)
-    console_log_handler.addFilter(AnalyticsLoggingFilter())
+    console_log_handler.addFilter(logging.Filter('importer'))
     logger.addHandler(console_log_handler)
 
     db_log_handler = PostgresDBHandler(function_name='importer', conn_params=get_conn_params())
     db_log_handler.setFormatter(logging_formatter)
-    db_log_handler.addFilter(AnalyticsLoggingFilter())
+    db_log_handler.addFilter(logging.Filter('importer'))
     logger.addHandler(db_log_handler)
 
     global is_importer_locked
@@ -58,7 +53,7 @@ def main(importer: func.TimerRequest, context: func.Context):
                                 "rid of the lock by restarting the database if needed.")
                     return
                 print("Running import_day_data_from_past")
-                import_day_data_from_past(1, cur)
+                # import_day_data_from_past(1, cur)
                 # import_day_data_from_past(2, cur)
                 # import_day_data_from_past(3, cur)
                 # import_day_data_from_past(4, cur)
@@ -87,7 +82,7 @@ def import_day_data_from_past(day_since_today, cur):
     import_data(cur=cur, import_date=import_date)
 
 def import_data(cur, import_date):
-    logger = logging.getLogger()
+    logger = logging.getLogger('importer')
 
     hfp_storage_container_name = os.getenv('HFP_STORAGE_CONTAINER_NAME')
     hfp_storage_connection_string = os.getenv('HFP_STORAGE_CONNECTION_STRING')
@@ -120,7 +115,7 @@ def import_data(cur, import_date):
                 logger.error(f'Error in reading blob chunks: {e}')
 
 def read_imported_data_to_db(cur, downloader):
-    logger = logging.getLogger()
+    logger = logging.getLogger('importer')
     compressed_content = downloader.content_as_bytes()
     reader = zstandard.ZstdDecompressor().stream_reader(compressed_content)
     bytes = reader.readall()

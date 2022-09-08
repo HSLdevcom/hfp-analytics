@@ -1,7 +1,7 @@
 # Call analysis functions in the db.
 
 import psycopg2
-import logging as logger
+import logging
 import time
 from common.utils import env_with_default, comma_separated_floats_to_list, comma_separated_integers_to_list, get_conn_params
 import common.constants as constants
@@ -13,6 +13,8 @@ def get_time():
 
 def main():
     global start_time
+
+    logger = logging.getLogger('importer')
 
     stop_near_limit_m = env_with_default('STOP_NEAR_LIMIT_M', 50.0)
     min_observations_per_stop = env_with_default('MIN_OBSERVATIONS_PER_STOP', 10)
