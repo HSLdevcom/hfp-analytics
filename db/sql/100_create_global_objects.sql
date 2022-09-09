@@ -1,7 +1,6 @@
 -- Extensions and global objects
 
 CREATE EXTENSION IF NOT EXISTS postgis;
-CREATE EXTENSION IF NOT EXISTS moddatetime;
 CREATE EXTENSION IF NOT EXISTS timescaledb;
 
 CREATE FUNCTION array_distinct(anyarray) 
@@ -26,3 +25,17 @@ AS $func$
     WHERE locktype = 'advisory' AND objid = lock_id
   )
 $func$;
+
+CREATE OR REPLACE FUNCTION set_modified_at()
+RETURNS TRIGGER
+VOLATILE
+LANGUAGE plpgsql
+AS $func$
+BEGIN
+  NEW.modified_at := now();
+  RETURN NEW;
+END;
+$func$;
+COMMENT ON FUNCTION set_modified_at IS
+'Automatically update "modified_at" column of the target table
+to current timestamp, for auditing of insert and update activities.';

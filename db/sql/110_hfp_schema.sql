@@ -39,10 +39,10 @@ COMMENT ON COLUMN hfp.vehicle.transport_mode IS
 'Mode of the vehicle. `transport_mode` in HFP topic.';
 COMMENT ON COLUMN hfp.vehicle.modified_at IS
 'When the vehicle row was added or last modified.';
-CREATE TRIGGER set_moddatetime    
+CREATE TRIGGER set_modified_at    
   BEFORE UPDATE ON hfp.vehicle
   FOR EACH ROW
-  EXECUTE PROCEDURE moddatetime(modified_at);
+  EXECUTE PROCEDURE set_modified_at();
 
 
 -- Journey model.
@@ -74,10 +74,10 @@ Interval type is used for future support of such start times.';
 COMMENT ON COLUMN hfp.observed_journey.observed_operator_id IS
 'Id of the operator the journey was assigned to. `oper` in HFP payload.';
 
-CREATE TRIGGER set_moddatetime    
+CREATE TRIGGER set_modified_at    
   BEFORE UPDATE ON hfp.observed_journey
   FOR EACH ROW
-  EXECUTE PROCEDURE moddatetime(modified_at);
+  EXECUTE PROCEDURE set_modified_at();
 
 
 -- HFP observation model.
