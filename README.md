@@ -98,6 +98,19 @@ You can get the API key used to access to the API from Azure Portal -> hfp-analy
 
 After this, restart `importer` function from Azure portal. After we have a working CI, this step shouldn't be no longer needed.
 
+### Manually run importer
+
+Locally:
+```
+./trigger_importer_local.sh
+```
+
+In dev environment:
+```
+./trigger_importer_dev.sh
+```
+In order for this to work, you'll have to get a master API key from Azure Portal -> hfp-importer -> App keys -> _master
+
 ### View logs
 
 From Azure Portal select a function app and open logstream view.

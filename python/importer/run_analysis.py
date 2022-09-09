@@ -1,8 +1,9 @@
 # Call analysis functions in the db.
 
 import psycopg2
+import logging
 import time
-from common.utils import env_with_default, comma_separated_floats_to_list, comma_separated_integers_to_list, get_conn_params, get_logger
+from common.utils import env_with_default, comma_separated_floats_to_list, comma_separated_integers_to_list, get_conn_params
 import common.constants as constants
 
 start_time = 0
@@ -12,6 +13,8 @@ def get_time():
 
 def main():
     global start_time
+
+    logger = logging.getLogger('importer')
 
     stop_near_limit_m = env_with_default('STOP_NEAR_LIMIT_M', 50.0)
     min_observations_per_stop = env_with_default('MIN_OBSERVATIONS_PER_STOP', 10)
@@ -31,18 +34,16 @@ def main():
     terminal_ids = comma_separated_integers_to_list(terminal_ids_str)
 
     conn = psycopg2.connect(**get_conn_params())
-
     try:
         with conn:
             with conn.cursor() as cur:
-                logger = get_logger()
                 start_time = time.time()
 
                 cur.execute("SELECT is_lock_enabled(%s)", (constants.IMPORTER_LOCK_ID,))
                 is_importer_locked = cur.fetchone()[0]
 
                 if is_importer_locked == False:
-                    logger.info("### Running analysis. ###")
+                    logger.info("Running analysis.")
                     cur.execute("SELECT lock_importer(%s)", (constants.IMPORTER_LOCK_ID,))
                 else:
                     logger.info("Importer is LOCKED which means that importer should be already running. You can get"
@@ -105,7 +106,7 @@ def main():
 
                 logger.info(f'{get_time()} Analysis complete.')
     finally:
-        conn.cursor().execute("SELECT unlock_importer(%s)", (constants.IMPORTER_LOCK_ID))
+        conn.cursor().execute("SELECT unlock_importer(%s)", (constants.IMPORTER_LOCK_ID,))
         conn.close()
 
 if __name__ == '__main__':

@@ -11,16 +11,19 @@
   },
   "functionTimeout": "08:00:00",
   "logging": {
+    "fileLoggingMode": "always",
     "logLevel": {
       "default": "Information",
       "Host.Results": "Error",
-      "Host.Aggregator": "Trace",
-      "Function": "Trace",
-      "Function.api": "Information",
-      "Function.importer": "Information"
+      "Function": "Error",
+      "Host.Aggregator": "Trace"
     },
-    "tracing": {
-      "consoleLevel": "verbose"
+    "applicationInsights": {
+      "httpAutoCollectionOptions": {
+        "enableResponseHeaderInjection": false,
+        "enableW3CDistributedTracing": false,
+        "enableHttpTriggerExtendedInfoCollection": true
+      }
     }
   }
 }
