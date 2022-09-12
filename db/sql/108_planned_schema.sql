@@ -37,10 +37,11 @@ CREATE TABLE planned.stop_point_in_journey_pattern (
   route_uuid            uuid NOT NULL REFERENCES planned.route(route_uuid),
   stop_sequence         smallint NOT NULL CHECK (stop_sequence > 0),
   stop_point_id         text NOT NULL,
-  stop_role_key         smallint NOT NULL REFERENCES planned.stop_role(stop_role_key),
 
   UNIQUE (route_uuid, stop_sequence)
 );
+COMMENT ON TABLE planned.stop_point_in_journey_pattern IS
+'Defines an ordered list of stops that a route shall visit.';
 
 CREATE TABLE planned.service_journey (
   service_journey_uuid  uuid PRIMARY KEY,
@@ -62,8 +63,8 @@ COMMENT ON TABLE planned.stop_role IS
 -- TODO: INSERT INTO planned.stop_role VALUES ...
 
 CREATE TABLE planned.timetabled_passing_time (
-  service_journey_uuid  uuid NOT NULL,
-  stop_in_pattern_uuid  uuid NOT NULL,
+  service_journey_uuid  uuid NOT NULL REFERENCES planned.service_journey(service_journey_uuid),
+  stop_in_pattern_uuid  uuid NOT NULL REFERENCES planned.stop_point_in_journey_pattern(stop_in_pattern_uuid),
   arrival_30h           interval,
   departure_30h         interval,
   stop_role_key         smallint NOT NULL REFERENCES planned.stop_role(stop_role_key),
