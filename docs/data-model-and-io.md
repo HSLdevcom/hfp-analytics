@@ -3,6 +3,60 @@
 Thoughts behind the data model, importing, and exporting the data.
 Note that this document is aspirational and may not reflect currently implemented features.
 
+## Planned service data model
+
+The [`planned`](../db/sql/108_planned_schema.sql) data model represents the planned transit service of HSL.
+The main origin for this data is Jore (transit registry) but for a convenient integration, the data is read from Transitlog database.
+
+In this model, we attempt to conform to [Transmodel](https://www.transmodel-cen.eu/model/index.htm) concepts and their relationships as far as conveniently possible.
+Note, however, that this is far from a full implementation of Transmodel.
+By following the Transmodel specification, we aim to make it easier to seamlessly change the data source for planned transit service in future, most probablt to [Jore 4.0](https://github.com/HSLdevcom/jore4).
+
+This diagram shows the basic relations currently implemented from Transmodel.
+
+```mermaid
+erDiagram
+    SERVICE_CALENDAR {
+      uuid calendar_uuid PK
+      text day_type
+      date operating_day
+    }
+    ROUTE {
+      uuid route_uuid PK
+      text route_id
+      smallint direction
+      daterange valid_during
+    }
+    STOP_POINT_IN_JOURNEY_PATTERN {
+      uuid stop_in_pattern_uuid PK
+      uuid route_uuid FK
+      smallint stop_sequence
+      text stop_point_id
+    }
+    SERVICE_JOURNEY {
+      uuid service_journey_uuid PK
+      uuid route_uuid FK
+      uuid calendar_uuid FK
+      interval journey_start_30h
+    }
+    TIMETABLED_PASSING_TIME {
+      uuid service_journey_uuid PK
+      uuid stop_in_pattern_uuid PK
+      interval arrival_30h
+      interval departure_30h
+      enum stop_role
+    }
+
+    SERVICE_JOURNEY }|--|| SERVICE_CALENDAR : "is run on days in"
+    SERVICE_JOURNEY }o--||ROUTE : "follows path of"
+    ROUTE ||--|{ STOP_POINT_IN_JOURNEY_PATTERN : "consists of"
+    SERVICE_JOURNEY ||--|{ TIMETABLED_PASSING_TIME : "follows sequence of"
+    TIMETABLED_PASSING_TIME }o--||STOP_POINT_IN_JOURNEY_PATTERN : "happens at"
+```
+
+> TODO: As a more practical example, let us consider passing times ("stop visits") of an imaginary _dated vehicle journey_, i.e., one that we except to have corresponding stop visit events in the real world, eventually seen from HFP data.
+> TODO: Table here, each column originates from a relation above.
+
 ## HFP data model
 
 The `hfp` schema in the database essentially answers the question **what was the state of vehicle X at this given second Y**.
