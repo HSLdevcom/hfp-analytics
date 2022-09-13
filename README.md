@@ -68,10 +68,6 @@ PGPASSWORD=<db_password> PGOPTIONS=--search_path=public,api,hfp,stopcorr psql -h
 
 Get the required secrets from Azure portal.
 
-### Run Migra
-```
-TODO
-```
 
 ### Run tests
 ```
@@ -97,6 +93,18 @@ You can get the API key used to access to the API from Azure Portal -> hfp-analy
 ```
 
 After this, restart `importer` function from Azure portal. After we have a working CI, this step shouldn't be no longer needed.
+
+### Deploy schema with Migra
+
+To make dev db schema the same as local db schema, cd into `scripts/deploy` and run:
+
+```
+python3 migra_local_vs_dev init
+```
+Open the generated .sql file and inspect the changes to be applied. If everything is OK, you can apply changes with:
+```
+python3 migra_local_vs_dev apply
+```
 
 ### Manually run importer
 
