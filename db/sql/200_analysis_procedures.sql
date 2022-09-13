@@ -255,18 +255,18 @@ around "stop_median" points at given percentages (from 0.0 to 1.0).';
 -- will remain valid.
 --
 
-CREATE PROCEDURE classify_medians(
-  min_radius_percentiles_to_sum real[],
-  default_min_radius_m real,
-  manual_acceptance_min_radius_m real,
-  large_scatter_percentile real,
-  large_scatter_radius_m real,
-  large_jore_dist_m real,
-  stop_guessed_percentage real,
-  terminal_ids integer[]
+CREATE OR REPLACE PROCEDURE classify_medians(
+  IN min_radius_percentiles_to_sum real[],
+  IN default_min_radius_m real,
+  IN manual_acceptance_min_radius_m real,
+  IN large_scatter_percentile real,
+  IN large_scatter_radius_m real,
+  IN large_jore_dist_m real,
+  IN stop_guessed_percentage real,
+  IN terminal_ids integer[]
 )
-LANGUAGE PLPGSQL
-AS $proc$
+LANGUAGE plpgsql
+AS $procedure$
 BEGIN
 
   UPDATE stop_median AS sm SET
@@ -315,7 +315,7 @@ BEGIN
   WHERE stop_id NOT IN (SELECT stop_id FROM jore_stop);
 
 END;
-$proc$;
+$procedure$;
 
 COMMENT ON PROCEDURE classify_medians IS
 'Updates result_class, recommended_min_radius_m and manual_acceptance_needed
