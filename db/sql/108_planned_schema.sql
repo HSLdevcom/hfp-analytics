@@ -25,6 +25,8 @@ CREATE TABLE planned.route (
   route_id              text NOT NULL,
   direction             smallint NOT NULL,
   valid_during          daterange NOT NULL,
+  import_history        jsonb,
+  modified_at           timestamptz DEFAULT now(),
 
   EXCLUDE USING GIST (route_id WITH =, direction WITH =, valid_during WITH &&)
 );
