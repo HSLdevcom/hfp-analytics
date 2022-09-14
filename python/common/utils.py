@@ -3,13 +3,7 @@ import pptx
 import logging as logger
 
 def get_conn_params():
-    return dict(
-        dbname = os.getenv('POSTGRES_DB'),
-        user = os.getenv('POSTGRES_USER'),
-        password = os.getenv('POSTGRES_PASSWORD'),
-        host = os.getenv('POSTGRES_HOST'),
-        port = 5432
-    )
+    return os.getenv('POSTGRES_CONNECTION_STRING')
 
 def env_with_default(var_name, default_value):
     res = os.getenv(var_name)

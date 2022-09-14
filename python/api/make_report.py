@@ -11,7 +11,7 @@ def main():
     min_observations_per_stop = env_with_default('MIN_OBSERVATIONS_PER_STOP', 100)
     large_jore_dist_m = env_with_default('LARGE_JORE_DIST_M', 25.0)
 
-    conn = psycopg2.connect(**get_conn_params())
+    conn = psycopg2.connect(get_conn_params())
 
     try:
         with conn:

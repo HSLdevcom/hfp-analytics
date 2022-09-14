@@ -36,7 +36,7 @@ def main(importer: func.TimerRequest, context: func.Context):
     logger.addHandler(db_log_handler)
 
     global is_importer_locked
-    conn = psycopg.connect(**get_conn_params())
+    conn = psycopg.connect(get_conn_params())
     try:
         with conn:
             with conn.cursor() as cur:
