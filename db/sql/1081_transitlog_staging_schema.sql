@@ -28,6 +28,7 @@ CREATE TABLE transitlog_stg.route_segment (
   date_end date NOT NULL,
   stop_id text NOT NULL,
   stop_index integer NOT NULL,
+  timing_stop_type integer NOT NULL,
   date_modified date,
   date_imported timestamptz,
   -- Populated here:
@@ -65,3 +66,31 @@ CREATE TABLE transitlog_stg.replacement_days_calendar (
   PRIMARY KEY (date_in_effect, scope)
 );
 -- -> Destination: planned.service_calendar
+
+CREATE TABLE transitlog_stg.departure (
+  route_id text NOT NULL,
+  direction text NOT NULL,
+  date_begin date NOT NULL,
+  date_end date NOT NULL,
+  hours integer NOT NULL,
+  minutes integer NOT NULL,
+  day_type text NOT NULL,
+  extra_departure text NOT NULL,
+  is_next_day boolean NOT NULL,
+  arrival_is_next_day boolean NOT NULL,
+  arrival_hours integer,
+  arrival_minutes integer,
+  operator_id text,
+  date_imported timestamptz,
+  -- Populated here:
+  service_journey_uuid uuid,
+  route_uuid uuid,
+  stop_in_pattern_uuid uuid,
+  arrival_30h interval,
+  departure_30h interval,
+  stop_role_key smallint,
+
+  PRIMARY KEY (route_id, direction, date_begin, date_end, hours, minutes, stop_id, day_type, extra_departure)
+);
+-- -> Destination: planned.service_journey
+--                 planned.timetabled_passing_time
