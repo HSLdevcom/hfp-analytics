@@ -57,6 +57,71 @@ erDiagram
 > TODO: As a more practical example, let us consider passing times ("stop visits") of an imaginary _dated vehicle journey_, i.e., one that we except to have corresponding stop visit events in the real world, eventually seen from HFP data.
 > TODO: Table here, each column originates from a relation above.
 
+### Import flow from Transitlog DB
+
+Data to `planned` schema is imported from [Transitlog](https://github.com/hsldevcom/transitlog-server) database's `jore` schema.
+This is not a perfect solution but currently it's the easiest one to integrate to, compared to the legacy Jore production database or other solutions that usually have the route data but no schedule data available.
+
+```mermaid
+flowchart LR
+    subgraph "Transitlog DB"
+        subgraph "jore"
+            direction TB
+            j.route[route]
+            j.route_segment[route_segment]
+            j.exception_days_calendar[exception_days_calendar]
+            j.replacement_days_calendar[replacement_days_calendar]
+            j.departure[departure]
+        end
+    end
+
+    subgraph "HFP Analytics DB"
+        subgraph "transitlog_stg"
+            direction TB
+            t.route[route]
+            t.route_segment[route_segment]
+            t.exception_days_calendar[exception_days_calendar]
+            t.replacement_days_calendar[replacement_days_calendar]
+            t.departure[departure]
+        end
+        subgraph "planned"
+            direction TB
+            p.route[route]
+            p.stop_point_in_journey_pattern[stop_point_in_journey_pattern]
+            p.service_calendar[service_calendar]
+            p.service_journey[service_journey]
+            p.timetabled_passing_time[timetabled_passing_time]
+        end
+        t.route-->p.route
+        t.route_segment-->p.stop_point_in_journey_pattern
+        t.exception_days_calendar-->p.service_calendar
+        t.replacement_days_calendar-->p.service_calendar
+        t.departure-->p.service_journey
+        t.departure-->p.timetabled_passing_time
+    end
+
+    j.route-->t.route
+    j.route_segment-->t.route_segment
+    j.exception_days_calendar-->t.exception_days_calendar
+    j.replacement_days_calendar-->t.replacement_days_calendar
+    j.departure-->t.departure
+```
+
+The above diagram shows in general how Transitlog `jore` entities flow into destination tables in HFP Analytics.
+
+- The data is read daily by default. A 2-week range `date1..date2` is defined for the read batch: this should correspond to the period from which we have HFP data in HFP Analytics DB. The batch reading and insertion process is handled by a Python service.
+- Only those entities whose validity period intersects with `date1..date2`, e.g. by `date_begin` and `date_end` values, is included in the batch.
+- The batch is inserted into staging tables in [`transitlog_stg` schema](../db/sql/1081_transitlog_staging_schema.sql). Any existing data is deleted from this schema in the beginning of each import run.
+- Finally, functions in `transitlog_stg` schema transform and insert the data into `planned` tables. For some entities, this mostly means generating UUID keys (as opposed to compound primary keys in Transitlog DB) and using Transmodel-compatible entity names, but there are also some special actions to consider:
+  - Transitlog DB can include route versions whose validity date ranges overlap, which is not allowed in HFP Analytics. This is probably because Jore data is updated to Transitlog incrementally on a daily basis, and old route versions may be left untouched while they were actually updated in Jore. We currently resolve this by keeping only the most recent ones of overlapping route versions, by Jore modification date and secondarily by Transitlog import time. 
+  - Jore's _exception_ and _replacement_ days are translated into a simple service calendar that maps day types to calendar dates.
+  - Transitlog does not have an entity comparable to _journey_, but it can be derived by picking each `departure` entity that happens at the first stop of the journey.
+  - `departure` entities are translated into `timetabled_passing_time`s, but their journey-related attributes (such as day type) are normalized into `service_journey`.
+
+In future, we probably want to use [Jore4](https://github.com/hsldevcom/jore4) as a data source instead of Transitlog DB.
+`planned` schema follows Transmodel concepts to make this transition easier.
+After the transition, Transitlog DB and `transitlog_stg` schema are no longer needed in the architecture of HFP Analytics.
+
 ## HFP data model
 
 The `hfp` schema in the database essentially answers the question **what was the state of vehicle X at this given second Y**.
