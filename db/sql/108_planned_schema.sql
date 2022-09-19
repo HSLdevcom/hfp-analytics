@@ -63,6 +63,7 @@ CREATE TABLE planned.service_journey (
   route_uuid            uuid NOT NULL REFERENCES planned.route(route_uuid),
   calendar_uuid         uuid NOT NULL REFERENCES planned.service_calendar(calendar_uuid),
   journey_start_30h     interval NOT NULL,
+  is_extra_journey      boolean,
 
   UNIQUE (route_uuid, calendar_uuid, journey_start_30h)
 );
@@ -80,5 +81,3 @@ CREATE TABLE planned.timetabled_passing_time (
 COMMENT ON TABLE planned.timetabled_passing_time IS
 'Planned stop call times of SERVICE JOURNEYS via their
 STOP POINTS IN JOURNEY PATTERN.';
-
--- TODO: Extra journey model.
