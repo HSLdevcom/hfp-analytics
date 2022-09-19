@@ -147,3 +147,121 @@ END;
 $function$;
 COMMENT ON FUNCTION transitlog_stg.truncate_all IS
 'Cleans up all staging tables in this schema. Should be run before every new data import.';
+
+
+-- NOTE: Split this monolith function into more manageable pieces
+--       if necessary, this is the first iteration.
+CREATE FUNCTION transitlog_stg.prepare_all()
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+AS $function$
+BEGIN
+  -- ### route ###
+  -- Generate valid_during values.
+  UPDATE transitlog_stg.route
+  SET valid_during = daterange(date_begin, date_end);
+
+  -- Delete conflicting routes.
+  CREATE VIEW transitlog_stg.route_with_version_conflict_indicator AS (
+    SELECT
+      *,
+      coalesce(
+        valid_during && lead(valid_during) OVER (PARTITION BY route_id, direction ORDER BY valid_during, date_modified, date_imported),
+        false
+        ) AS does_conflict
+    FROM transitlog_stg.route
+    ORDER BY route_id, direction, valid_during, date_modified, date_imported
+  );
+  COMMENT ON VIEW transitlog_stg.route_with_version_conflict_indicator IS
+  'Shows whether a route conflicts with its next version in time, when ordered by
+  validity 1) date period, 2) Jore modification date, and 3) Transitlog import timestamp.';
+
+  DELETE FROM transitlog_stg.route
+  WHERE (route_id, direction, date_begin, date_end) IN (
+    SELECT route_id, direction, date_begin, date_end
+    FROM transitlog_stg.route_with_version_conflict_indicator
+    WHERE does_conflict
+  );
+
+  -- Generate route_uuid values.
+  UPDATE transitlog_stg.route
+  SET route_uuid = md5(concat_ws('_', route_id, direction, date_begin, date_end))::uuid;
+
+  -- ### route_segment ###
+  -- Delete segments of deleted routes.
+  DELETE FROM transitlog_stg.route_segment
+  WHERE (route_id, direction, date_begin, date_end) NOT IN (
+    SELECT route_id, direction, date_begin, date_end
+    FROM transitlog_stg.route
+  );
+
+  -- Generate route_uuid values.
+  UPDATE transitlog_stg.route_segment
+  SET route_uuid = md5(concat_ws('_', route_id, direction, date_begin, date_end))::uuid;
+
+  -- Generate stop_in_pattern-uuid values.
+  UPDATE transitlog_stg.route_segment
+  SET stop_in_pattern_uuid = md5(concat_ws('_', route_uuid, stop_index))::uuid;
+
+  -- Set stop_role_key values.
+  UPDATE transitlog_stg.route_segment AS rs
+  SET stop_role_key = CASE
+      WHEN rs.stop_index = 1 THEN 1
+      WHEN lsi.is_last THEN 2
+      -- Both timing_stop_type values 1 and 2 seem to correspond to stops used
+      -- as regulated timing points on the route; no documentation found
+      -- for the difference of 1 and 2, apparently they inherit from Jore.  
+      WHEN rs.timing_stop_type IN (1, 2) THEN 3
+      ELSE 4
+    END
+  FROM (
+    SELECT
+      route_id, direction, date_begin, date_end, stop_index,
+      (stop_index = (max(stop_index) OVER (PARTITION BY (route_id, direction, date_begin, date_end)))) AS is_last
+    FROM transitlog_stg.route_segment
+  ) AS lsi
+  WHERE (rs.route_id, rs.direction, rs.date_begin, rs.date_end, rs.stop_index)
+    = (lsi.route_id, lsi.direction, lsi.date_begin, lsi.date_end, lsi.stop_index);
+
+  -- ### exception_days_calendar, replacement_days_calendar ###
+  -- TODO: Create calendar_id + dates-in-effect entries by day types
+  --       and exceptions.
+
+  -- ### departure ###
+  -- Delete departures of deleted routes.
+  DELETE FROM transitlog_stg.departure
+  WHERE (route_id, direction, date_begin, date_end) NOT IN (
+    SELECT route_id, direction, date_begin, date_end
+    FROM transitlog_stg.route
+  );
+
+  -- Generate route_uuid values.
+  UPDATE transitlog_stg.departure
+  SET route_uuid = md5(concat_ws('_', route_id, direction, date_begin, date_end))::uuid;
+
+  -- Generate 30h values.
+  UPDATE transitlog_stg.departure
+  SET
+    arrival_30h = format(
+      '%s %s:%s:00',
+      CASE WHEN arrival_is_next_day THEN 1 ELSE 0 END,
+      arrival_hours,
+      arrival_minutes
+      )::interval,
+    departure_30h = format(
+      '%s %s:%s:00',
+      CASE WHEN is_next_day THEN 1 ELSE 0 END,
+      hours,
+      minutes
+      )::interval;
+
+  -- TODO:
+  -- * Generate service_journey_uuid (after calendar stuff is done)
+  -- * Create interim table for unique service_journey entries, and there:
+  --   * calendar_uuid
+  --   * journey_start_30h
+END;
+$function$;
+COMMENT ON FUNCTION transitlog_stg.prepare_all IS
+'Prepares the staging data so it is ready for insertion into "planned" schema.';
