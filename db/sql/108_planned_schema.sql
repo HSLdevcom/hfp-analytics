@@ -34,11 +34,24 @@ COMMENT ON TABLE planned.route IS
 'A service path of stops and links through the transit network.
 Only one combination (route_id, direction) may be in effect during an operating date (valid_during).';
 
+CREATE TABLE planned.stop_role (
+  stop_role_key         smallint PRIMARY KEY CHECK (stop_role_key BETWEEN 1 AND 4),
+  stop_role             text NOT NULL
+);
+COMMENT ON TABLE planned.stop_role IS
+'Enum values for stop roles in journey patterns (first/last, timing point).';
+INSERT INTO planned.stop_role VALUES
+  (1, 'FIRST'),
+  (2, 'TIMING_POINT'),
+  (3, 'LAST'),
+  (4, 'NORMAL');
+
 CREATE TABLE planned.stop_point_in_journey_pattern (
   stop_in_pattern_uuid  uuid PRIMARY KEY,
   route_uuid            uuid NOT NULL REFERENCES planned.route(route_uuid),
   stop_sequence         smallint NOT NULL CHECK (stop_sequence > 0),
   stop_point_id         text NOT NULL,
+  stop_role_key         smallint NOT NULL REFERENCES planned.stop_role(stop_role_key),
 
   UNIQUE (route_uuid, stop_sequence)
 );
@@ -56,20 +69,11 @@ CREATE TABLE planned.service_journey (
 COMMENT ON TABLE planned.service_journey IS
 'A passenger carrying vehicle journey of a DAY TYPE following a ROUTE.';
 
-CREATE TABLE planned.stop_role (
-  stop_role_key         smallint PRIMARY KEY,
-  stop_role             text NOT NULL
-);
-COMMENT ON TABLE planned.stop_role IS
-'Enum lookup table for stop points in journey pattern of a journey.';
--- TODO: INSERT INTO planned.stop_role VALUES ...
-
 CREATE TABLE planned.timetabled_passing_time (
   service_journey_uuid  uuid NOT NULL REFERENCES planned.service_journey(service_journey_uuid),
   stop_in_pattern_uuid  uuid NOT NULL REFERENCES planned.stop_point_in_journey_pattern(stop_in_pattern_uuid),
   arrival_30h           interval,
   departure_30h         interval,
-  stop_role_key         smallint NOT NULL REFERENCES planned.stop_role(stop_role_key),
 
   PRIMARY KEY (service_journey_uuid, stop_in_pattern_uuid)
 );

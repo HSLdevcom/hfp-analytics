@@ -34,6 +34,7 @@ CREATE TABLE transitlog_stg.route_segment (
   -- Populated here:
   stop_in_pattern_uuid uuid,
   route_uuid uuid,
+  stop_role_key smallint,
   read_from_transitlog_at timestamptz DEFAULT now(),
 
   -- Pkey corresponding to Transitlog.
@@ -89,7 +90,6 @@ CREATE TABLE transitlog_stg.departure (
   stop_in_pattern_uuid uuid,
   arrival_30h interval,
   departure_30h interval,
-  stop_role_key smallint,
   read_from_transitlog_at timestamptz DEFAULT now(),
 
   PRIMARY KEY (route_id, direction, date_begin, date_end, hours, minutes, stop_id, day_type, extra_departure)
