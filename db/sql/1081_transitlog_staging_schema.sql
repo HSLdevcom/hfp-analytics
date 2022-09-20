@@ -97,6 +97,19 @@ CREATE TABLE transitlog_stg.departure (
 -- -> Destination: planned.service_journey
 --                 planned.timetabled_passing_time
 
+CREATE VIEW transitlog_stg.route_with_version_conflict_indicator AS (
+    SELECT
+      *,
+      coalesce(
+        valid_during && lead(valid_during) OVER (PARTITION BY route_id, direction ORDER BY valid_during, date_modified, date_imported),
+        false
+        ) AS does_conflict
+    FROM transitlog_stg.route
+    ORDER BY route_id, direction, valid_during, date_modified, date_imported
+);
+COMMENT ON VIEW transitlog_stg.route_with_version_conflict_indicator IS
+'Shows whether a route conflicts with its next version in time, when ordered by
+validity 1) date period, 2) Jore modification date, and 3) Transitlog import timestamp.';
 
 -- NOTE:
 -- This is an interim function for WIP before the integration via Python
@@ -163,20 +176,6 @@ BEGIN
   SET valid_during = daterange(date_begin, date_end);
 
   -- Delete conflicting routes.
-  CREATE VIEW transitlog_stg.route_with_version_conflict_indicator AS (
-    SELECT
-      *,
-      coalesce(
-        valid_during && lead(valid_during) OVER (PARTITION BY route_id, direction ORDER BY valid_during, date_modified, date_imported),
-        false
-        ) AS does_conflict
-    FROM transitlog_stg.route
-    ORDER BY route_id, direction, valid_during, date_modified, date_imported
-  );
-  COMMENT ON VIEW transitlog_stg.route_with_version_conflict_indicator IS
-  'Shows whether a route conflicts with its next version in time, when ordered by
-  validity 1) date period, 2) Jore modification date, and 3) Transitlog import timestamp.';
-
   DELETE FROM transitlog_stg.route
   WHERE (route_id, direction, date_begin, date_end) IN (
     SELECT route_id, direction, date_begin, date_end
