@@ -2,8 +2,11 @@
 # Build and push an image to Azure Container Registry
 # https://docs.microsoft.com/azure/devops/pipelines/languages/docker
 
+# trigger the pipeline when creating a tag with -rc* suffix
 trigger:
-- main
+  tags:
+    include:
+      - '*.*.*-rc*'
 
 resources:
 - repo: self
@@ -11,17 +14,17 @@ resources:
 variables:
   # Container registry service connection established during pipeline creation
   dockerRegistryServiceConnection: '8552ded1-0fd3-4204-9481-ab0101c1ead2'
-  imageRepository: 'hfpanalyticsapi'
+  imageRepository: 'hfpanalytics/api'
   containerRegistry: 'hfpanalyticsregistry.azurecr.io'
   dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile.api_deploy'
-  tag: '$(Build.BuildId)'
+  versionTag: '$(Build.SourceBranchName)'
 
   # Agent VM image name
   vmImageName: 'ubuntu-latest'
 
 stages:
 - stage: Build
-  displayName: Build and push stage
+  displayName: Build and push test
   jobs:
   - job: Build
     displayName: Build
@@ -36,4 +39,4 @@ stages:
         dockerfile: $(dockerfilePath)
         containerRegistry: $(dockerRegistryServiceConnection)
         tags: |
-          $(tag)
+          $(versionTag)
