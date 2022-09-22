@@ -7,15 +7,117 @@ GPS data quality can vary due to tunnels, underground terminals or other problem
 - Are there geographical areas with significant quality issues, such as positioning errors or message transmission delays?
 - Do the issues in an area change over time?
 
-## Journey availability analysis
+## Journey availability analysis _(work in progress!)_
 
 A scheduled journey (route, dir, oday, start) exists in the HFP data, if there is at least one event from it.
-Jore is considered the master data of scheduled journeys, HFP in turn is the master source for actual journeys.
+Jore is considered the master data of planned _dated vehicle journeys_, HFP in turn is the master source for actually realized _monitored vehicle journeys_.
 
-- Which scheduled journeys are found in the HFP data?
-- Which journeys are found in the HFP data but not in scheduled journeys?
-- Which scheduled journeys were realized more than once?
-  - Were they valid duplicated journeys or e.g. used as test cases (large difference between planned and actual times)?
+This feature tells, for a given **operating date** `yyyy-mm-dd` (and lasting over midnight),
+
+- dated vehicle journeys planned for that date (based on Jore);
+- which of these planned journeys were found in the HFP data (at least one observation from a signed-in vehicle);
+- which journeys were found in HFP but have no corresponding planned journey from Jore;
+- which planned journeys were realized more than once, i.e., "consumed" by multiple vehicles;
+  - Were these planned journeys marked as extra journeys, in which case consumption by multiple vehicles could be OK?
+
+### Journey stop coverage analysis
+
+Moreover, this feature returns per-journey information on _stop coverage_, i.e., planned stop points the dated vehicle journey should have served versus actually detected stop points the monitored vehicle journey stopped at or passed.
+
+WIP draft for this feature in the REST API:
+
+<details>
+<summary>GET /api/v1/journeys?operating_date=2022-09-01</summary>
+
+```json
+200 OK:
+  {"data":
+    "journeys": [
+      {
+        "dated_vehicle_journey_uuid": "e0f7f542-f212-4b93-a4fc-6450a145e27b",
+          # ^ This is unique over route, dir, oday, start + is_extra_journey.
+        "monitored_vehicle_journey_uuid": "c7122273-d75a-4b20-8588-6d1ea128d5d1", 
+          # ^ Unique over route, dir, oday, start(24h), vehicle, operator; null if no match found
+        "route_id": "1067",
+        "direction_id": 1,
+        "operating_date": "2022-09-01",
+        "start_time_30h": "24:36:00",
+        "is_extra_journey": False,
+        "planned_stop_count": 34,
+        "monitored_stop_count": 29,
+        "monitored_stop_ratio": 0.8529,
+        # ^ == monitored_stop_count / planned_stop_count
+        "monitored_timestamp_span": {
+          "start_timestamp": "20220902T003618Z",
+          "end_timestamp": "20220902T011737Z"
+        }, 
+        # ^ Between which start and end time did we get _any_ HFP data from that journey+vehicle?
+        "stops": [
+          # This list contains per-stop-visit details.
+          # "monitored_" entries are null if not detected.
+          # Alternatively, these details could be requested
+          # from a different endpoint, since this would contain a lot of data.
+          {
+            "stop_sequence": 1,
+            "stop_role": "FIRST",
+            "stop_id": "1004223",
+            "planned_arrival_timestamp": "20220902T003600Z",
+            "monitored_arrival_timestamp": null,
+            "planned_departure_timestamp": "20220902T003600Z",
+            "monitored_departure_timestamp": "20220902T003618Z",
+            "detected_events": ["DOC", "PDE, "DEP"]
+            # ^ The stop visit was "proven" by availability of these HFP events with correct stop value.
+          },
+          {
+            "stop_sequence": 2,
+            "stop_role": "NORMAL",
+            "stop_id": "1092303",
+            "planned_arrival_timestamp": "20220902T003800Z",
+            "monitored_arrival_timestamp": "20220902T003811Z",
+            "planned_departure_timestamp": "20220902T003800Z",
+            "monitored_departure_timestamp": "20220902T003814Z",
+            "detected_events": ["ARR", "PAS, "DEP"]
+          },
+          ...
+          {
+            "stop_sequence": 10,
+            "stop_role": "REGULATED",
+            # ^ This is a regulated timing stop where the vehicle must wait for scheduled dep time.
+            "stop_id": "10921127",
+            "planned_arrival_timestamp": "20220902T004900Z",
+            "monitored_arrival_timestamp": "20220902T004903Z",
+            "planned_departure_timestamp": "20220902T005100Z",
+            "monitored_departure_timestamp": "20220902T003814Z",
+            "detected_events": ["ARR", "ARS", "DOO", "DOC" "PDE, "DEP"]
+          },
+          {
+            "stop_sequence": 11,
+            "stop_role": "NORMAL",
+            "stop_id": "10921127",
+            "planned_arrival_timestamp": "20220902T004900Z",
+            "monitored_arrival_timestamp": null,
+            "planned_departure_timestamp": "20220902T005100Z",
+            "monitored_departure_timestamp": null,
+            "detected_events": []
+            # ^ This stop was not detected in HFP.
+          },
+          {
+            "stop_sequence": 34,
+            "stop_role": "LAST",
+            "stop_id": "1305597",
+            "planned_arrival_timestamp": "20220902T011700Z",
+            "monitored_arrival_timestamp": "20220902T011801Z",
+            "planned_departure_timestamp": "20220902T011700Z",
+            "monitored_departure_timestamp": null,
+            "detected_events": ["ARR", "ARS", "DOO"]
+          },
+        ]
+      }
+    ]
+  }
+```
+
+</details>
 
 ## Journey route validity analysis
 
