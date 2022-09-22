@@ -87,6 +87,7 @@ CREATE TABLE transitlog_stg.departure (
   -- Populated here:
   service_journey_uuid uuid,
   route_uuid uuid,
+  stop_sequence smallint,
   stop_in_pattern_uuid uuid,
   arrival_30h interval,
   departure_30h interval,
