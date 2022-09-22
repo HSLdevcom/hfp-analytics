@@ -1,0 +1,4 @@
+migra==3.0.1658662267
+sqlbag==0.1.1617247075
+python-dotenv==0.20.0
+psycopg2-binary==2.9.1

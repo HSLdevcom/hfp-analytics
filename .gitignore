@@ -16,5 +16,7 @@ testdata/import/hfp.csv
 .vscode/
 analytics-data
 
-scripts/deploy/.env
-scripts/deploy/dev_deploy.sql
+scripts/dev_devploy/.env
+scripts/dev_devploy/dev_deploy.sql
+scripts/test_devploy/.env
+scripts/test_devploy/test_deploy.sql
