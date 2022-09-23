@@ -9,7 +9,7 @@ resources:
 
 variables:
   # Container registry service connection established during pipeline creation
-  dockerRegistryServiceConnection: '${dockerRegistryServiceConnectionString}'
+  dockerRegistryServiceConnection: '$(dockerRegistryServiceConnectionString)'
   imageRepository: 'hfp-analytics/api'
   containerRegistry: 'hfpanalyticsregistry.azurecr.io'
   dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile.api_deploy'
