@@ -8,9 +8,11 @@ resources:
 - repo: self
 
 variables:
-  imageRepository: 'hfp-analytics/api'
+  imageRepositoryApi: 'hfp-analytics/api'
+  imageRepositoryImporter: 'hfp-analytics/importer'
   containerRegistry: 'hfpanalyticsregistry.azurecr.io'
-  dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile.api_deploy'
+  dockerfilePathApi: '$(Build.SourcesDirectory)/Dockerfile.api_deploy'
+  dockerfilePathImporter: '$(Build.SourcesDirectory)/Dockerfile.importer_deploy'
   versionTag: '$(Build.SourceBranchName)'
 
   # Agent VM image name
@@ -26,11 +28,20 @@ stages:
       vmImage: $(vmImageName)
     steps:
     - task: Docker@2
-      displayName: Build and push an image to container registry
+      displayName: Build and push api to container registry
       inputs:
         command: buildAndPush
-        repository: $(imageRepository)
-        dockerfile: $(dockerfilePath)
-        containerRegistry: $(dockerRegistryServiceConnectionString) # Container registry service connection established during pipeline creation
+        repository: $(imageRepositoryApi)
+        dockerfile: $(dockerfilePathApi)
+        containerRegistry: $(dockerRegistryServiceConnectionString) # Stored as a secret variable, got it when created the pipeline in Azure
+        tags: |
+          $(versionTag)
+    - task: Docker@2
+      displayName: Build and push importer to container registry
+      inputs:
+        command: buildAndPush
+        repository: $(imageRepositoryImporter)
+        dockerfile: $(dockerfilePathImporter)
+        containerRegistry: $(dockerRegistryServiceConnectionString) # Stored as a secret variable, got it when created the pipeline in Azure
         tags: |
           $(versionTag)
