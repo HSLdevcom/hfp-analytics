@@ -8,8 +8,6 @@ resources:
 - repo: self
 
 variables:
-  # Container registry service connection established during pipeline creation
-  dockerRegistryServiceConnection: '$(dockerRegistryServiceConnectionString)'
   imageRepository: 'hfp-analytics/api'
   containerRegistry: 'hfpanalyticsregistry.azurecr.io'
   dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile.api_deploy'
@@ -33,6 +31,6 @@ stages:
         command: buildAndPush
         repository: $(imageRepository)
         dockerfile: $(dockerfilePath)
-        containerRegistry: $(dockerRegistryServiceConnection)
+        containerRegistry: (dockerRegistryServiceConnectionString) # Container registry service connection established during pipeline creation
         tags: |
           $(versionTag)
