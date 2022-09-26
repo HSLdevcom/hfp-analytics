@@ -31,6 +31,6 @@ stages:
         command: buildAndPush
         repository: $(imageRepository)
         dockerfile: $(dockerfilePath)
-        containerRegistry: (dockerRegistryServiceConnectionString) # Container registry service connection established during pipeline creation
+        containerRegistry: $(dockerRegistryServiceConnectionString) # Container registry service connection established during pipeline creation
         tags: |
           $(versionTag)
