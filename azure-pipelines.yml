@@ -33,7 +33,7 @@ stages:
         command: buildAndPush
         repository: $(imageRepositoryApi)
         dockerfile: $(dockerfilePathApi)
-        containerRegistry: $(dockerRegistryServiceConnectionString) # Stored as a secret variable, got it when created the pipeline in Azure
+        containerRegistry: Azure Container Registry Connection # Service connection created in Azure with this name
         tags: |
           $(versionTag)
     - task: Docker@2
@@ -42,6 +42,6 @@ stages:
         command: buildAndPush
         repository: $(imageRepositoryImporter)
         dockerfile: $(dockerfilePathImporter)
-        containerRegistry: $(dockerRegistryServiceConnectionString) # Stored as a secret variable, got it when created the pipeline in Azure
+        containerRegistry: Azure Container Registry Connection # Service connection created in Azure with this name
         tags: |
           $(versionTag)
