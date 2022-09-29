@@ -1,0 +1,47 @@
+# Docker
+# Build and push an image to Azure Container Registry
+# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
+
+trigger: none
+
+resources:
+- repo: self
+
+variables:
+  imageRepositoryApi: 'hfp-analytics/api'
+  imageRepositoryImporter: 'hfp-analytics/importer'
+  containerRegistry: 'hfpanalyticsregistry.azurecr.io'
+  dockerfilePathApi: '$(Build.SourcesDirectory)/Dockerfile.api_deploy'
+  dockerfilePathImporter: '$(Build.SourcesDirectory)/Dockerfile.importer_deploy'
+  versionTag: '$(Build.SourceBranchName)'
+
+  # Agent VM image name
+  vmImageName: 'ubuntu-latest'
+
+stages:
+- stage: Build
+  displayName: Build and push test
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: Docker@2
+      displayName: Build and push api to container registry
+      inputs:
+        command: buildAndPush
+        repository: $(imageRepositoryApi)
+        dockerfile: $(dockerfilePathApi)
+        containerRegistry: Azure Container Registry Connection # Service connection created in Azure with this name
+        tags: |
+          $(versionTag)
+    - task: Docker@2
+      displayName: Build and push importer to container registry
+      inputs:
+        command: buildAndPush
+        repository: $(imageRepositoryImporter)
+        dockerfile: $(dockerfilePathImporter)
+        containerRegistry: Azure Container Registry Connection # Service connection created in Azure with this name
+        tags: |
+          $(versionTag)
