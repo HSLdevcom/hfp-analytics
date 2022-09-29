@@ -13,7 +13,6 @@ variables:
   containerRegistry: 'hfpanalyticsregistry.azurecr.io'
   dockerfilePathApi: '$(Build.SourcesDirectory)/Dockerfile.api_deploy'
   dockerfilePathImporter: '$(Build.SourcesDirectory)/Dockerfile.importer_deploy'
-  versionTag: '$(Build.SourceBranchName)'
 
   # Agent VM image name
   vmImageName: 'ubuntu-latest'
@@ -34,8 +33,9 @@ stages:
         repository: $(imageRepositoryApi)
         dockerfile: $(dockerfilePathApi)
         containerRegistry: Azure Container Registry Connection # Service connection created in Azure with this name
+        # imageTag (dev/test/prod): a pipeline variable
         tags: |
-          $(versionTag)
+          $(imageTag)
     - task: Docker@2
       displayName: Build and push importer to container registry
       inputs:
@@ -43,5 +43,6 @@ stages:
         repository: $(imageRepositoryImporter)
         dockerfile: $(dockerfilePathImporter)
         containerRegistry: Azure Container Registry Connection # Service connection created in Azure with this name
+        # imageTag (dev/test/prod): a pipeline variable
         tags: |
-          $(versionTag)
+          $(imageTag)
