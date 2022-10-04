@@ -15,7 +15,7 @@ class PostgresDBHandler(logging.Handler):
     def __init__(self, function_name: str, conn_params: dict):
         logging.Handler.__init__(self)
         try:
-            self.sql_conn = psycopg2.connect(**conn_params)
+            self.sql_conn = psycopg2.connect(conn_params)
             self.sql_cursor = self.sql_conn.cursor()
         except psycopg2.OperationalError as err:
             self.sql_conn, self.sql_cursor = None, None
