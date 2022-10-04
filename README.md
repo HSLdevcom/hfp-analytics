@@ -96,7 +96,7 @@ After this, restart `importer` function from Azure portal. After we have a worki
 
 ### Deploy schema with Migra
 
-To make dev db schema the same as local db schema, cd into `scripts/deploy` and run:
+To make for example dev db schema the same as local db schema, cd into `scripts/dev_deploy` and run:
 
 ```
 python3 migra_local_vs_dev init
@@ -105,6 +105,7 @@ Open the generated .sql file and inspect the changes to be applied. If everythin
 ```
 python3 migra_local_vs_dev apply
 ```
+Note: you may want to comment out SQL related to timescaledb / postgis updates. 
 
 ### Manually run importer
 

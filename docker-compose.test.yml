@@ -4,7 +4,7 @@ version: "3.8"
 services:
   # Database for local development
   db:
-    image: timescale/timescaledb-ha:pg14-latest
+    image: timescale/timescaledb-ha:pg14.4-ts2.7.2-p0
     restart: unless-stopped
     env_file: .env
     ports:
@@ -13,8 +13,6 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - ./db/sql:/docker-entrypoint-initdb.d:ro
-      # Change to an actual import volume for production:
-      - ./testdata/import:/import:ro
       # Persistent storage
       - ./analytics-data:/var/lib/postgresql/data:z
     healthcheck:
@@ -49,9 +47,6 @@ services:
     build:
       context: ./python
       dockerfile: Dockerfile.importer_local
-    depends_on:
-      db:
-        condition: service_healthy
     ports:
       - "127.0.0.1:7072:80"
     env_file: .env
