@@ -106,7 +106,7 @@ def main():
 
                 logger.info(f'{get_time()} Analysis complete.')
     finally:
-        conn.cursor().execute("SELECT unlock_importer(%s)", (constants.IMPORTER_LOCK_ID,))
+        conn.cursor().execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
         conn.close()
 
 if __name__ == '__main__':
