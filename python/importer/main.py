@@ -12,6 +12,7 @@ from common.logger_util import PostgresDBHandler
 from common.utils import get_conn_params
 import common.constants as constants
 from .run_analysis import main as run_analysis
+from .remove_old_data import main as remove_old_data
 
 # TODO: import other event types as well when needed.
 event_types_to_import = ['DOC', 'DOO']
@@ -53,7 +54,7 @@ def main(importer: func.TimerRequest, context: func.Context):
                                 "rid of the lock by restarting the database if needed.")
                     return
                 print("Running import_day_data_from_past")
-                # import_day_data_from_past(1, cur)
+                import_day_data_from_past(1, cur)
                 # import_day_data_from_past(2, cur)
                 # import_day_data_from_past(3, cur)
                 # import_day_data_from_past(4, cur)
@@ -65,6 +66,10 @@ def main(importer: func.TimerRequest, context: func.Context):
         conn.cursor().execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
 
         if is_importer_locked == False:
+
+            logger.info("Going to remove old data.")
+            remove_old_data()
+
             logger.info("Going to run analysis.")
             run_analysis()
         else:
