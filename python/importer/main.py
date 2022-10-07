@@ -11,8 +11,8 @@ import psycopg2 as psycopg
 from common.logger_util import PostgresDBHandler
 from common.utils import get_conn_params
 import common.constants as constants
-from .run_analysis import main as run_analysis
-from .remove_old_data import main as remove_old_data
+from .run_analysis import run_analysis
+from .remove_old_data import remove_old_data
 
 # TODO: import other event types as well when needed.
 event_types_to_import = ['DOC', 'DOO']
@@ -53,14 +53,7 @@ def main(importer: func.TimerRequest, context: func.Context):
                     logger.info("Importer is LOCKED which means that importer should be already running. You can get"
                                 "rid of the lock by restarting the database if needed.")
                     return
-                print("Running import_day_data_from_past")
                 import_day_data_from_past(1, cur)
-                # import_day_data_from_past(2, cur)
-                # import_day_data_from_past(3, cur)
-                # import_day_data_from_past(4, cur)
-                # import_day_data_from_past(5, cur)
-                # import_day_data_from_past(6, cur)
-                # import_day_data_from_past(7, cur)
                 logger.info("Importing done - next up: analysis.")
     finally:
         conn.cursor().execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
@@ -111,7 +104,8 @@ def import_data(cur, import_date):
             blob_index += 1
             # Limit downloading all the blobs when developing. Enable if needed.
             # if os.getenv('IS_DEBUG') == 'True' and blob_index > 1:
-            #   return
+            #     logger.info("Returning early from import.")
+            #     return
 
         except Exception as e:
             if "ErrorCode:BlobNotFound" in e.message:
