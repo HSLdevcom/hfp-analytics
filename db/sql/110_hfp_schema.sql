@@ -86,7 +86,7 @@ CREATE TRIGGER set_modified_at
 CREATE TABLE hfp.hfp_point (
   point_timestamp   timestamptz NOT NULL,
   vehicle_id        integer     NOT NULL REFERENCES hfp.vehicle(vehicle_id),
-  journey_id        uuid            NULL REFERENCES hfp.observed_journey(journey_id),
+  journey_id        uuid            NULL REFERENCES hfp.observed_journey(journey_id) ON DELETE CASCADE,
   hfp_events        text[],
   received_at       timestamptz,
   odo               real,
