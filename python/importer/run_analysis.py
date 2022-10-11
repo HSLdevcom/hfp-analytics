@@ -11,7 +11,7 @@ start_time = 0
 def get_time():
     return f'[{round(time.time() - start_time)}s]'
 
-def main():
+def run_analysis():
     global start_time
 
     logger = logging.getLogger('importer')
@@ -109,5 +109,3 @@ def main():
         conn.cursor().execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
         conn.close()
 
-if __name__ == '__main__':
-    main()
