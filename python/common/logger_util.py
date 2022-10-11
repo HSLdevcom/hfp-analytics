@@ -1,6 +1,7 @@
 import logging
 import psycopg2
 from psycopg2 import sql
+from common.utils import get_conn_params
 
 class PostgresDBHandler(logging.Handler):
     """
@@ -12,10 +13,10 @@ class PostgresDBHandler(logging.Handler):
     Logging library docs: https://docs.python.org/3/library/logging.html
     """
 
-    def __init__(self, function_name: str, conn_params: dict):
+    def __init__(self, function_name: str):
         logging.Handler.__init__(self)
         try:
-            self.sql_conn = psycopg2.connect(**conn_params)
+            self.sql_conn = psycopg2.connect(get_conn_params())
             self.sql_cursor = self.sql_conn.cursor()
         except psycopg2.OperationalError as err:
             self.sql_conn, self.sql_cursor = None, None

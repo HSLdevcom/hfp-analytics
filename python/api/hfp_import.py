@@ -8,7 +8,7 @@ def main():
     starttime = datetime.now()
     print(f'[{starttime}] Importing HFP events to database')
 
-    conn = psycopg2.connect(**get_conn_params())
+    conn = psycopg2.connect(get_conn_params())
     try:
         with conn:
             with conn.cursor() as cur:

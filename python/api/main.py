@@ -68,7 +68,7 @@ async def run_import():
 @app.get("/jore_stops")
 async def get_jore_stops(stop_id = -1):
     """Returns a GeoJSON FeatureCollection of either all jore stops or one jore stop found with given stop_id"""
-    with psycopg.connect(**get_conn_params()) as conn:
+    with psycopg.connect(get_conn_params()) as conn:
         with conn.cursor() as cur:
 
             cur.execute("SELECT * FROM api.view_jore_stop_4326")
@@ -99,7 +99,7 @@ async def get_stop_medians(stop_id = -1):
     """
     Returns a GeoJSON FeatureCollection of stop medians and their percentile radii
     """
-    with psycopg.connect(**get_conn_params()) as conn:
+    with psycopg.connect(get_conn_params()) as conn:
         with conn.cursor() as cur:
 
             cur.execute("SELECT * FROM api.view_stop_median_4326")
@@ -133,7 +133,7 @@ async def get_hfp_points(stop_id: str):
     Returns a GeoJSON FeatureCollection with HFP (door) observations which were used for analysis of that stop_id
     OR which have NULL stop_id value but are located max search_distance_m (default 100) around the stop
     """
-    with psycopg.connect(**get_conn_params()) as conn:
+    with psycopg.connect(get_conn_params()) as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM api.view_observation_4326 \
                 WHERE st_asgeojson -> 'properties' ->> 'stop_id' = %(stop_id)s", {'stop_id': stop_id})
@@ -162,7 +162,7 @@ async def get_percentile_circles(stop_id: str):
     """
     Returns a GeoJSON FeatureCollection of percentile circles around the given stop by stop_id.
     """
-    with psycopg.connect(**get_conn_params()) as conn:
+    with psycopg.connect(get_conn_params()) as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT api.get_percentile_circles_with_stop_id(%(stop_id)s)", {'stop_id': stop_id })
             percentile_circles = cur.fetchall()

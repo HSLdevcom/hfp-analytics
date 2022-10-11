@@ -33,7 +33,7 @@ def run_analysis():
     terminal_ids_str = env_with_default('TERMINAL_IDS', '1000001,1000015,2000002,2000003,2000212,4000011')
     terminal_ids = comma_separated_integers_to_list(terminal_ids_str)
 
-    conn = psycopg2.connect(**get_conn_params())
+    conn = psycopg2.connect(get_conn_params())
     try:
         with conn:
             with conn.cursor() as cur:

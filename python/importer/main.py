@@ -31,13 +31,13 @@ def main(importer: func.TimerRequest, context: func.Context):
     console_log_handler.addFilter(logging.Filter('importer'))
     logger.addHandler(console_log_handler)
 
-    db_log_handler = PostgresDBHandler(function_name='importer', conn_params=get_conn_params())
+    db_log_handler = PostgresDBHandler(function_name='importer')
     db_log_handler.setFormatter(logging_formatter)
     db_log_handler.addFilter(logging.Filter('importer'))
     logger.addHandler(db_log_handler)
 
     global is_importer_locked
-    conn = psycopg.connect(**get_conn_params())
+    conn = psycopg.connect(get_conn_params())
     try:
         with conn:
             with conn.cursor() as cur:
