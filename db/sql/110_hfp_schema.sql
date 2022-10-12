@@ -234,3 +234,50 @@ CREATE TRIGGER insert_hfp_data_through_view
   INSTEAD OF INSERT ON hfp.view_as_original_hfp_event
   FOR EACH ROW 
   EXECUTE FUNCTION hfp.tg_hfp_insertor();
+
+
+CREATE TABLE hfp.assumed_monitored_vehicle_journey (
+  -- Unlike in hfp_point, vehicle_id is _not_ nullable.
+  vehicle_id        integer     NOT NULL REFERENCES hfp.vehicle(vehicle_id),
+  -- Entries without journey info would not make sense in this table.
+  journey_id        uuid        NOT NULL REFERENCES hfp.observed_journey(journey_id) ON DELETE CASCADE,
+  min_timestamp     timestamptz NOT NULL,
+  max_timestamp     timestamptz NOT NULL,
+  -- (Add further aggregates such as N of hfp_point rows here, if required later.)
+  modified_at       timestamptz DEFAULT now(),
+
+  PRIMARY KEY (vehicle_id, journey_id)
+);
+COMMENT ON TABLE hfp.assumed_monitored_vehicle_journey IS
+'Whole journey (or part of a journey) with the same vehicle including min and max timestamps.';
+
+
+CREATE FUNCTION insert_assumed_monitored_vehicle_journeys()
+RETURNS void
+VOLATILE
+LANGUAGE SQL
+AS $func$
+  INSERT INTO hfp.assumed_monitored_vehicle_journey (
+    vehicle_id, journey_id, min_timestamp, max_timestamp
+  )
+  SELECT
+    vehicle_id,
+    journey_id,
+    min(point_timestamp) AS min_timestamp,
+    max(point_timestamp) AS max_timestamp
+  -- (Add further aggregates such as N of hfp_point rows here, if required later.)
+  FROM hfp.hfp_point
+  GROUP BY
+    vehicle_id,
+    journey_id
+  -- In case of existing row in target table by (vehicle_id, journey_id),
+  -- we don't touch min_timestamp (since it had to be set by older data already)
+  -- but we update max_timestamp (since more recent data can have arrived this time,
+  -- which can help us amend journeys that remained incomplete in the last import time).
+  ON CONFLICT(vehicle_id, journey_id) DO UPDATE SET
+    max_timestamp = EXCLUDED.max_timestamp,
+    modified_at = now();
+$func$;
+
+COMMENT ON FUNCTION insert_assumed_monitored_vehicle_journeys IS
+'Populates hfp.assumed_monitored_vehicle_journey with min_timestamp and max_timestamp of a journey with a specific vehicle.';

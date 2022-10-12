@@ -106,3 +106,26 @@ RETURNS setof json as $$
 $$ LANGUAGE SQL STABLE;
 COMMENT ON FUNCTION api.get_percentile_circles_with_stop_id IS
 'Returns percentile circles around given stop_id as GeoJSON features';
+
+
+CREATE VIEW api.view_assumed_monitored_vehicle_journey AS (
+  SELECT
+    oj.route_id,
+    oj.direction_id,
+    oj.oday,
+    -- Format: hhmmss, can implement 30h-transformed format later if requested.
+    oj.start AS start_24h,
+    -- Using a clearer name for Jubumera context.
+    oj.observed_operator_id AS journey_operator_id,
+    ve.vehicle_operator_id,
+    ve.vehicle_number,
+    amvj.min_timestamp,
+    amvj.max_timestamp,
+    amvj.modified_at
+  FROM
+    hfp.assumed_monitored_vehicle_journey AS amvj
+    INNER JOIN hfp.observed_journey AS oj ON (amvj.journey_id = oj.journey_id)
+    INNER JOIN hfp.vehicle AS ve ON (amvj.vehicle_id = ve.vehicle_id)
+);
+COMMENT ON VIEW api.view_assumed_monitored_vehicle_journey IS
+'Returns all monitored vehicle journeys.';
