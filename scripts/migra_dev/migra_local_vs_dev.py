@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 LOCAL_DB_CONNECTION_STRING = "postgresql://postgres:postgres@localhost/analytics"
-DEPLOY_FILE_NAME = "dev_deploy.sql"
+DEPLOY_FILE_NAME = "migra_dev.sql"
 
 def is_dev_db_connection_string_ok(dev_db_connection_string):
     if dev_db_connection_string is None:
@@ -29,7 +29,7 @@ def main():
 
         Before doing anything, make sure that your local database is up-to-date
         with the current schema definition (in db/sql). After that, you can run
-        the script with "init" param and then go through dev_deploy.sql.
+        the script with "init" param and then go through migra_dev.sql.
 
         If everything looks good, you can run the script with apply argument.
     """
