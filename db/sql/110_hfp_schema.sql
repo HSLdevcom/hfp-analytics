@@ -270,12 +270,13 @@ AS $func$
   GROUP BY
     vehicle_id,
     journey_id
-  -- In case of existing row in target table by (vehicle_id, journey_id),
-  -- we don't touch min_timestamp (since it had to be set by older data already)
-  -- but we update max_timestamp (since more recent data can have arrived this time,
-  -- which can help us amend journeys that remained incomplete in the last import time).
+  -- Update existing rows in target table by (vehicle_id, journey_id),
+  -- update min and max timestamps as we might get new values for them
+  -- when importing hfp data to fill a gap or if more recent data is available
+  -- when running import.
   ON CONFLICT(vehicle_id, journey_id) DO UPDATE SET
     max_timestamp = EXCLUDED.max_timestamp,
+    min_timestamp = EXCLUDED.min_timestamp,
     modified_at = now();
 $func$;
 
