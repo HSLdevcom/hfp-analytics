@@ -249,7 +249,7 @@ CREATE TABLE hfp.assumed_monitored_vehicle_journey (
   PRIMARY KEY (vehicle_id, journey_id)
 );
 COMMENT ON TABLE hfp.assumed_monitored_vehicle_journey IS
-'Whole journey (or part of a journey) with the same vehicle including min and max timestamps.';
+'Assumed monitored vehicle journey (or part of a journey) with the same vehicle including min and max timestamps. Assumed here means that this journey might be invalid (e.g. driver accidentally logged into a wrong departure)';
 
 
 CREATE FUNCTION insert_assumed_monitored_vehicle_journeys()
