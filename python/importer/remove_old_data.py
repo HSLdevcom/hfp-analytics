@@ -5,7 +5,7 @@ from common.utils import get_conn_params
 def remove_old_data():
     logger = logging.getLogger('importer')
 
-    conn = psycopg2.connect(**get_conn_params())
+    conn = psycopg2.connect(get_conn_params())
     try:
         with conn:
             with conn.cursor() as cur:
