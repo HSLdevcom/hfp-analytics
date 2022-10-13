@@ -172,7 +172,9 @@ async def get_percentile_circles(stop_id: str):
 @app.get("/monitored_vehicle_journeys")
 async def get_monitored_vehicle_journeys(operating_day: str):
     """
-    Returns monitored vehicle journeys from given operating day.
+    Returns assumed monitored vehicle journeys from given operating day. Assumed here means
+    that the journeys might be valid or not, API doesn't know it. Invalid journey is example
+    a journey where bus driver signed in to a wrong departure.
     """
     with psycopg.connect(get_conn_params()) as conn:
         with conn.cursor() as cur:
