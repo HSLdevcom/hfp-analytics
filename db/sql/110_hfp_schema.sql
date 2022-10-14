@@ -234,3 +234,55 @@ CREATE TRIGGER insert_hfp_data_through_view
   INSTEAD OF INSERT ON hfp.view_as_original_hfp_event
   FOR EACH ROW 
   EXECUTE FUNCTION hfp.tg_hfp_insertor();
+
+
+CREATE TABLE hfp.assumed_monitored_vehicle_journey (
+  vehicle_id        integer     NOT NULL REFERENCES hfp.vehicle(vehicle_id),
+  -- Entries without journey info would not make sense in this table.
+  journey_id        uuid        NOT NULL REFERENCES hfp.observed_journey(journey_id) ON DELETE CASCADE,
+  min_timestamp     timestamptz NOT NULL,
+  max_timestamp     timestamptz NOT NULL,
+  -- (Add further aggregates such as N of hfp_point rows here, if required later.)
+  modified_at       timestamptz DEFAULT now(),
+
+  PRIMARY KEY (vehicle_id, journey_id)
+);
+COMMENT ON TABLE hfp.assumed_monitored_vehicle_journey IS
+'Assumed monitored vehicle journey (or part of a journey) with the same vehicle
+including min and max timestamps. Assumed here means that this journey might
+be invalid (e.g. driver accidentally logged into a wrong departure)';
+
+
+CREATE FUNCTION insert_assumed_monitored_vehicle_journeys()
+RETURNS void
+VOLATILE
+LANGUAGE SQL
+AS $func$
+  INSERT INTO hfp.assumed_monitored_vehicle_journey (
+    vehicle_id, journey_id, min_timestamp, max_timestamp
+  )
+  SELECT
+    vehicle_id,
+    journey_id,
+    min(point_timestamp) AS min_timestamp,
+    max(point_timestamp) AS max_timestamp
+  -- (Add further aggregates such as N of hfp_point rows here, if required later.)
+  FROM hfp.hfp_point
+  GROUP BY
+    vehicle_id,
+    journey_id
+  -- Update existing rows in target table by (vehicle_id, journey_id),
+  -- update min and max timestamps as we might get new values for them
+  -- when importing hfp data to fill a gap or if more recent data is available
+  -- when running import.
+  ON CONFLICT(vehicle_id, journey_id) DO UPDATE SET
+    max_timestamp = EXCLUDED.max_timestamp,
+    min_timestamp = EXCLUDED.min_timestamp,
+    modified_at = now();
+$func$;
+
+COMMENT ON FUNCTION insert_assumed_monitored_vehicle_journeys IS
+'Populates hfp.assumed_monitored_vehicle_journey with min_timestamp
+and max_timestamp of a journey with a specific vehicle. If new hfp.hfp_point
+data has been imported, updates min and max timestamps of existing journey
+rows accordingly.';

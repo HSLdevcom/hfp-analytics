@@ -14,8 +14,8 @@ import common.constants as constants
 from .run_analysis import run_analysis
 from .remove_old_data import remove_old_data
 
-# TODO: import other event types as well when needed.
-event_types_to_import = ['DOC', 'DOO']
+# Import other event types as well when needed.
+event_types_to_import = ['VP', 'DOC', 'DOO']
 
 def main(importer: func.TimerRequest, context: func.Context):
     logger = logging.getLogger('importer')

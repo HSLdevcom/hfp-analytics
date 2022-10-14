@@ -104,6 +104,9 @@ def run_analysis():
                 cur.execute('SELECT count(*) FROM stop_median WHERE result_class IS NOT NULL')
                 logger.info(f'{get_time()} {cur.fetchone()[0]} "stop_median" updated with "result_class", "recommended_min_radius_m" and "manual_acceptance_needed"')
 
+                cur.execute('SELECT insert_assumed_monitored_vehicle_journeys()')
+                logger.info(f'Assumed monitored vehicle journeys updated.')
+
                 logger.info(f'{get_time()} Analysis complete.')
     finally:
         conn.cursor().execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))

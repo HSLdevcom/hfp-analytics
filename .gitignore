@@ -17,6 +17,6 @@ testdata/import/hfp.csv
 analytics-data
 
 scripts/migra_dev/.env
-scripts/migra_dev/dev_deploy.sql
+scripts/migra_dev/migra_dev.sql
 scripts/migra_test/.env
-scripts/migra_test/test_deploy.sql
+scripts/migra_test/migra_test.sql
