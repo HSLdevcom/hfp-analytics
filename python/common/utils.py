@@ -1,5 +1,6 @@
 import os
 import pptx
+from datetime import datetime
 import logging as logger
 
 def get_conn_params():
@@ -20,8 +21,12 @@ def tuples_to_feature_collection(geom_tuples: list[tuple]) -> dict:
         "features": features
     }
 
-def format_date_to_string(date_obj):
-    return date_obj.isoformat(sep=" ", timespec="seconds")
+def validate_date_string(date_string):
+    try:
+        datetime.strptime(date_string, "%Y-%m-%d")
+        return True
+    except ValueError:
+        return False
 
 def comma_separated_floats_to_list(val_str):
     res = val_str.split(',')

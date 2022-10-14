@@ -5,7 +5,7 @@ from fastapi.openapi.docs import (
     get_redoc_html,
     get_swagger_ui_html,
 )
-from common.utils import get_conn_params, tuples_to_feature_collection, format_date_to_string
+from common.utils import get_conn_params, tuples_to_feature_collection, validate_date_string
 import psycopg2 as psycopg
 from .digitransit_import import main as run_digitransit_import
 
@@ -176,6 +176,13 @@ async def get_monitored_vehicle_journeys(operating_day: str):
     that the journeys might be valid or not, API doesn't know it. Invalid journey is example
     a journey where bus driver signed in to a wrong departure.
     """
+    print("validate_date_string... ", validate_date_string(operating_day))
+    if not validate_date_string(operating_day):
+        raise HTTPException(
+            status_code=404,
+            detail=f'Given operating_day must be in format of YYYY-MM-DD.'
+        )
+
     with psycopg.connect(get_conn_params()) as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM api.view_assumed_monitored_vehicle_journey where oday = %(operating_day)s", {'operating_day': operating_day})
@@ -191,9 +198,9 @@ async def get_monitored_vehicle_journeys(operating_day: str):
                     "operator_id": vehicle_journey[4],
                     "vehicle_id": vehicle_journey[5],
                     "vehicle_number": vehicle_journey[6],
-                    "min_timestamp": format_date_to_string(vehicle_journey[7]),
-                    "max_timestamp": format_date_to_string(vehicle_journey[8]),
-                    "modified_at": format_date_to_string(vehicle_journey[9])
+                    "min_timestamp": vehicle_journey[7],
+                    "max_timestamp": vehicle_journey[8],
+                    "modified_at": vehicle_journey[9].isoformat(sep=" ", timespec="seconds")
                 })
             return {
                 "data": {

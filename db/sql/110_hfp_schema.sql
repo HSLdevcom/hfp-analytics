@@ -237,7 +237,6 @@ CREATE TRIGGER insert_hfp_data_through_view
 
 
 CREATE TABLE hfp.assumed_monitored_vehicle_journey (
-  -- Unlike in hfp_point, vehicle_id is _not_ nullable.
   vehicle_id        integer     NOT NULL REFERENCES hfp.vehicle(vehicle_id),
   -- Entries without journey info would not make sense in this table.
   journey_id        uuid        NOT NULL REFERENCES hfp.observed_journey(journey_id) ON DELETE CASCADE,
@@ -249,7 +248,9 @@ CREATE TABLE hfp.assumed_monitored_vehicle_journey (
   PRIMARY KEY (vehicle_id, journey_id)
 );
 COMMENT ON TABLE hfp.assumed_monitored_vehicle_journey IS
-'Assumed monitored vehicle journey (or part of a journey) with the same vehicle including min and max timestamps. Assumed here means that this journey might be invalid (e.g. driver accidentally logged into a wrong departure)';
+'Assumed monitored vehicle journey (or part of a journey) with the same vehicle
+including min and max timestamps. Assumed here means that this journey might
+be invalid (e.g. driver accidentally logged into a wrong departure)';
 
 
 CREATE FUNCTION insert_assumed_monitored_vehicle_journeys()
@@ -281,4 +282,7 @@ AS $func$
 $func$;
 
 COMMENT ON FUNCTION insert_assumed_monitored_vehicle_journeys IS
-'Populates hfp.assumed_monitored_vehicle_journey with min_timestamp and max_timestamp of a journey with a specific vehicle.';
+'Populates hfp.assumed_monitored_vehicle_journey with min_timestamp
+and max_timestamp of a journey with a specific vehicle. If new hfp.hfp_point
+data has been imported, updates min and max timestamps of existing journey
+rows accordingly.';
