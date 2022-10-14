@@ -42,3 +42,38 @@ class PostgresDBHandler(logging.Handler):
         In practice, this gets called as a result of logger.removeHandler(handler)."""
         if self.sql_conn:
             self.sql_conn.close()
+
+# get_custom_db_log_handler(function_name='importer', conn_params=get_conn_params())
+
+class CustomDbLogHandler():
+    """
+    Create an instance of this class once at the start of every function app endpoint
+    where you need db logging. After this, you can reference to the logger by calling
+    logger = logging.getLogger(<function_name>)
+
+    NOTE: remember to call remove_handlers() in the end of the function app endpoint
+    """
+    def __init__(self, function_name: str):
+        logger = logging.getLogger('importer')
+        logger.setLevel('DEBUG')
+
+        logging_formatter = logging.Formatter(
+            "%(name)-12s %(asctime)s %(levelname)-8s %(filename)s:%(funcName)s %(message)s")
+
+        console_log_handler = logging.StreamHandler()
+        console_log_handler.setFormatter(logging_formatter)
+        console_log_handler.addFilter(logging.Filter('importer'))
+        logger.addHandler(console_log_handler)
+
+        db_log_handler = PostgresDBHandler(function_name=function_name)
+        db_log_handler.setFormatter(logging_formatter)
+        db_log_handler.addFilter(logging.Filter('importer'))
+        logger.addHandler(db_log_handler)
+
+        self.db_log_handler = db_log_handler
+        self.console_log_handler = console_log_handler
+        self.logger = logger
+
+    def remove_handlers(self):
+        self.logger.removeHandler(self.console_log_handler)
+        self.logger.removeHandler(self.db_log_handler)

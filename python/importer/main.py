@@ -8,7 +8,7 @@ import logging
 import zstandard
 from datetime import datetime, timedelta
 import psycopg2 as psycopg
-from common.logger_util import PostgresDBHandler
+from common.logger_util import CustomDbLogHandler
 from common.utils import get_conn_params
 import common.constants as constants
 from .run_analysis import run_analysis
@@ -18,23 +18,8 @@ from .remove_old_data import remove_old_data
 event_types_to_import = ['VP', 'DOC', 'DOO']
 
 def main(importer: func.TimerRequest, context: func.Context):
+    custom_db_log_handler = CustomDbLogHandler(function_name='importer')
     logger = logging.getLogger('importer')
-    logger.setLevel('DEBUG')
-    # TODO: move logging boilerplate to a single place like so:
-    # custom_db_log_handler = get_custom_db_log_handler(function_name='importer', conn_params=get_conn_params())
-    # logger = custom_db_log_handler.get_logger()
-    # custom_db_log_handler.removeHandlers()
-    logging_formatter = logging.Formatter("%(name)-12s %(asctime)s %(levelname)-8s %(filename)s:%(funcName)s %(message)s")
-
-    console_log_handler = logging.StreamHandler()
-    console_log_handler.setFormatter(logging_formatter)
-    console_log_handler.addFilter(logging.Filter('importer'))
-    logger.addHandler(console_log_handler)
-
-    db_log_handler = PostgresDBHandler(function_name='importer')
-    db_log_handler.setFormatter(logging_formatter)
-    db_log_handler.addFilter(logging.Filter('importer'))
-    logger.addHandler(db_log_handler)
 
     global is_importer_locked
     conn = psycopg.connect(get_conn_params())
@@ -71,8 +56,8 @@ def main(importer: func.TimerRequest, context: func.Context):
             logger.info("Skipping analysis - importer is locked.")
 
         logger.info("Importer done.")
-        logger.removeHandler(console_log_handler)
-        logger.removeHandler(db_log_handler)
+
+        custom_db_log_handler.remove_handlers()
 
         conn.close()
 
