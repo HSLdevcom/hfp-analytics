@@ -55,6 +55,8 @@ def main(importer: func.TimerRequest, context: func.Context):
                     return
                 import_day_data_from_past(1, cur)
                 logger.info("Importing done - next up: analysis.")
+    except Exception as e:
+        logger.error(f'Error when running importer: {e}')
     finally:
         conn.cursor().execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
 
@@ -83,7 +85,11 @@ def import_data(cur, import_date):
     logger = logging.getLogger('importer')
 
     hfp_storage_container_name = os.getenv('HFP_STORAGE_CONTAINER_NAME')
+    if not hfp_storage_container_name:
+        logger.info("HFP_STORAGE_CONTAINER_NAME env not found, have you defined it?")
     hfp_storage_connection_string = os.getenv('HFP_STORAGE_CONNECTION_STRING')
+    if not hfp_storage_connection_string:
+        logger.info("HFP_STORAGE_CONNECTION_STRING env not found, have you defined it?")
     service = BlobServiceClient.from_connection_string(conn_str=hfp_storage_connection_string)
     result = service.find_blobs_by_tags(f"@container='{hfp_storage_container_name}' AND min_oday <= '{import_date}' AND max_oday >= '{import_date}'")
 
@@ -111,7 +117,7 @@ def import_data(cur, import_date):
             if "ErrorCode:BlobNotFound" in e.message:
                 logger.error(f'Blob {blob_name} not found.')
             else:
-                logger.error(f'Error in reading blob chunks: {e}')
+                logger.error(f'Error when reading blob chunks: {e}')
 
 def read_imported_data_to_db(cur, downloader):
     logger = logging.getLogger('importer')

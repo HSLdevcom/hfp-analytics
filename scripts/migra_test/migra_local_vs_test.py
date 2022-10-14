@@ -29,7 +29,7 @@ def main():
 
         Before doing anything, make sure that your local database is up-to-date
         with the current schema definition (in db/sql). After that, you can run
-        the script with "init" param and then go through test_deploy.sql.
+        the script with "init" param and then go through migra_test.sql.
 
         If everything looks good, you can run the script with apply argument.
     """

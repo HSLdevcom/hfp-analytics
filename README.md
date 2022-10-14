@@ -96,7 +96,7 @@ After this, restart `importer` function from Azure portal. After we have a worki
 
 ### Deploy schema with Migra
 
-To make for example dev db schema the same as local db schema, cd into `scripts/dev_deploy` and run:
+To make for example dev db schema the same as local db schema, cd into `scripts/migra_dev` and run:
 
 ```
 python3 migra_local_vs_dev init
