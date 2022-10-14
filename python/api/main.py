@@ -1,11 +1,12 @@
 """HFP Analytics REST API"""
 import azure.functions as func
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Query
 from fastapi.openapi.docs import (
     get_redoc_html,
     get_swagger_ui_html,
 )
-from common.utils import get_conn_params, tuples_to_feature_collection, validate_date_string
+from common.utils import get_conn_params, tuples_to_feature_collection
+from datetime import date
 import psycopg2 as psycopg
 from .digitransit_import import main as run_digitransit_import
 
@@ -170,18 +171,12 @@ async def get_percentile_circles(stop_id: str):
         return tuples_to_feature_collection(geom_tuples=percentile_circles)
 
 @app.get("/monitored_vehicle_journeys")
-async def get_monitored_vehicle_journeys(operating_day: str):
+async def get_monitored_vehicle_journeys(operating_day: date = Query(..., description="Format YYYY-MM-DD")):
     """
     Returns assumed monitored vehicle journeys from given operating day. Assumed here means
     that the journeys might be valid or not, API doesn't know it. Invalid journey is example
     a journey where bus driver signed in to a wrong departure.
     """
-    print("validate_date_string... ", validate_date_string(operating_day))
-    if not validate_date_string(operating_day):
-        raise HTTPException(
-            status_code=404,
-            detail=f'Given operating_day must be in format of YYYY-MM-DD.'
-        )
 
     with psycopg.connect(get_conn_params()) as conn:
         with conn.cursor() as cur:
