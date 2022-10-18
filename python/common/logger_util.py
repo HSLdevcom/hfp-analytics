@@ -43,8 +43,6 @@ class PostgresDBHandler(logging.Handler):
         if self.sql_conn:
             self.sql_conn.close()
 
-# get_custom_db_log_handler(function_name='importer', conn_params=get_conn_params())
-
 class CustomDbLogHandler():
     """
     Create an instance of this class once at the start of every function app endpoint
