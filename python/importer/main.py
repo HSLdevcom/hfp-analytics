@@ -62,6 +62,9 @@ def main(importer: func.TimerRequest, context: func.Context):
         conn.close()
 
 def import_day_data_from_past(day_since_today, cur):
+    logger = logging.getLogger('importer')
+    logger.info(f"Importing HFP data {day_since_today} days from past.")
+
     import_date = datetime.now() - timedelta(day_since_today)
     import_date = datetime.strftime(import_date, '%Y-%m-%d')
     import_data(cur=cur, import_date=import_date)
