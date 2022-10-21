@@ -92,7 +92,7 @@ def import_data(cur, import_date):
     blob_index = 0
     for blob_name in blob_names:
         try:
-            blob_client = service.get_blob_client(container="hfp-v2-test", blob=blob_name)
+            blob_client = service.get_blob_client(container=hfp_storage_container_name, blob=blob_name)
             storage_stream_downloader = blob_client.download_blob()
             read_imported_data_to_db(cur=cur, downloader=storage_stream_downloader)
             blob_index += 1

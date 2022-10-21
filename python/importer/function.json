@@ -7,7 +7,7 @@
       "direction": "in",
       "name": "importer",
       "runOnStartup": false,
-      "schedule": "0 30 15 * * *"
+      "schedule": "0 0 15 * * *"
     }
   ]
 }

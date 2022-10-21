@@ -151,9 +151,7 @@ CREATE VIEW hfp.view_as_original_hfp_event AS (
       ON (hp.journey_id = oj.journey_id)
 );
 COMMENT ON VIEW hfp.view_as_original_hfp_event IS
-'Exposes HFP points with event types decomposed into separate rows
-and with vehicle and journey attributes, like in original HFP data.
-Used primarily for data imports through INSTEAD OF INSERT trigger.';
+'Exposes HFP points with event types decomposed into separate rows and with vehicle and journey attributes, like in original HFP data. Used primarily for data imports through INSTEAD OF INSERT trigger.';
 
 CREATE FUNCTION hfp.tg_hfp_insertor()
 RETURNS trigger

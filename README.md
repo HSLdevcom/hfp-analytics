@@ -27,7 +27,7 @@ See further descriptions from the links.
 ### Requirements
 
 **Preferred OS**: Linux, haven't tried with Windows or Mac yet.\
-**Required tools**: docker, docker-compose and Python 3, Postgresql.
+**Required tools**: docker, docker-compose and Python 3.10+, Pip3, Postgresql.
 
 ### Set up development environment
 ```
@@ -44,6 +44,21 @@ HFP_STORAGE_CONTAINER_NAME=secret
 HFP_STORAGE_CONNECTION_STRING=secret
 ```
 Values to these can be found from Azure Portal -> hfp-analytics-dev rg -> hfp-analytics-importer -> configuration
+
+Install Python libraries globally on your machine with
+```
+cd python
+pip3 install -r requirements.txt
+```
+Make tables as timescale DB tables with:
+```
+SELECT create_hypertable('hfp.hfp_point', 'point_timestamp', chunk_time_interval => INTERVAL '1 day');
+```
+More information can be found from docs/timescaledb.md
+
+### See API docs
+
+You can get an API key from Azure's key vault: Azure Portal -> hfp-analytics-[environment] -> hfp-analytics-[environment]-vault -> Secrets -> host--masterKey--master. See API docs from `<API url>/docs?code=<API key>`. That app url can be found from `api` Function App's overview page.
 
 ### Get test data
 
@@ -78,21 +93,19 @@ TODO
 
 The API is hosted in [Azure Functions](https://docs.microsoft.com/en-us/azure/azure-functions/), and the database in [Azure Database for PostgreSQL](https://azure.microsoft.com/en-us/services/postgresql/)
 
-### Deploy api
+### Manually deploy Api & importer
+
+You can deploy e.g. unmerged PR to run in dev manually for testing. Currently manual deploying is supported for dev environment only.
 ```
+cd scripts/manual_deploy/
 ./deploy_api.sh
-```
-
-After this, restart `api` function from Azure portal. After we have a working CI, this step shouldn't be no longer needed.
-
-You can get the API key used to access to the API from Azure Portal -> hfp-analytics rg -> hfp-analytics-api function ->  App keys -> default. See instructions for using the API from `<API url>/docs?code=<API key>`. 
-
-### Deploy importer
-```
 ./deploy_importer.sh
 ```
+After this, restart `api` and `importer` functions from Azure portal as Azure's continuous deployment is slow to pull new versions for image's at least for now.
 
-After this, restart `importer` function from Azure portal. After we have a working CI, this step shouldn't be no longer needed.
+### Deploy Api & importer via Azure pipeline
+
+Open hfp-analytic's Azure Pipelines page, click 3 dots from some environments a pipeline, select run pipeline. After pipeline has been run, you can manually restart Azure Function Apps to ensure that they start running with the latest image.
 
 ### Deploy schema with Migra
 
@@ -107,7 +120,7 @@ python3 migra_local_vs_dev apply
 ```
 Note: you may want to comment out SQL related to timescaledb / postgis updates. 
 
-### Manually run importer
+### Manually trigger importer
 
 Locally:
 ```
@@ -122,7 +135,9 @@ In order for this to work, you'll have to get a master API key from Azure Portal
 
 ### View logs
 
-From Azure Portal select a function app and open logstream view.
+Two ways to inspect logs:
+1) SSH into local / dev / test / prod db, query logs from either `api_log` or `importer_log` tables.
+2) From Azure Portal select a function app and open logstream view.
 
 ## Contact
 

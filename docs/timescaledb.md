@@ -18,7 +18,7 @@ As adding extensions doesn't currently work from Azure portal.
 
 You can transform for example table `hfp.hfp_point` as a hypertable with:
 ```
-create_hypertable('hfp.hfp_point', 'point_timestamp', , chunk_time_interval => INTERVAL '1 day')
+SELECT create_hypertable('hfp.hfp_point', 'point_timestamp', chunk_time_interval => INTERVAL '1 day');
 ```
 Note that a table should be empty when transforming it to a hypertable.
 

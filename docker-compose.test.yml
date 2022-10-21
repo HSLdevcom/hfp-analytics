@@ -83,5 +83,4 @@ services:
 
 networks:
   default:
-    external: true
     name: hfp_analytics_nw
