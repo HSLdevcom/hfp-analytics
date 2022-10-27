@@ -114,7 +114,7 @@ CREATE VIEW api.view_assumed_monitored_vehicle_journey AS (
     oj.direction_id,
     oj.oday,
     -- Format: hhmmss, can implement 30h-transformed format later if requested.
-    to_char(oj.start, 'HH:MI:SS') AS start_24h,
+    to_char(oj.start, 'HH24:MI:SS') AS start_24h,
     -- Using a clearer name for Jubumera context.
     oj.observed_operator_id AS journey_operator_id,
     ve.vehicle_operator_id,
