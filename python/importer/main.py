@@ -13,6 +13,7 @@ from common.utils import get_conn_params
 import common.constants as constants
 from .run_analysis import run_analysis
 from .remove_old_data import remove_old_data
+import time
 
 # Import other event types as well when needed.
 event_types_to_import = ['VP', 'DOC', 'DOO']
@@ -91,10 +92,15 @@ def import_data(cur, import_date):
 
     blob_index = 0
     for blob_name in blob_names:
+        logger.debug(f"Processing blob: {blob_name}")
+        blob_start_time = time.time()
         try:
             blob_client = service.get_blob_client(container=hfp_storage_container_name, blob=blob_name)
             storage_stream_downloader = blob_client.download_blob()
-            read_imported_data_to_db(cur=cur, downloader=storage_stream_downloader)
+
+            row_count = read_imported_data_to_db(cur=cur, downloader=storage_stream_downloader)
+            logger.debug(f"{blob_name} is done. Imported {row_count} rows in {int(time.time() - blob_start_time)} seconds")
+
             blob_index += 1
             # Limit downloading all the blobs when developing. Enable if needed.
             # if os.getenv('IS_DEBUG') == 'True' and blob_index > 1:
@@ -102,10 +108,10 @@ def import_data(cur, import_date):
             #     return
 
         except Exception as e:
-            if "ErrorCode:BlobNotFound" in e.message:
+            if "ErrorCode:BlobNotFound" in str(e):
                 logger.error(f'Blob {blob_name} not found.')
             else:
-                logger.error(f'Error when reading blob chunks: {e}')
+                logger.error(f'Error after {int(time.time() - blob_start_time)} seconds when reading blob chunks: {e}')
 
 def read_imported_data_to_db(cur, downloader):
     logger = logging.getLogger('importer')
@@ -120,7 +126,10 @@ def read_imported_data_to_db(cur, downloader):
                        "routeId", "dir", "oday", "start", "oper", "odo", "drst", "locationQualityMethod",
                         "stop", "longitude", "latitude"]
     writer = csv.DictWriter(import_io, fieldnames=selected_fields)
+
+    calculator = 0
     for old_row in hfp_dict_reader:
+        calculator += 1
         new_row = {key: old_row[key] for key in selected_fields}
         if not any(old_row[key] is None for key in ["tst", "oper", "vehicleNumber"]):
             writer.writerow(new_row)
@@ -133,3 +142,5 @@ def read_imported_data_to_db(cur, downloader):
     import_io.seek(0)
     cur.copy_expert(sql="COPY hfp.view_as_original_hfp_event FROM STDIN WITH CSV",
                     file=import_io)
+
+    return calculator
