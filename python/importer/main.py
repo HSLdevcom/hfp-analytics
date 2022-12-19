@@ -1,6 +1,6 @@
 """HFP Analytics data importer"""
 import azure.functions as func
-from azure.storage.blob import BlobServiceClient
+from azure.storage.blob import ContainerClient
 from io import StringIO
 import os
 import csv
@@ -73,14 +73,14 @@ def import_day_data_from_past(day_since_today, cur):
 def import_data(cur, import_date):
     logger = logging.getLogger('importer')
 
-    hfp_storage_container_name = os.getenv('HFP_STORAGE_CONTAINER_NAME')
+    hfp_storage_container_name = os.getenv('HFP_STORAGE_CONTAINER_NAME', '')
     if not hfp_storage_container_name:
         logger.info("HFP_STORAGE_CONTAINER_NAME env not found, have you defined it?")
-    hfp_storage_connection_string = os.getenv('HFP_STORAGE_CONNECTION_STRING')
+    hfp_storage_connection_string = os.getenv('HFP_STORAGE_CONNECTION_STRING', '')
     if not hfp_storage_connection_string:
         logger.info("HFP_STORAGE_CONNECTION_STRING env not found, have you defined it?")
-    service = BlobServiceClient.from_connection_string(conn_str=hfp_storage_connection_string)
-    result = service.find_blobs_by_tags(f"@container='{hfp_storage_container_name}' AND min_oday <= '{import_date}' AND max_oday >= '{import_date}'")
+    container_client = ContainerClient.from_connection_string(conn_str=hfp_storage_connection_string, container_name=hfp_storage_container_name)
+    result = container_client.list_blobs(name_starts_with=import_date)
 
     blob_names = []
     for i, r in enumerate(result):
@@ -95,11 +95,12 @@ def import_data(cur, import_date):
         logger.debug(f"Processing blob: {blob_name}")
         blob_start_time = time.time()
         try:
-            blob_client = service.get_blob_client(container=hfp_storage_container_name, blob=blob_name)
+            blob_client = container_client.get_blob_client(blob=blob_name)
             storage_stream_downloader = blob_client.download_blob()
 
             row_count = read_imported_data_to_db(cur=cur, downloader=storage_stream_downloader)
-            logger.debug(f"{blob_name} is done. Imported {row_count} rows in {int(time.time() - blob_start_time)} seconds")
+            duration = time.time() - blob_start_time
+            logger.debug(f"{blob_name} is done. Imported {row_count} rows in {int(duration)} seconds ({int(row_count/duration)} rows/second)")
 
             blob_index += 1
             # Limit downloading all the blobs when developing. Enable if needed.
