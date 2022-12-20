@@ -14,9 +14,20 @@ import common.constants as constants
 from .run_analysis import run_analysis
 from .remove_old_data import remove_old_data
 import time
+import multiprocessing
 
 # Import other event types as well when needed.
 event_types_to_import = ['VP', 'DOC', 'DOO']
+
+def get_azure_container_client():
+    logger = logging.getLogger('importer')
+    hfp_storage_container_name = os.getenv('HFP_STORAGE_CONTAINER_NAME', '')
+    if not hfp_storage_container_name:
+        logger.error("HFP_STORAGE_CONTAINER_NAME env not found, have you defined it?")
+    hfp_storage_connection_string = os.getenv('HFP_STORAGE_CONNECTION_STRING', '')
+    if not hfp_storage_connection_string:
+        logger.error("HFP_STORAGE_CONNECTION_STRING env not found, have you defined it?")
+    return ContainerClient.from_connection_string(conn_str=hfp_storage_connection_string, container_name=hfp_storage_container_name)
 
 def main(importer: func.TimerRequest, context: func.Context):
     custom_db_log_handler = CustomDbLogHandler(function_name='importer')
@@ -39,7 +50,7 @@ def main(importer: func.TimerRequest, context: func.Context):
                     logger.info("Importer is LOCKED which means that importer should be already running. You can get"
                                 "rid of the lock by restarting the database if needed.")
                     return
-                import_day_data_from_past(1, cur)
+                import_day_data_from_past(1)
                 logger.info("Importing done - next up: analysis.")
     except Exception as e:
         logger.error(f'Error when running importer: {e}')
@@ -62,24 +73,16 @@ def main(importer: func.TimerRequest, context: func.Context):
 
         conn.close()
 
-def import_day_data_from_past(day_since_today, cur):
+def import_day_data_from_past(day_since_today):
     logger = logging.getLogger('importer')
     logger.info(f"Importing HFP data {day_since_today} days from past.")
 
     import_date = datetime.now() - timedelta(day_since_today)
     import_date = datetime.strftime(import_date, '%Y-%m-%d')
-    import_data(cur=cur, import_date=import_date)
+    import_data(import_date=import_date)
 
-def import_data(cur, import_date):
-    logger = logging.getLogger('importer')
-
-    hfp_storage_container_name = os.getenv('HFP_STORAGE_CONTAINER_NAME', '')
-    if not hfp_storage_container_name:
-        logger.info("HFP_STORAGE_CONTAINER_NAME env not found, have you defined it?")
-    hfp_storage_connection_string = os.getenv('HFP_STORAGE_CONNECTION_STRING', '')
-    if not hfp_storage_connection_string:
-        logger.info("HFP_STORAGE_CONNECTION_STRING env not found, have you defined it?")
-    container_client = ContainerClient.from_connection_string(conn_str=hfp_storage_connection_string, container_name=hfp_storage_container_name)
+def import_data(import_date):
+    container_client = get_azure_container_client()
     result = container_client.list_blobs(name_starts_with=import_date)
 
     blob_names = []
@@ -90,29 +93,41 @@ def import_data(cur, import_date):
         if type in event_types_to_import:
             blob_names.append(r.name)
 
-    blob_index = 0
-    for blob_name in blob_names:
-        logger.debug(f"Processing blob: {blob_name}")
-        blob_start_time = time.time()
-        try:
-            blob_client = container_client.get_blob_client(blob=blob_name)
-            storage_stream_downloader = blob_client.download_blob()
+    # TODO: Cannot still use more than 1 process, because of locks...
+    pool = multiprocessing.Pool(processes=1)
+    pool.map(import_blob, blob_names)
 
-            row_count = read_imported_data_to_db(cur=cur, downloader=storage_stream_downloader)
-            duration = time.time() - blob_start_time
-            logger.debug(f"{blob_name} is done. Imported {row_count} rows in {int(duration)} seconds ({int(row_count/duration)} rows/second)")
 
-            blob_index += 1
-            # Limit downloading all the blobs when developing. Enable if needed.
-            # if os.getenv('IS_DEBUG') == 'True' and blob_index > 1:
-            #     logger.info("Returning early from import.")
-            #     return
 
-        except Exception as e:
-            if "ErrorCode:BlobNotFound" in str(e):
-                logger.error(f'Blob {blob_name} not found.')
-            else:
-                logger.error(f'Error after {int(time.time() - blob_start_time)} seconds when reading blob chunks: {e}')
+def import_blob(blob_name):
+    # TODO: Use connection pooling
+    connection = psycopg.connect(get_conn_params())
+    cur = connection.cursor()
+    logger = logging.getLogger('importer')
+    logger.debug(f"Processing blob: {blob_name}")
+    blob_start_time = time.time()
+
+    try:
+        container_client = get_azure_container_client()
+
+        blob_client = container_client.get_blob_client(blob=blob_name)
+        storage_stream_downloader = blob_client.download_blob()
+
+        row_count = read_imported_data_to_db(cur=cur, downloader=storage_stream_downloader)
+        duration = time.time() - blob_start_time
+        logger.debug(f"{blob_name} is done. Imported {row_count} rows in {int(duration)} seconds ({int(row_count/duration)} rows/second)")
+        connection.commit()
+
+    except Exception as e:
+        if "ErrorCode:BlobNotFound" in str(e):
+            logger.error(f'Blob {blob_name} not found.')
+        else:
+            logger.error(f'Error after {int(time.time() - blob_start_time)} seconds when reading blob chunks: {e}')
+        connection.rollback()
+
+    cur.close()
+    connection.close()
+
 
 def read_imported_data_to_db(cur, downloader):
     logger = logging.getLogger('importer')
