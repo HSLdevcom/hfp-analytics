@@ -14,7 +14,6 @@ import common.constants as constants
 from .run_analysis import run_analysis
 from .remove_old_data import remove_old_data
 import time
-import multiprocessing
 
 # Import other event types as well when needed.
 event_types_to_import = ['VP', 'DOC', 'DOO']
@@ -96,6 +95,8 @@ def import_day_data_from_past(day_since_today):
     import_data(import_date=import_date)
 
 def import_data(import_date):
+    logger = logging.getLogger('importer')
+
     container_client = get_azure_container_client()
     result = container_client.list_blobs(name_starts_with=import_date)
 
@@ -107,10 +108,10 @@ def import_data(import_date):
         if type in event_types_to_import:
             blob_names.append(r.name)
 
-    # TODO: Cannot still use more than 1 process, because of locks...
-    pool = multiprocessing.Pool(processes=1)
-    pool.map(import_blob, blob_names)
+    for blob in blob_names:
+        import_blob(blob)
 
+    logger.info("Importer ready for next step")
 
 
 def import_blob(blob_name):
