@@ -17,6 +17,6 @@ def remove_old_data():
                 cur.execute("DELETE FROM hfp.hfp_point WHERE point_timestamp < now() - interval '2 week'")
                 logger.info(f"{cur.rowcount} remaining hfp.hfp_point rows deleted.")
     except psycopg2.OperationalError as err:
-        print(f"Old data removal failed: {err}")
+        logger.error(f"Old data removal failed: {err}")
     finally:
         conn.close()

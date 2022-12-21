@@ -43,12 +43,12 @@ def run_analysis():
                 is_importer_locked = cur.fetchone()[0]
 
                 if is_importer_locked == False:
-                    logger.info("Running analysis.")
-                    cur.execute("SELECT pg_advisory_lock(%s)", (constants.IMPORTER_LOCK_ID,))
-                else:
                     logger.info("Importer is LOCKED which means that importer should be already running. You can get"
                                 "rid of the lock by restarting the database if needed.")
                     return
+
+                logger.info("Running analysis.")
+                cur.execute("SELECT pg_advisory_lock(%s)", (constants.IMPORTER_LOCK_ID,))
 
                 cur.execute('SELECT stopcorr.refresh_observation()')
                 logger.info(
@@ -108,6 +108,8 @@ def run_analysis():
                 logger.info(f'Assumed monitored vehicle journeys updated.')
 
                 logger.info(f'{get_time()} Analysis complete.')
+    except Exception as e:
+        logger.error(f"Analysis failed: {e}")
     finally:
         conn.cursor().execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
         conn.close()

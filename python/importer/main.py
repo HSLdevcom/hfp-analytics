@@ -19,7 +19,7 @@ import multiprocessing
 # Import other event types as well when needed.
 event_types_to_import = ['VP', 'DOC', 'DOO']
 
-def get_azure_container_client():
+def get_azure_container_client() -> ContainerClient:
     logger = logging.getLogger('importer')
     hfp_storage_container_name = os.getenv('HFP_STORAGE_CONTAINER_NAME', '')
     if not hfp_storage_container_name:
@@ -35,6 +35,10 @@ def main(importer: func.TimerRequest, context: func.Context):
 
     global is_importer_locked
     conn = psycopg.connect(get_conn_params())
+    
+    import_success = False
+
+    # Create a lock for import
     try:
         with conn:
             with conn.cursor() as cur:
@@ -43,35 +47,45 @@ def main(importer: func.TimerRequest, context: func.Context):
                 cur.execute("SELECT is_lock_enabled(%s)", (constants.IMPORTER_LOCK_ID,))
                 is_importer_locked = cur.fetchone()[0]
 
-                if is_importer_locked == False:
-                    logger.info("Going to run importer.")
-                    cur.execute("SELECT pg_advisory_lock(%s)", (constants.IMPORTER_LOCK_ID,))
-                else:
-                    logger.info("Importer is LOCKED which means that importer should be already running. You can get"
+                if is_importer_locked:
+                    logger.error("Importer is LOCKED which means that importer should be already running. You can get"
                                 "rid of the lock by restarting the database if needed.")
                     return
-                import_day_data_from_past(1)
-                logger.info("Importing done - next up: analysis.")
+
+                logger.info("Going to run importer.")
+                cur.execute("SELECT pg_advisory_lock(%s)", (constants.IMPORTER_LOCK_ID,))
+                conn.commit()
+    except Exception as e:
+        logger.error(f'Error when creating locks for importer: {e}')
+
+    try:
+        import_day_data_from_past(1)
+        logger.info("Importing done - next up: analysis.")
+        import_success = True
     except Exception as e:
         logger.error(f'Error when running importer: {e}')
     finally:
-        conn.cursor().execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
-
-        if is_importer_locked == False:
-
-            logger.info("Going to remove old data.")
-            remove_old_data()
-
-            logger.info("Going to run analysis.")
-            run_analysis()
-        else:
-            logger.info("Skipping analysis - importer is locked.")
-
-        logger.info("Importer done.")
-
-        custom_db_log_handler.remove_handlers()
-
+        # Remove lock at this point
+        with conn.cursor() as cur:
+            cur.execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
+            conn.commit()
         conn.close()
+
+
+    if import_success:
+        logger.info("Going to remove old data.")
+        remove_old_data()
+
+        logger.info("Going to run analysis.")
+        run_analysis()
+
+    else:
+        logger.info("Skipping analysis - importer didn't run successfully.")
+
+    logger.info("Importer done.")
+
+    custom_db_log_handler.remove_handlers()
+
 
 def import_day_data_from_past(day_since_today):
     logger = logging.getLogger('importer')
