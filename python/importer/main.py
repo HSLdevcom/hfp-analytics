@@ -91,7 +91,7 @@ def import_data(import_date):
     logger = logging.getLogger('importer')
 
     container_client = get_azure_container_client()
-    result = container_client.find_blobs_by_tags(f"min_oday <= '{import_date}' AND max_oday >= '{import_date}'")
+    result = container_client.find_blobs_by_tags(f"min_oday >= '{import_date}''")
     # result = container_client.list_blob_names(name_starts_with=import_date)
 
     blob_names = []
