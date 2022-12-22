@@ -16,7 +16,7 @@ from .remove_old_data import remove_old_data
 import time
 
 # Import other event types as well when needed.
-event_types_to_import = ['VP', 'DOC', 'DOO']
+event_types_to_import = []
 
 def get_azure_container_client() -> ContainerClient:
     logger = logging.getLogger('importer')
