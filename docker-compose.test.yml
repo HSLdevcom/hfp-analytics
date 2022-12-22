@@ -53,6 +53,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
     volumes:
+      - ./python/analyzer:/home/site/wwwroot/analyzer:ro
       - ./python/importer:/home/site/wwwroot/importer:ro
       - ./python/common:/home/site/wwwroot/common:ro
       - ./python/host.json:/home/site/wwwroot/host.json:ro

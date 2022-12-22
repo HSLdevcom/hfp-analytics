@@ -71,17 +71,10 @@ def main(importer: func.TimerRequest, context: func.Context):
         conn.close()
 
 
-    if import_success:
-        logger.info("Going to remove old data.")
-        remove_old_data()
+    logger.info("Importer done. Starting minianalysis")
 
-        logger.info("Going to run analysis.")
-        run_analysis()
 
-    else:
-        logger.info("Skipping analysis - importer didn't run successfully.")
-
-    logger.info("Importer done.")
+    run_analysis()
 
     custom_db_log_handler.remove_handlers()
 
@@ -98,20 +91,66 @@ def import_data(import_date):
     logger = logging.getLogger('importer')
 
     container_client = get_azure_container_client()
-    result = container_client.list_blobs(name_starts_with=import_date)
+    result = container_client.find_blobs_by_tags(f"min_oday <= '{import_date}' AND max_oday >= '{import_date}'")
+    # result = container_client.list_blob_names(name_starts_with=import_date)
 
     blob_names = []
-    for i, r in enumerate(result):
-        # File format is e.g. 2022-05-11T00-3_ARR.csv.zst
-        # extract event type as we know what the format is:
-        type = r.name.split('T')[1].split('_')[1].split('.')[0]
-        if type in event_types_to_import:
-            blob_names.append(r.name)
 
-    for blob in blob_names:
-        import_blob(blob)
+    conn = psycopg.connect(get_conn_params())
+    with conn:
+        with conn.cursor() as cur:
+            
+            for i, r in enumerate(result):
+                name = str(r.name)
+                # File format is e.g. 2022-05-11T00-3_ARR.csv.zst
+                # extract event type as we know what the format is:
+                # type = name.split('T')[1].split('_')[1].split('.')[0]
+                # if type in event_types_to_import:
+                #     blob_names.append(r.name)
 
-    logger.info("Importer ready for next step")
+                cur.execute("SELECT EXISTS( SELECT 1 FROM importer.blob WHERE name = %s)", (name,))
+                exists_in_list = cur.fetchone()[0]
+
+                if exists_in_list:
+                    # Already imported, no need to fetch tags or try to insert
+                    continue
+
+                blob_client = container_client.get_blob_client(blob=name)
+                tags = blob_client.get_blob_tags()
+
+                event_type = tags.get('eventType')
+
+                covered_by_import = event_type in event_types_to_import
+
+
+                cur.execute("INSERT INTO importer.blob(name, type, min_oday, max_oday, min_tst, max_tst, row_count, covered_by_import) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING",
+                                    (name, event_type, tags.get('min_oday'), tags.get('max_oday'), tags.get('min_tst'), tags.get('max_tst'), tags.get('row_count'), covered_by_import,))
+
+
+    # for blob in blob_names:
+    #     import_blob(blob)
+
+            logger.info("Importer ready for next step")
+
+            cur.execute("SELECT name FROM importer.blob WHERE covered_by_import AND import_status = 'not started'")
+            
+            names = cur.fetchall()
+
+            for n in names:
+                blob_names.append(n[0])
+
+                cur.execute("UPDATE importer.blob SET import_status = 'pending' WHERE name = %s", (n,))
+
+    conn.close()
+    # print(blob_names)
+    logger.debug(f"Running import for {blob_names}")
+
+    
+    for b in blob_names:
+        import_blob(b)
+
+
+
 
 
 def import_blob(blob_name):
@@ -121,7 +160,8 @@ def import_blob(blob_name):
     logger = logging.getLogger('importer')
     logger.debug(f"Processing blob: {blob_name}")
     blob_start_time = time.time()
-
+    cur.execute("UPDATE importer.blob SET import_started = NOW(), import_status = 'importing' WHERE name = %s", (blob_name,))
+    connection.commit()
     try:
         container_client = get_azure_container_client()
 
@@ -131,6 +171,7 @@ def import_blob(blob_name):
         row_count = read_imported_data_to_db(cur=cur, downloader=storage_stream_downloader)
         duration = time.time() - blob_start_time
         logger.debug(f"{blob_name} is done. Imported {row_count} rows in {int(duration)} seconds ({int(row_count/duration)} rows/second)")
+        cur.execute("UPDATE importer.blob SET (import_finished, import_status) = (NOW(), 'imported') WHERE name = %s", (blob_name,))
         connection.commit()
 
     except Exception as e:
@@ -139,6 +180,8 @@ def import_blob(blob_name):
         else:
             logger.error(f'Error after {int(time.time() - blob_start_time)} seconds when reading blob chunks: {e}')
         connection.rollback()
+        cur.execute("UPDATE importer.blob SET (import_finished, import_status) = (NOW(), 'failed') WHERE name = %s", (blob_name,))
+        connection.commit()
 
     cur.close()
     connection.close()
