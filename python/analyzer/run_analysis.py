@@ -54,6 +54,8 @@ def run_analysis():
                 logger.info(
                     f'{get_time()} {cur.fetchone()[0]} observations inserted.')
 
+                conn.commit()
+
                 cur.execute(
                     'UPDATE observation \
                     SET stop_id_guessed = false \
@@ -63,6 +65,8 @@ def run_analysis():
                 cur.execute('SELECT * FROM guess_missing_stop_ids(%s)',
                             (stop_near_limit_m, ))
                 logger.info(f'{get_time()} {cur.fetchone()[0]} observations updated with guessed stop_id')
+
+                conn.commit()
 
                 cur.execute('SELECT stop_id FROM observed_stop_not_in_jore_stop')
                 res = [str(x[0]) for x in cur.fetchall()]
@@ -76,6 +80,8 @@ def run_analysis():
                 cur.execute('SELECT * FROM calculate_jore_distances()')
                 logger.info(f'{get_time()} {cur.fetchone()[0]} observations updated with dist_to_jore_point_m')
 
+                conn.commit()
+
                 cur.execute('WITH deleted AS (DELETE FROM stop_median RETURNING 1)\
                             SELECT count(*) FROM deleted')
                 logger.info(f'{get_time()} {cur.fetchone()[0]} rows deleted from "stop_median"')
@@ -84,12 +90,18 @@ def run_analysis():
                             (min_observations_per_stop, max_null_stop_dist_m))
                 logger.info(f'{get_time()} {cur.fetchone()[0]} rows inserted into "stop_median"')
 
+                conn.commit()
+
                 cur.execute('SELECT * FROM calculate_median_distances()')
                 logger.info(f'{get_time()} {cur.fetchone()[0]} observations updated with dist_to_median_point_m')
+
+                conn.commit()
 
                 cur.execute('SELECT * FROM calculate_percentile_radii(%s)',
                             (radius_percentiles, ))
                 logger.info(f'{get_time()} {cur.fetchone()[0]} "percentile_radii" created using percentiles {radius_percentiles_str}')
+
+                conn.commit()
 
                 cur.execute('CALL classify_medians(%s, %s, %s, %s, %s, %s, %s, %s)',
                             (min_radius_percentiles_to_sum,
@@ -104,6 +116,7 @@ def run_analysis():
                 cur.execute('SELECT count(*) FROM stop_median WHERE result_class IS NOT NULL')
                 logger.info(f'{get_time()} {cur.fetchone()[0]} "stop_median" updated with "result_class", "recommended_min_radius_m" and "manual_acceptance_needed"')
 
+                conn.commit()
 
                 logger.info(f'{get_time()} Analysis complete.')
     except Exception as e:
