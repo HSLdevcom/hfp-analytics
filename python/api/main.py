@@ -191,11 +191,11 @@ async def get_monitored_vehicle_journeys(operating_day: date = Query(..., descri
                     "oday": vehicle_journey[2],
                     "start_24h": str(vehicle_journey[3]),
                     "operator_id": vehicle_journey[4],
-                    "vehicle_id": vehicle_journey[5],
+                    "vehicle_operator_id": vehicle_journey[5],
                     "vehicle_number": vehicle_journey[6],
                     "min_timestamp": vehicle_journey[7],
                     "max_timestamp": vehicle_journey[8],
-                    "modified_at": vehicle_journey[9].isoformat(sep=" ", timespec="seconds")
+                    "modified_at": vehicle_journey[9].isoformat(timespec="seconds")
                 })
             return {
                 "data": {
