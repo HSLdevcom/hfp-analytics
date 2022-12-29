@@ -19,7 +19,7 @@ VALUES ('bus'), ('tram'), ('metro'), ('train'), ('ferry'), ('ubus');
 CREATE TABLE hfp.vehicle (
   vehicle_id            integer       PRIMARY KEY,
   vehicle_operator_id   smallint      NOT NULL,
-  vehicle_number        smallint      NOT NULL,
+  vehicle_number        integer       NOT NULL,
   transport_mode        text              NULL REFERENCES hfp.transport_mode(transport_mode),
   modified_at           timestamptz   DEFAULT now(),
   CONSTRAINT vehicle_id_format CHECK (
