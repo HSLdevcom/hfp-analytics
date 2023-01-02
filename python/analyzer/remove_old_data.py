@@ -21,11 +21,13 @@ def remove_old_data():
 
                 logger.info("Running analysis.")
                 cur.execute("SELECT pg_advisory_lock(%s)", (constants.IMPORTER_LOCK_ID,))
-                logger.info("Removing data older than 2 weeks.")
-                cur.execute("DELETE FROM hfp.observed_journey WHERE oday < now() - interval '2 week'")
+                logger.info("Removing  observation data older than 3 weeks.")
+                # This data should cover more history than hfp_point, because removing data from here doesn't remove it currenlty from hfp_point, and that causes conflicts.
+                cur.execute("DELETE FROM hfp.observed_journey WHERE oday < now() - interval '3 week'") 
                 logger.info(f"{cur.rowcount} rows deleted from hfp.observed_journey, and all related rows in hfp.hfp_point.")
-                cur.execute("DELETE FROM observation WHERE oday < now() - interval '2 week'")
+                cur.execute("DELETE FROM observation WHERE oday < now() - interval '3 week'")
                 logger.info(f"{cur.rowcount} rows deleted from observation.")
+                logger.info("Removing hfp_point data older than 2 weeks")
                 cur.execute("DELETE FROM hfp.hfp_point WHERE point_timestamp < now() - interval '2 week'")
                 logger.info(f"{cur.rowcount} remaining hfp.hfp_point rows deleted.")
     except psycopg2.OperationalError as err:

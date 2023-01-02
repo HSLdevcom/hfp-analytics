@@ -58,7 +58,7 @@ def main(importer: func.TimerRequest, context: func.Context):
         logger.error(f'Error when creating locks for importer: {e}')
 
     try:
-        import_day_data_from_past(1)
+        import_day_data_from_past(5)
         logger.info("Importing done - next up: analysis.")
         import_success = True
     except Exception as e:
