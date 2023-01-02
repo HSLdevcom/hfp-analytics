@@ -276,7 +276,11 @@ AS $func$
   ON CONFLICT(vehicle_id, journey_id) DO UPDATE SET
     max_timestamp = EXCLUDED.max_timestamp,
     min_timestamp = EXCLUDED.min_timestamp,
-    modified_at = now();
+    modified_at = now()
+  WHERE
+  -- Update only if values are actually changed, so that modified_at -field shows the correct time.
+    assumed_monitored_vehicle_journey.min_timestamp != EXCLUDED.min_timestamp OR
+  	assumed_monitored_vehicle_journey.max_timestamp != EXCLUDED.max_timestamp;
 $func$;
 
 COMMENT ON FUNCTION insert_assumed_monitored_vehicle_journeys IS
