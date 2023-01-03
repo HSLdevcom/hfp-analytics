@@ -34,8 +34,8 @@ def main(importer: func.TimerRequest, context: func.Context):
 
     global is_importer_locked
     conn = psycopg.connect(get_conn_params())
-    
-    import_success = False
+
+    info = {}
 
     # Create a lock for import
     try:
@@ -58,9 +58,9 @@ def main(importer: func.TimerRequest, context: func.Context):
         logger.error(f'Error when creating locks for importer: {e}')
 
     try:
-        import_day_data_from_past(5)
+        info = import_day_data_from_past(1)
         logger.info("Importing done - next up: analysis.")
-        import_success = True
+
     except Exception as e:
         logger.error(f'Error when running importer: {e}')
     finally:
@@ -74,7 +74,7 @@ def main(importer: func.TimerRequest, context: func.Context):
     logger.info("Importer done. Starting minianalysis")
 
 
-    run_analysis()
+    run_analysis(info)
 
     custom_db_log_handler.remove_handlers()
 
@@ -85,9 +85,11 @@ def import_day_data_from_past(day_since_today):
 
     import_date = datetime.now() - timedelta(day_since_today)
     import_date = datetime.strftime(import_date, '%Y-%m-%d')
-    import_data(import_date=import_date)
+    info = import_data(import_date=import_date)
+    return info
 
 def import_data(import_date):
+    info = {}
     logger = logging.getLogger('importer')
 
     container_client = get_azure_container_client()
@@ -99,14 +101,8 @@ def import_data(import_date):
     conn = psycopg.connect(get_conn_params())
     with conn:
         with conn.cursor() as cur:
-            
             for i, r in enumerate(result):
                 name = str(r.name)
-                # File format is e.g. 2022-05-11T00-3_ARR.csv.zst
-                # extract event type as we know what the format is:
-                # type = name.split('T')[1].split('_')[1].split('.')[0]
-                # if type in event_types_to_import:
-                #     blob_names.append(r.name)
 
                 cur.execute("SELECT EXISTS( SELECT 1 FROM importer.blob WHERE name = %s)", (name,))
                 exists_in_list = cur.fetchone()[0]
@@ -126,15 +122,23 @@ def import_data(import_date):
                 cur.execute("INSERT INTO importer.blob(name, type, min_oday, max_oday, min_tst, max_tst, row_count, covered_by_import) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING",
                                     (name, event_type, tags.get('min_oday'), tags.get('max_oday'), tags.get('min_tst'), tags.get('max_tst'), tags.get('row_count'), covered_by_import,))
 
-
-    # for blob in blob_names:
-    #     import_blob(blob)
+            conn.commit()
 
             logger.info("Importer ready for next step")
 
             cur.execute("SELECT name FROM importer.blob WHERE covered_by_import AND import_status = 'not started'")
-            
             names = cur.fetchall()
+            cur.execute("SELECT min(min_oday), max(max_oday), min(min_tst), max(max_tst), count(*), sum(row_count) FROM importer.blob WHERE covered_by_import AND import_status = 'not started'")
+            data = cur.fetchone() or {}
+
+            info = {
+                'min_oday': data[0],
+                'max_oday': data[1],
+                'min_tst': data[2],
+                'max_tst': data[3],
+                'files': data[4],
+                'rows': data[5]
+            }
 
             for n in names:
                 blob_names.append(n[0])
@@ -142,14 +146,13 @@ def import_data(import_date):
                 cur.execute("UPDATE importer.blob SET import_status = 'pending' WHERE name = %s", (n,))
 
     conn.close()
-    # print(blob_names)
+
     logger.debug(f"Running import for {blob_names}")
 
-    
     for b in blob_names:
         import_blob(b)
 
-
+    return info
 
 
 

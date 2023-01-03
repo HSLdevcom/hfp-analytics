@@ -251,7 +251,7 @@ including min and max timestamps. Assumed here means that this journey might
 be invalid (e.g. driver accidentally logged into a wrong departure)';
 
 
-CREATE FUNCTION insert_assumed_monitored_vehicle_journeys()
+CREATE FUNCTION insert_assumed_monitored_vehicle_journeys(min_tst timestamptz)
 RETURNS void
 VOLATILE
 LANGUAGE SQL
@@ -264,8 +264,11 @@ AS $func$
     journey_id,
     min(point_timestamp) AS min_timestamp,
     max(point_timestamp) AS max_timestamp
-  -- (Add further aggregates such as N of hfp_point rows here, if required later.)
+  -- (Add further aggregates such as N of hfp_point rows here, if required later.
+  -- Be careful about min_tst, because aggregate might not give all records, if there were ones before min_tst.
+  -- Perhaps fetch more points before tst, e.g. 6 hours, to get a bit historical data for aggregation, but update only the ones that overlaps with the tst limit.)
   FROM hfp.hfp_point
+  WHERE point_timestamp >= min_tst - interval '1 minutes'
   GROUP BY
     vehicle_id,
     journey_id
@@ -274,8 +277,8 @@ AS $func$
   -- when importing hfp data to fill a gap or if more recent data is available
   -- when running import.
   ON CONFLICT(vehicle_id, journey_id) DO UPDATE SET
-    max_timestamp = EXCLUDED.max_timestamp,
-    min_timestamp = EXCLUDED.min_timestamp,
+    max_timestamp = greatest(assumed_monitored_vehicle_journey.max_timestamp, EXCLUDED.max_timestamp),
+    min_timestamp = least(assumed_monitored_vehicle_journey.min_timestamp, EXCLUDED.min_timestamp),
     modified_at = now()
   WHERE
   -- Update only if values are actually changed, so that modified_at -field shows the correct time.
