@@ -126,9 +126,9 @@ def import_data(import_date):
 
             logger.info("Importer ready for next step")
 
-            cur.execute("SELECT name FROM importer.blob WHERE covered_by_import AND import_status = 'not started'")
+            cur.execute("SELECT name FROM importer.blob WHERE covered_by_import AND import_status IN ('not started', 'pending')")
             names = cur.fetchall()
-            cur.execute("SELECT min(min_oday), max(max_oday), min(min_tst), max(max_tst), count(*), sum(row_count) FROM importer.blob WHERE covered_by_import AND import_status = 'not started'")
+            cur.execute("SELECT min(min_oday), max(max_oday), min(min_tst), max(max_tst), count(*), sum(row_count) FROM importer.blob WHERE covered_by_import AND import_status IN ('not started', 'pending')")
             data = cur.fetchone() or {}
 
             info = {
@@ -163,7 +163,7 @@ def import_blob(blob_name):
     logger = logging.getLogger('importer')
     logger.debug(f"Processing blob: {blob_name}")
     blob_start_time = time.time()
-    cur.execute("UPDATE importer.blob SET import_started = NOW(), import_status = 'importing' WHERE name = %s", (blob_name,))
+    cur.execute("UPDATE importer.blob SET import_started = %s, import_status = 'importing' WHERE name = %s", (datetime.utcnow(), blob_name,))
     connection.commit()
     try:
         container_client = get_azure_container_client()
@@ -174,7 +174,7 @@ def import_blob(blob_name):
         row_count = read_imported_data_to_db(cur=cur, downloader=storage_stream_downloader)
         duration = time.time() - blob_start_time
         logger.debug(f"{blob_name} is done. Imported {row_count} rows in {int(duration)} seconds ({int(row_count/duration)} rows/second)")
-        cur.execute("UPDATE importer.blob SET (import_finished, import_status) = (NOW(), 'imported') WHERE name = %s", (blob_name,))
+        cur.execute("UPDATE importer.blob SET (import_finished, import_status) = (%s, 'imported') WHERE name = %s", (datetime.utcnow(), blob_name,))
         connection.commit()
 
     except Exception as e:
@@ -183,7 +183,7 @@ def import_blob(blob_name):
         else:
             logger.error(f'Error after {int(time.time() - blob_start_time)} seconds when reading blob chunks: {e}')
         connection.rollback()
-        cur.execute("UPDATE importer.blob SET (import_finished, import_status) = (NOW(), 'failed') WHERE name = %s", (blob_name,))
+        cur.execute("UPDATE importer.blob SET (import_finished, import_status) = (%s, 'failed') WHERE name = %s", (datetime.utcnow(), blob_name,))
         connection.commit()
 
     cur.close()
