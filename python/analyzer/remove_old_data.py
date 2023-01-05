@@ -29,7 +29,12 @@ def remove_old_data():
                 logger.info(f"{cur.rowcount} rows deleted from observation.")
                 logger.info("Removing hfp_point data older than 2 weeks")
                 cur.execute("DELETE FROM hfp.hfp_point WHERE point_timestamp < now() - interval '2 week'")
-                logger.info(f"{cur.rowcount} remaining hfp.hfp_point rows deleted.")
+                logger.info(f"{cur.rowcount} rows deleted from hfp.hfp_point.")
+                logger.info(f"Removing old logs and blob info")
+                cur.execute("DELETE FROM importer.blob WHERE listed_at < now() - interval '4 week'")
+                logger.info(f"{cur.rowcount} rows deleted from importer.blob .")
+                cur.execute("DELETE FROM logs.importer_log WHERE log_timestamp < now() - interval '4 week'")
+                logger.info(f"{cur.rowcount} rows deleted from logs.importer_log.")
     except psycopg2.OperationalError as err:
         logger.error(f"Old data removal failed: {err}")
     finally:

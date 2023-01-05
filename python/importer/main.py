@@ -12,7 +12,6 @@ from common.logger_util import CustomDbLogHandler
 from common.utils import get_conn_params
 import common.constants as constants
 from .run_analysis import run_analysis
-from .remove_old_data import remove_old_data
 import time
 
 # Import other event types as well when needed.
