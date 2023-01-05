@@ -14,7 +14,7 @@ class PostgresDBHandler(logging.Handler):
     """
 
     def __init__(self, function_name: str):
-        logging.Handler.__init__(self)
+        super().__init__()
         try:
             self.sql_conn = psycopg2.connect(get_conn_params())
             self.sql_cursor = self.sql_conn.cursor()
@@ -74,4 +74,6 @@ class CustomDbLogHandler():
 
     def remove_handlers(self):
         self.logger.removeHandler(self.console_log_handler)
+        self.console_log_handler.close()
         self.logger.removeHandler(self.db_log_handler)
+        self.db_log_handler.close()
