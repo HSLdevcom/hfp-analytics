@@ -5,9 +5,9 @@
       "authLevel": "function",
       "type": "timerTrigger",
       "direction": "in",
-      "name": "importer",
+      "name": "analyzer",
       "runOnStartup": false,
-      "schedule": "0 0 * * * *"
+      "schedule": "0 55 4 * * *"
     }
   ]
 }

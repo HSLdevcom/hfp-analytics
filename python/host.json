@@ -9,7 +9,7 @@
         "routePrefix": ""
     }
   },
-  "functionTimeout": "08:00:00",
+  "functionTimeout": "18:00:00",
   "logging": {
     "fileLoggingMode": "always",
     "logLevel": {

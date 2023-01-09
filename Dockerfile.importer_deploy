@@ -9,6 +9,7 @@ COPY ./python/requirements.txt /
 RUN pip install -r /requirements.txt
 
 COPY ./python/importer /home/site/wwwroot/importer/
+COPY ./python/analyzer /home/site/wwwroot/analyzer/
 COPY ./python/common /home/site/wwwroot/common/
 COPY ./python/host.json home/site/wwwroot/host.json
 COPY ./python/requirements.txt home/site/wwwroot/requirements.txt
