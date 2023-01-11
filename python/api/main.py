@@ -46,7 +46,7 @@ async def custom_swagger_ui_html(request: Request):
     )
 
 @app.get("/redoc", include_in_schema=False)
-async def custom_swagger_ui_html(request: Request):
+async def custom_redoc_ui_html(request: Request):
     """
     API documentation, taken from: https://fastapi.tiangolo.com/advanced/extending-openapi/
     Note: to authenticate openapi, you can also check: https://github.com/tiangolo/fastapi/issues/364#issuecomment-890853577
@@ -183,6 +183,9 @@ async def get_monitored_vehicle_journeys(operating_day: date = Query(..., descri
             cur.execute("SELECT * FROM api.view_assumed_monitored_vehicle_journey where oday = %(operating_day)s", {'operating_day': operating_day})
             vehicle_journeys = cur.fetchall()
 
+            cur.execute("SELECT MAX(modified_at) FROM api.view_assumed_monitored_vehicle_journey where oday = %(operating_day)s", {'operating_day': operating_day})
+            last_updated = cur.fetchone()[0]
+
             results = []
             for vehicle_journey in vehicle_journeys:
                 results.append({
@@ -200,5 +203,6 @@ async def get_monitored_vehicle_journeys(operating_day: date = Query(..., descri
             return {
                 "data": {
                     "monitoredVehicleJourneys": results
-                }
+                },
+                "last_updated": last_updated.isoformat(timespec="seconds")
             }
