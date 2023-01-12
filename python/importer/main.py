@@ -48,6 +48,7 @@ def main(importer: func.TimerRequest, context: func.Context):
                 if is_importer_locked:
                     logger.error("Importer is LOCKED which means that importer should be already running. You can get"
                                 "rid of the lock by restarting the database if needed.")
+                    custom_db_log_handler.remove_handlers()
                     return
 
                 logger.info("Going to run importer.")
