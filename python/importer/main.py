@@ -57,7 +57,7 @@ def main(importer: func.TimerRequest, context: func.Context):
         logger.error(f'Error when creating locks for importer: {e}')
 
     try:
-        info = import_day_data_from_past(3)
+        info = import_day_data_from_past(1)
         logger.info("Importing done - next up: analysis.")
 
     except Exception as e:
@@ -90,19 +90,23 @@ def import_day_data_from_past(day_since_today):
 def import_data(import_date):
     info = {}
     logger = logging.getLogger('importer')
-
     container_client = get_azure_container_client()
-    result = container_client.find_blobs_by_tags(f"min_oday >= '{import_date}''")
-    # result = container_client.list_blob_names(name_starts_with=import_date)
+    storage_blob_names = []
+    import_date_obj = datetime.strptime(import_date, "%Y-%m-%d")
+
+    while import_date_obj <= datetime.now():
+        current_date_str = import_date_obj.strftime("%Y-%m-%d")
+        blobs = container_client.list_blobs(name_starts_with=current_date_str)
+        for blob in blobs:
+            storage_blob_names.append(blob.name)
+        import_date_obj += timedelta(days=1)
 
     blob_names = []
 
     conn = psycopg.connect(get_conn_params())
     with conn:
         with conn.cursor() as cur:
-            for i, r in enumerate(result):
-                name = str(r.name)
-
+            for i, name in enumerate(storage_blob_names):
                 cur.execute("SELECT EXISTS( SELECT 1 FROM importer.blob WHERE name = %s)", (name,))
                 exists_in_list = cur.fetchone()[0]
 
@@ -110,7 +114,7 @@ def import_data(import_date):
                     # Already imported, no need to fetch tags or try to insert
                     continue
 
-                blob_client = container_client.get_blob_client(blob=name)
+                blob_client = container_client.get_blob_client(name)
                 tags = blob_client.get_blob_tags()
 
                 event_type = tags.get('eventType')
