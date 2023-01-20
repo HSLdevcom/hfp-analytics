@@ -120,6 +120,15 @@ def import_data(import_date):
 
                 event_type = tags.get('eventType')
 
+                min_oday = datetime.strptime(tags.get('min_oday'), "%Y-%m-%d")
+                blob_date = datetime.strptime(name[0:10], "%Y-%m-%d")
+
+                # Warn if min_oday is older than from yesterday
+                if blob_date - min_oday > timedelta(1):
+                    logger.warning(f"Bad oday data found in {name}")
+
+                    # TODO: Send warning to slack.
+
                 covered_by_import = event_type in event_types_to_import
 
 
@@ -153,8 +162,8 @@ def import_data(import_date):
 
     logger.debug(f"Running import for {blob_names}")
 
-    for b in blob_names:
-        import_blob(b)
+    # for b in blob_names:
+        # import_blob(b)
 
     return info
 
