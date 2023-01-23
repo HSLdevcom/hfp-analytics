@@ -5,6 +5,7 @@ import logging
 import time
 from common.utils import env_with_default, comma_separated_floats_to_list, comma_separated_integers_to_list, get_conn_params
 import common.constants as constants
+import common.slack as slack
 
 start_time = 0
 
@@ -119,8 +120,10 @@ def run_analysis():
                 conn.commit()
 
                 logger.info(f'{get_time()} Analysis complete.')
+                slack.send_to_channel(f"Analysis completed in {get_time()}")
     except Exception as e:
         logger.error(f"Analysis failed: {e}")
+        slack.send_to_channel(f"Analysis failed: {e}", alert=True)
     finally:
         conn.cursor().execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
         conn.close()

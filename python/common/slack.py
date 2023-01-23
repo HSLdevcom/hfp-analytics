@@ -5,7 +5,7 @@ SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL", "")
 SLACK_USERS_TO_ALERT = os.getenv("SLACK_USERS_TO_ALERT", "")
 
 # Call this function to send messages to Slack channel. Use alert=True to tag users.
-def send_alert(message, alert=False):
+def send_to_channel(message, alert=False):
 
   if not SLACK_WEBHOOK_URL:
     # Slack url not found, exit

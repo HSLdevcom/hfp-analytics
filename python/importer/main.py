@@ -13,6 +13,7 @@ from common.utils import get_conn_params
 import common.constants as constants
 from .run_analysis import run_analysis
 import time
+import common.slack as slack
 
 # Import other event types as well when needed.
 event_types_to_import = ['VP', 'DOC', 'DOO']
@@ -56,6 +57,7 @@ def main(importer: func.TimerRequest, context: func.Context):
                 conn.commit()
     except Exception as e:
         logger.error(f'Error when creating locks for importer: {e}')
+        slack.send_to_channel(f'Error when creating locks for importer: {e}', alert=True)
 
     try:
         info = import_day_data_from_past(1)
@@ -63,6 +65,7 @@ def main(importer: func.TimerRequest, context: func.Context):
 
     except Exception as e:
         logger.error(f'Error when running importer: {e}')
+        slack.send_to_channel(f'Error when running importer: {e}', alert=True)
     finally:
         # Remove lock at this point
         with conn.cursor() as cur:
@@ -126,8 +129,7 @@ def import_data(import_date):
                 # Warn if min_oday is older than from yesterday
                 if blob_date - min_oday > timedelta(1):
                     logger.warning(f"Bad oday data found in {name}")
-
-                    # TODO: Send warning to slack.
+                    slack.send_to_channel(f"Bad oday data found in {name}", alert=True)
 
                 covered_by_import = event_type in event_types_to_import
 
@@ -162,8 +164,8 @@ def import_data(import_date):
 
     logger.debug(f"Running import for {blob_names}")
 
-    # for b in blob_names:
-        # import_blob(b)
+    for b in blob_names:
+        import_blob(b)
 
     return info
 
@@ -184,7 +186,7 @@ def import_blob(blob_name):
         blob_client = container_client.get_blob_client(blob=blob_name)
         storage_stream_downloader = blob_client.download_blob()
 
-        row_count = read_imported_data_to_db(cur=cur, downloader=storage_stream_downloader)
+        row_count = read_imported_data_to_db(cur=cur, downloader=storage_stream_downloader, blob_name=blob_name)
         duration = time.time() - blob_start_time
         logger.debug(f"{blob_name} is done. Imported {row_count} rows in {int(duration)} seconds ({int(row_count/duration)} rows/second)")
         cur.execute("UPDATE importer.blob SET (import_finished, import_status) = (%s, 'imported') WHERE name = %s", (datetime.utcnow(), blob_name,))
@@ -203,7 +205,7 @@ def import_blob(blob_name):
     connection.close()
 
 
-def read_imported_data_to_db(cur, downloader):
+def read_imported_data_to_db(cur, downloader, blob_name):
     logger = logging.getLogger('importer')
     compressed_content = downloader.content_as_bytes()
     reader = zstandard.ZstdDecompressor().stream_reader(compressed_content)
@@ -227,7 +229,8 @@ def read_imported_data_to_db(cur, downloader):
             invalid_row_count += 1
 
     if invalid_row_count > 0:
-        logger.error(f'Import invalid row count: {invalid_row_count}')
+        logger.error(f'Analytics found {invalid_row_count} invalid rows in blob {blob_name}')
+        slack.send_to_channel(f'Analytics found {invalid_row_count} invalid rows in blob {blob_name}', alert=True)
 
     import_io.seek(0)
     cur.copy_expert(sql="COPY hfp.view_as_original_hfp_event FROM STDIN WITH CSV",

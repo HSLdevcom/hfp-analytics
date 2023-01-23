@@ -2,6 +2,7 @@ import psycopg2
 import logging
 from common.utils import get_conn_params
 import common.constants as constants
+import common.slack as slack
 
 def remove_old_data():
     logger = logging.getLogger('importer')
@@ -37,6 +38,7 @@ def remove_old_data():
                 logger.info(f"{cur.rowcount} rows deleted from logs.importer_log.")
     except psycopg2.OperationalError as err:
         logger.error(f"Old data removal failed: {err}")
+        slack.send_to_channel(f"Old data removal failed: {err}", alert=True)
     finally:
         conn.cursor().execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
         conn.close()
