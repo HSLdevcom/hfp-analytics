@@ -8,6 +8,7 @@ import logging
 import zstandard
 from datetime import datetime, timedelta
 import psycopg2 as psycopg
+from psycopg2.pool import SimpleConnectionPool
 from common.logger_util import CustomDbLogHandler
 from common.utils import get_conn_params
 import common.constants as constants
@@ -16,6 +17,8 @@ import time
 
 # Import other event types as well when needed.
 event_types_to_import = ['VP', 'DOC', 'DOO']
+pool = SimpleConnectionPool(1, 20, get_conn_params())
+
 
 def get_azure_container_client() -> ContainerClient:
     logger = logging.getLogger('importer')
@@ -153,20 +156,26 @@ def import_data(import_date):
 
     logger.debug(f"Running import for {blob_names}")
 
-    for b in blob_names:
-        import_blob(b)
+    try:
+        for b in blob_names:
+            import_blob(b)
+    except Exception as e:
+        print(e)
+    finally:
+        pool.closeall()
 
     return info
 
 
 
 def import_blob(blob_name):
-    # TODO: Use connection pooling
-    connection = psycopg.connect(get_conn_params())
-    cur = connection.cursor()
     logger = logging.getLogger('importer')
     logger.debug(f"Processing blob: {blob_name}")
     blob_start_time = time.time()
+
+    connection = pool.getconn()
+    cur = connection.cursor()
+
     cur.execute("UPDATE importer.blob SET import_started = %s, import_status = 'importing' WHERE name = %s", (datetime.utcnow(), blob_name,))
     connection.commit()
     try:
@@ -191,10 +200,10 @@ def import_blob(blob_name):
         connection.commit()
 
     cur.close()
-    connection.close()
+    pool.putconn(connection)
 
 
-def read_imported_data_to_db(cur, downloader):
+def read_imported_data_to_db(cur, downloader, chunk_size=10000):
     logger = logging.getLogger('importer')
     compressed_content = downloader.content_as_bytes()
     reader = zstandard.ZstdDecompressor().stream_reader(compressed_content)
@@ -209,19 +218,32 @@ def read_imported_data_to_db(cur, downloader):
     writer = csv.DictWriter(import_io, fieldnames=selected_fields)
 
     calculator = 0
+    rows_processed = 0
     for old_row in hfp_dict_reader:
         calculator += 1
         new_row = {key: old_row[key] for key in selected_fields}
         if not any(old_row[key] is None for key in ["tst", "oper", "vehicleNumber"]):
             writer.writerow(new_row)
+            rows_processed += 1
         else:
             invalid_row_count += 1
 
+        if rows_processed >= chunk_size:
+            import_io.seek(0)
+            cur.copy_expert(sql="COPY hfp.view_as_original_hfp_event FROM STDIN WITH CSV",
+                            file=import_io)
+            import_io.seek(0)
+            import_io.truncate()
+            rows_processed = 0
+    
+    if rows_processed > 0:
+        import_io.seek(0)
+        cur.copy_expert(sql="COPY hfp.view_as_original_hfp_event FROM STDIN WITH CSV",
+                        file=import_io)
+        import_io.seek(0)
+        import_io.truncate()
+
     if invalid_row_count > 0:
         logger.error(f'Import invalid row count: {invalid_row_count}')
-
-    import_io.seek(0)
-    cur.copy_expert(sql="COPY hfp.view_as_original_hfp_event FROM STDIN WITH CSV",
-                    file=import_io)
 
     return calculator
