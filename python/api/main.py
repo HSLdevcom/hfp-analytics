@@ -1,13 +1,20 @@
 """HFP Analytics REST API"""
+import io
+import gzip
 import azure.functions as func
+from typing import Optional
 from fastapi import FastAPI, HTTPException, Request, Query
 from fastapi.openapi.docs import (
     get_redoc_html,
     get_swagger_ui_html,
 )
+from fastapi.responses import Response
+from fastapi.middleware.gzip import GZipMiddleware
+
 from common.utils import get_conn_params, tuples_to_feature_collection
-from datetime import date
+from datetime import date, datetime
 import psycopg2 as psycopg
+from psycopg2 import sql
 from .digitransit_import import main as run_digitransit_import
 
 app = FastAPI(
@@ -24,6 +31,8 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
 )
+
+# app.add_middleware(GZipMiddleware, minimum_size=0)
 
 def main(req: func.HttpRequest, context: func.Context) -> func.HttpResponse:
     return func.AsgiMiddleware(app).handle(req, context)
@@ -206,3 +215,56 @@ async def get_monitored_vehicle_journeys(operating_day: date = Query(..., descri
                 },
                 "last_updated": last_updated.isoformat(timespec="seconds")
             }
+
+@app.get("/hfp_data")
+async def get_hfp_raw_data(route_id: Optional[str] = None, oper: Optional[str] = None, veh: Optional[str] = None, oday: date = Query(..., description="Format YYYY-MM-DD")):
+    """
+    Returns hfp data records of requested parameters.
+    """
+
+    with psycopg.connect(get_conn_params()) as conn:
+        with conn.cursor() as cur:
+            query = cur.mogrify("""
+                SELECT
+                    event_type,
+                    route_id,
+                    direction_id,
+                    vehicle_operator_id,
+                    observed_operator_id,
+                    vehicle_number,
+                    oday,
+                    "start",
+                    stop,
+                    tst,
+                    loc,
+                    latitude,
+                    longitude,
+                    odo,
+                    drst
+                FROM hfp.view_as_original_hfp_event
+                WHERE
+                    (%s IS NULL OR route_id = %s) AND
+                    ((%s IS NULL AND %s IS NULL ) OR (vehicle_operator_id = %s AND vehicle_number = %s))
+                    AND oday = %s
+            """, (route_id, route_id, oper, veh, oper, veh, oday,))
+
+            # Input stream for csv data from database, output stream for compressed data
+            input_stream = io.StringIO()
+            output_stream = io.BytesIO()
+
+            cur.copy_expert("COPY ({0}) TO STDOUT WITH CSV HEADER".format(query.decode()), input_stream)
+
+            data = input_stream.getvalue().encode()
+
+            with gzip.GzipFile(fileobj=output_stream, mode='wb') as compressed_data_stream:
+                compressed_data_stream.write(data)
+
+            response = Response(content = output_stream.getvalue(),
+                media_type="application/gzip"
+            )
+            # Send as an attachment
+            response.headers["Content-Disposition"] = f"attachment; filename=hfp-export-{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv.gz"
+
+    return response
+
+       
