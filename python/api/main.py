@@ -216,7 +216,7 @@ async def get_monitored_vehicle_journeys(operating_day: date = Query(..., descri
             }
 
 
-@app.get("/HFP/fetch",
+@app.get("/hfp/fetch",
          summary="Get HFP raw data",
          tags=["HFP data"],
          description="Returns raw HFP data in a gzip compressed csv file.")
@@ -234,12 +234,16 @@ async def get_hfp_raw_data(
                                example="662"),
     oday: date = Query(...,
                        title="Operating day",
-                       description="Operating day of the journey. Format YYYY-MM-DD",
+                       description=("Operating day of the journey. "
+                                    "Remember that the database contains data from previous 14 days. "
+                                    "Format YYYY-MM-DD"),
                        example="2023-01-12")
 ) -> Response:
     """
     Get hfp data in raw csv format filtered by parameters.
     """
+    if not route_id and not (oper and veh):
+        raise HTTPException(400, detail="Either route_id or oper and veh -parameters are required!")
 
     with psycopg.connect(get_conn_params()) as conn:
         with conn.cursor() as cur:
