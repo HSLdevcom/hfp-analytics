@@ -1,20 +1,19 @@
 """HFP Analytics REST API"""
 import io
 import gzip
-import azure.functions as func
 from typing import Optional
+from datetime import date, datetime
+
+import azure.functions as func
 from fastapi import FastAPI, HTTPException, Request, Query
 from fastapi.openapi.docs import (
     get_redoc_html,
     get_swagger_ui_html,
 )
 from fastapi.responses import Response
-from fastapi.middleware.gzip import GZipMiddleware
+import psycopg2 as psycopg
 
 from common.utils import get_conn_params, tuples_to_feature_collection
-from datetime import date, datetime
-import psycopg2 as psycopg
-from psycopg2 import sql
 from .digitransit_import import main as run_digitransit_import
 
 app = FastAPI(
@@ -28,11 +27,11 @@ app = FastAPI(
         "name": "MIT License",
         "url": "https://github.com/HSLdevcom/hfp-analytics/blob/main/LICENSE"
     },
+    openapi_tags=[{"name": "HFP data", "description": "API to query raw HFP data."}],
     docs_url=None,
     redoc_url=None,
 )
 
-# app.add_middleware(GZipMiddleware, minimum_size=0)
 
 def main(req: func.HttpRequest, context: func.Context) -> func.HttpResponse:
     return func.AsgiMiddleware(app).handle(req, context)
@@ -216,14 +215,35 @@ async def get_monitored_vehicle_journeys(operating_day: date = Query(..., descri
                 "last_updated": last_updated.isoformat(timespec="seconds")
             }
 
-@app.get("/hfp_data")
-async def get_hfp_raw_data(route_id: Optional[str] = None, oper: Optional[str] = None, veh: Optional[str] = None, oday: date = Query(..., description="Format YYYY-MM-DD")):
+
+@app.get("/HFP/fetch",
+         summary="Get HFP raw data",
+         tags=["HFP data"],
+         description="Returns raw HFP data in a gzip compressed csv file.")
+async def get_hfp_raw_data(
+    route_id: Optional[str] = Query(default=None,
+                                    title="Route ID",
+                                    description="JORE ID of the route. Required when no `oper` and `veh` provided.",
+                                    example="2550"),
+    oper: Optional[int] = Query(default=None,
+                                title="Operator ID",
+                                description="Operator ID of the vehicle. Required when no `route_id` provided.",
+                                example="18"),
+    veh: Optional[int] = Query(default=None,
+                               description="Vehicle ID. Required when no `route_id` provided.",
+                               example="662"),
+    oday: date = Query(...,
+                       title="Operating day",
+                       description="Operating day of the journey. Format YYYY-MM-DD",
+                       example="2023-01-12")
+) -> Response:
     """
-    Returns hfp data records of requested parameters.
+    Get hfp data in raw csv format filtered by parameters.
     """
 
     with psycopg.connect(get_conn_params()) as conn:
         with conn.cursor() as cur:
+            # IS NULL statements make route_id, oper and veh optional
             query = cur.mogrify("""
                 SELECT
                     event_type,
@@ -252,19 +272,18 @@ async def get_hfp_raw_data(route_id: Optional[str] = None, oper: Optional[str] =
             input_stream = io.StringIO()
             output_stream = io.BytesIO()
 
-            cur.copy_expert("COPY ({0}) TO STDOUT WITH CSV HEADER".format(query.decode()), input_stream)
+            cur.copy_expert(f"COPY ({query.decode()}) TO STDOUT WITH CSV HEADER", input_stream)
 
             data = input_stream.getvalue().encode()
 
             with gzip.GzipFile(fileobj=output_stream, mode='wb') as compressed_data_stream:
                 compressed_data_stream.write(data)
 
-            response = Response(content = output_stream.getvalue(),
-                media_type="application/gzip"
-            )
+            response = Response(content=output_stream.getvalue(),
+                                media_type="application/gzip")
+
+            filename = f"hfp-export-{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv.gz"
             # Send as an attachment
-            response.headers["Content-Disposition"] = f"attachment; filename=hfp-export-{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv.gz"
+            response.headers["Content-Disposition"] = f"attachment; filename={filename}"
 
     return response
-
-       
