@@ -2,8 +2,10 @@ import os
 import pptx
 import logging as logger
 
-def get_conn_params():
-    return os.getenv('POSTGRES_CONNECTION_STRING')
+
+def get_conn_params() -> str:
+    return os.getenv("POSTGRES_CONNECTION_STRING", "")
+
 
 def env_with_default(var_name, default_value):
     res = os.getenv(var_name)

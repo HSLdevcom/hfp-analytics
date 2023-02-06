@@ -15,6 +15,7 @@ import psycopg2 as psycopg
 
 from common.utils import get_conn_params, tuples_to_feature_collection
 from .digitransit_import import main as run_digitransit_import
+from api.services import get_hfp_data
 
 app = FastAPI(
     title="HSL Analytics REST API",
@@ -216,7 +217,7 @@ async def get_monitored_vehicle_journeys(operating_day: date = Query(..., descri
             }
 
 
-@app.get("/hfp/fetch",
+@app.get("/hfp/data",
          summary="Get HFP raw data",
          tags=["HFP data"],
          description="Returns raw HFP data in a gzip compressed csv file.")
@@ -245,49 +246,22 @@ async def get_hfp_raw_data(
     if not route_id and not (oper and veh):
         raise HTTPException(400, detail="Either route_id or oper and veh -parameters are required!")
 
-    with psycopg.connect(get_conn_params()) as conn:
-        with conn.cursor() as cur:
-            # IS NULL statements make route_id, oper and veh optional
-            query = cur.mogrify("""
-                SELECT
-                    event_type,
-                    route_id,
-                    direction_id,
-                    vehicle_operator_id,
-                    observed_operator_id,
-                    vehicle_number,
-                    oday,
-                    "start",
-                    stop,
-                    tst,
-                    loc,
-                    latitude,
-                    longitude,
-                    odo,
-                    drst
-                FROM hfp.view_as_original_hfp_event
-                WHERE
-                    (%s IS NULL OR route_id = %s) AND
-                    ((%s IS NULL AND %s IS NULL ) OR (vehicle_operator_id = %s AND vehicle_number = %s))
-                    AND oday = %s
-            """, (route_id, route_id, oper, veh, oper, veh, oday,))
+    # Input stream for csv data from database, output stream for compressed data
+    input_stream = io.BytesIO()
+    output_stream = io.BytesIO()
 
-            # Input stream for csv data from database, output stream for compressed data
-            input_stream = io.StringIO()
-            output_stream = io.BytesIO()
+    await get_hfp_data(route_id, oper, veh, oday, input_stream)
 
-            cur.copy_expert(f"COPY ({query.decode()}) TO STDOUT WITH CSV HEADER", input_stream)
+    data = input_stream.getvalue()
 
-            data = input_stream.getvalue().encode()
+    with gzip.GzipFile(fileobj=output_stream, mode='wb') as compressed_data_stream:
+        compressed_data_stream.write(data)
 
-            with gzip.GzipFile(fileobj=output_stream, mode='wb') as compressed_data_stream:
-                compressed_data_stream.write(data)
+    response = Response(content=output_stream.getvalue(),
+                        media_type="application/gzip")
 
-            response = Response(content=output_stream.getvalue(),
-                                media_type="application/gzip")
-
-            filename = f"hfp-export-{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv.gz"
-            # Send as an attachment
-            response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+    filename = f"hfp-export-{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv.gz"
+    # Send as an attachment
+    response.headers["Content-Disposition"] = f"attachment; filename={filename}"
 
     return response
