@@ -1,3 +1,7 @@
+"""
+Services related to /hfp data endpoint
+"""
+
 from io import BytesIO
 from typing import Optional
 from datetime import date
@@ -10,6 +14,7 @@ async def get_hfp_data(route_id: Optional[str],
                        veh: Optional[int],
                        oday: Optional[date],
                        stream: BytesIO) -> None:
+    """Query hfp raw data filtered by parameters to CSV format. Save the result to the input stream."""
     async with pool.connection() as conn:
         async with conn.cursor().copy(
             """
