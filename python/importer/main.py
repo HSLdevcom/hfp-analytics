@@ -8,7 +8,7 @@ import logging
 import zstandard
 from datetime import datetime, timedelta
 import psycopg2 as psycopg
-from common.logger_util import CustomDbLogHandler
+from common.logger_util import log_handler_initialized
 from common.utils import get_conn_params
 import common.constants as constants
 from .run_analysis import run_analysis
@@ -27,8 +27,9 @@ def get_azure_container_client() -> ContainerClient:
         logger.error("HFP_STORAGE_CONNECTION_STRING env not found, have you defined it?")
     return ContainerClient.from_connection_string(conn_str=hfp_storage_connection_string, container_name=hfp_storage_container_name)
 
-def main(importer: func.TimerRequest, context: func.Context):
-    custom_db_log_handler = CustomDbLogHandler(function_name='importer')
+
+@log_handler_initialized(name='importer')
+def start_import():
     logger = logging.getLogger('importer')
 
     global is_importer_locked
@@ -48,7 +49,6 @@ def main(importer: func.TimerRequest, context: func.Context):
                 if is_importer_locked:
                     logger.error("Importer is LOCKED which means that importer should be already running. You can get"
                                 "rid of the lock by restarting the database if needed.")
-                    custom_db_log_handler.remove_handlers()
                     return
 
                 logger.info("Going to run importer.")
@@ -70,13 +70,10 @@ def main(importer: func.TimerRequest, context: func.Context):
             conn.commit()
         conn.close()
 
-
     logger.info("Importer done. Starting minianalysis")
-
 
     run_analysis(info)
 
-    custom_db_log_handler.remove_handlers()
 
 
 def import_day_data_from_past(day_since_today):
@@ -225,3 +222,8 @@ def read_imported_data_to_db(cur, downloader):
                     file=import_io)
 
     return calculator
+
+
+def main(importer: func.TimerRequest, context: func.Context) -> None:
+    """ Main function to be called by Azure Function """
+    start_import()

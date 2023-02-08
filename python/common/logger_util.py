@@ -1,7 +1,9 @@
 import logging
+from typing import Callable
 import psycopg2
 from psycopg2 import sql
 from common.utils import get_conn_params
+
 
 class PostgresDBHandler(logging.Handler):
     """
@@ -43,6 +45,7 @@ class PostgresDBHandler(logging.Handler):
         if self.sql_conn:
             self.sql_conn.close()
 
+
 class CustomDbLogHandler():
     """
     Create an instance of this class once at the start of every function app endpoint
@@ -77,3 +80,34 @@ class CustomDbLogHandler():
         self.console_log_handler.close()
         self.logger.removeHandler(self.db_log_handler)
         self.db_log_handler.close()
+
+
+# Store loggers here
+log_handlers = {}
+
+
+def log_handler_initialized(name: str) -> Callable:
+    """ Wrapper function to initialize and keep track of logging handlers. """
+    def func(function_to_log: Callable) -> Callable:
+        def wrapper(*args, **kwargs) -> None:
+            if name not in log_handlers:
+                # Init new logger handler
+                logger = CustomDbLogHandler(name)
+                log_handlers[name] = {'logger': logger, 'count': 1}
+            else:
+                # Handler already defined, just track that we are using it
+                log_handlers[name]['count'] += 1
+
+            # Call the wrapped function
+            function_to_log(*args, **kwargs)
+
+            # Function done, free the log_handler
+            log_handlers[name]['count'] -= 1
+
+            if log_handlers[name]['count'] == 0:
+                # Last logger was removed, delete handlers
+                log_handlers[name]['logger'].remove_handlers()
+                del log_handlers[name]
+
+        return wrapper
+    return func
