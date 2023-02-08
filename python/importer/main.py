@@ -8,7 +8,7 @@ import logging
 import zstandard
 from datetime import datetime, timedelta
 import psycopg2 as psycopg
-from common.logger_util import log_handler_initialized
+from common.logger_util import CustomDbLogHandler
 from common.utils import get_conn_params
 import common.constants as constants
 from .run_analysis import run_analysis
@@ -17,8 +17,10 @@ import time
 # Import other event types as well when needed.
 event_types_to_import = ['VP', 'DOC', 'DOO']
 
+logger = logging.getLogger('importer')
+
+
 def get_azure_container_client() -> ContainerClient:
-    logger = logging.getLogger('importer')
     hfp_storage_container_name = os.getenv('HFP_STORAGE_CONTAINER_NAME', '')
     if not hfp_storage_container_name:
         logger.error("HFP_STORAGE_CONTAINER_NAME env not found, have you defined it?")
@@ -28,10 +30,7 @@ def get_azure_container_client() -> ContainerClient:
     return ContainerClient.from_connection_string(conn_str=hfp_storage_connection_string, container_name=hfp_storage_container_name)
 
 
-@log_handler_initialized(name='importer')
 def start_import():
-    logger = logging.getLogger('importer')
-
     global is_importer_locked
     conn = psycopg.connect(get_conn_params())
 
@@ -75,9 +74,7 @@ def start_import():
     run_analysis(info)
 
 
-
 def import_day_data_from_past(day_since_today):
-    logger = logging.getLogger('importer')
     logger.info(f"Importing HFP data {day_since_today} days from past.")
 
     import_date = datetime.now() - timedelta(day_since_today)
@@ -85,9 +82,9 @@ def import_day_data_from_past(day_since_today):
     info = import_data(import_date=import_date)
     return info
 
+
 def import_data(import_date):
     info = {}
-    logger = logging.getLogger('importer')
     container_client = get_azure_container_client()
     storage_blob_names = []
     import_date_obj = datetime.strptime(import_date, "%Y-%m-%d")
@@ -156,12 +153,10 @@ def import_data(import_date):
     return info
 
 
-
 def import_blob(blob_name):
     # TODO: Use connection pooling
     connection = psycopg.connect(get_conn_params())
     cur = connection.cursor()
-    logger = logging.getLogger('importer')
     logger.debug(f"Processing blob: {blob_name}")
     blob_start_time = time.time()
     cur.execute("UPDATE importer.blob SET import_started = %s, import_status = 'importing' WHERE name = %s", (datetime.utcnow(), blob_name,))
@@ -192,7 +187,6 @@ def import_blob(blob_name):
 
 
 def read_imported_data_to_db(cur, downloader):
-    logger = logging.getLogger('importer')
     compressed_content = downloader.content_as_bytes()
     reader = zstandard.ZstdDecompressor().stream_reader(compressed_content)
     bytes = reader.readall()
@@ -226,4 +220,5 @@ def read_imported_data_to_db(cur, downloader):
 
 def main(importer: func.TimerRequest, context: func.Context) -> None:
     """ Main function to be called by Azure Function """
-    start_import()
+    with CustomDbLogHandler('importer'):
+        start_import()
