@@ -7,14 +7,15 @@ from common.utils import env_with_default, comma_separated_floats_to_list, comma
 import common.constants as constants
 
 start_time = 0
+logger = logging.getLogger('importer')
+
 
 def get_time():
     return f'[{round(time.time() - start_time)}s]'
 
+
 def run_analysis():
     global start_time
-
-    logger = logging.getLogger('importer')
 
     stop_near_limit_m = env_with_default('STOP_NEAR_LIMIT_M', 50.0)
     min_observations_per_stop = env_with_default('MIN_OBSERVATIONS_PER_STOP', 10)

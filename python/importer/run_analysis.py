@@ -7,14 +7,15 @@ from common.utils import get_conn_params
 import common.constants as constants
 
 start_time = 0
+logger = logging.getLogger('importer')
+
 
 def get_time():
     return f'[{round(time.time() - start_time)}s]'
 
+
 def run_analysis(info = {}):
     global start_time
-
-    logger = logging.getLogger('importer')
 
     conn = psycopg2.connect(get_conn_params())
     try:
@@ -45,4 +46,3 @@ def run_analysis(info = {}):
     finally:
         conn.cursor().execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
         conn.close()
-
