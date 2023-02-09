@@ -1,14 +1,18 @@
 FROM mcr.microsoft.com/azure-functions/python:4-python3.10
 
+RUN apt-get update && apt-get install -y libpq5 && rm -rf /var/lib/apt/lists/*
+
 ENV TZ="Europe/Helsinki"
 ENV AzureWebJobsScriptRoot=/home/site/wwwroot
 ENV AzureFunctionsJobHost__Logging__Console__IsEnabled=true
 ENV PYTHONUNBUFFERED=1
 
-COPY ./python/requirements.txt /
-RUN pip install -r /requirements.txt
+# Directory where the project will be installed
+ENV WORK_DIR=${AzureWebJobsScriptRoot}
 
-COPY ./python/api /home/site/wwwroot/api/
-COPY ./python/common /home/site/wwwroot/common/
-COPY ./python/host.json home/site/wwwroot/host.json
-COPY ./python/requirements.txt home/site/wwwroot/requirements.txt
+COPY ./python/requirements.txt ${WORK_DIR}/requirements.txt
+RUN pip install -r ${WORK_DIR}/requirements.txt
+
+COPY ./python/api ${WORK_DIR}/api/
+COPY ./python/common ${WORK_DIR}/common/
+COPY ./python/host.json ${WORK_DIR}/host.json
