@@ -1,14 +1,18 @@
 FROM mcr.microsoft.com/azure-functions/python:4-python3.10
 
+RUN apt-get update && apt-get install -y libpq5 && rm -rf /var/lib/apt/lists/*
+
 ENV AzureWebJobsScriptRoot=/home/site/wwwroot
 ENV AzureFunctionsJobHost__Logging__Console__IsEnabled=true
 ENV TZ="Europe/Helsinki"
-
 ENV FUNCTIONS_SECRETS_PATH=/etc/secrets
 ENV AzureWebJobsSecretStorageType=Files
-RUN mkdir -p /etc/secrets/
-ADD local_host_secrets.json /etc/secrets/host.json
 
-COPY requirements.txt /
-RUN pip install -r /requirements.txt
+# Directory where the project will be installed
+ENV WORK_DIR=${AzureWebJobsScriptRoot}
 
+RUN mkdir -p ${FUNCTIONS_SECRETS_PATH}
+ADD local_host_secrets.json ${FUNCTIONS_SECRETS_PATH}/host.json
+
+COPY requirements.txt ${WORK_DIR}
+RUN pip install -r ${WORK_DIR}/requirements.txt

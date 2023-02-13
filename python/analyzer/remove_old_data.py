@@ -3,8 +3,11 @@ import logging
 from common.utils import get_conn_params
 import common.constants as constants
 
+
+logger = logging.getLogger('importer')
+
+
 def remove_old_data():
-    logger = logging.getLogger('importer')
 
     conn = psycopg2.connect(get_conn_params())
     try:
@@ -23,7 +26,7 @@ def remove_old_data():
                 cur.execute("SELECT pg_advisory_lock(%s)", (constants.IMPORTER_LOCK_ID,))
                 logger.info("Removing  observation data older than 3 weeks.")
                 # This data should cover more history than hfp_point, because removing data from here doesn't remove it currenlty from hfp_point, and that causes conflicts.
-                cur.execute("DELETE FROM hfp.observed_journey WHERE oday < now() - interval '3 week'") 
+                cur.execute("DELETE FROM hfp.observed_journey WHERE oday < now() - interval '3 week'")
                 logger.info(f"{cur.rowcount} rows deleted from hfp.observed_journey, and all related rows in hfp.hfp_point.")
                 cur.execute("DELETE FROM observation WHERE oday < now() - interval '3 week'")
                 logger.info(f"{cur.rowcount} rows deleted from observation.")
