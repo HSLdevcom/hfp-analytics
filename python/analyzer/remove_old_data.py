@@ -31,18 +31,14 @@ def remove_old_data():
                 cur.execute("DELETE FROM observation WHERE oday < now() - interval '3 week'")
                 logger.info(f"{cur.rowcount} rows deleted from observation.")
                 logger.info("Removing hfp_point data older than 2 weeks")
-                cur.execute("DELETE FROM hfp.hfp_point WHERE point_timestamp < now() - interval '2 week'")
-                logger.info(f"{cur.rowcount} rows deleted from hfp.hfp_point.")
+                cur.execute("SELECT drop_chunks('hfp.hfp_point', interval '2 week')")
+
                 logger.info(f"Removing old logs and blob info")
                 cur.execute("DELETE FROM importer.blob WHERE listed_at < now() - interval '4 week'")
                 logger.info(f"{cur.rowcount} rows deleted from importer.blob .")
                 cur.execute("DELETE FROM logs.importer_log WHERE log_timestamp < now() - interval '4 week'")
                 logger.info(f"{cur.rowcount} rows deleted from logs.importer_log.")
                 conn.commit()
-
-                # This removes old data from indices after deletion. Run every week instead of every night, if it takes too long and blocks the analysis and imports.
-                cur.execute("VACUUM FULL")
-
     except psycopg2.OperationalError as err:
         logger.error(f"Old data removal failed: {err}")
     finally:
