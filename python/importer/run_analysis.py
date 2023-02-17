@@ -39,8 +39,8 @@ def run_analysis(info = {}):
                 cur.execute('SELECT insert_assumed_monitored_vehicle_journeys(%s)', (min_tst,))
 
                 logger.info(f'Assumed monitored vehicle journeys updated.')
-
-                logger.info(f'{get_time()} Analysis complete.')
+                duration = time.time() - start_time
+                logger.info(f'{get_time()} Analysis complete in {int(duration)} seconds.')
     except Exception as e:
         logger.error(f"Analysis failed: {e}")
     finally:

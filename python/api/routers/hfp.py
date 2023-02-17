@@ -4,11 +4,15 @@ import io
 import gzip
 from typing import Optional
 from datetime import date, datetime
-
+import time
+import logging
+from common.logger_util import CustomDbLogHandler
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 
 from api.services.hfp import get_hfp_data
+
+logger = logging.getLogger('api')
 
 router = APIRouter(
     prefix="/hfp",
@@ -41,25 +45,30 @@ async def get_hfp_raw_data(
     """
     Get hfp data in raw csv format filtered by parameters.
     """
-    if not route_id and not (oper and veh):
-        raise HTTPException(400, detail="Either route_id or oper and veh -parameters are required!")
+    with CustomDbLogHandler('api'):
+        fetch_start_time = time.time()
+        logger.debug(f"Fetching raw hfp data. route_id: {route_id}, oper: {oper}, veh: {veh}, oday: {oday}")
+        if not route_id and not (oper and veh):
+            logger.error("Missing required parameters.")
+            raise HTTPException(400, detail="Either route_id or oper and veh -parameters are required!")
 
-    # Input stream for csv data from database, output stream for compressed data
-    input_stream = io.BytesIO()
-    output_stream = io.BytesIO()
+        # Input stream for csv data from database, output stream for compressed data
+        input_stream = io.BytesIO()
+        output_stream = io.BytesIO()
 
-    await get_hfp_data(route_id, oper, veh, oday, input_stream)
+        await get_hfp_data(route_id, oper, veh, oday, input_stream)
+        logger.debug("Hfp data received. Compressing.")
+        data = input_stream.getvalue()
 
-    data = input_stream.getvalue()
+        with gzip.GzipFile(fileobj=output_stream, mode='wb') as compressed_data_stream:
+            compressed_data_stream.write(data)
 
-    with gzip.GzipFile(fileobj=output_stream, mode='wb') as compressed_data_stream:
-        compressed_data_stream.write(data)
+        response = Response(content=output_stream.getvalue(),
+                            media_type="application/gzip")
 
-    response = Response(content=output_stream.getvalue(),
-                        media_type="application/gzip")
-
-    filename = f"hfp-export-{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv.gz"
-    # Send as an attachment
-    response.headers["Content-Disposition"] = f"attachment; filename={filename}"
-
-    return response
+        filename = f"hfp-export-{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv.gz"
+        # Send as an attachment
+        response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+        duration = time.time() - fetch_start_time
+        logger.debug(f"Hfp raw data fetch finished in {int(duration)} seconds. Exported file: {filename}")
+        return response

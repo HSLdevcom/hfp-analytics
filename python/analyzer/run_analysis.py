@@ -119,7 +119,8 @@ def run_analysis():
 
                 conn.commit()
 
-                logger.info(f'{get_time()} Analysis complete.')
+                duration = time.time() - start_time
+                logger.info(f'{get_time()} Analysis complete in {int(duration)} seconds.')
     except Exception as e:
         logger.error(f"Analysis failed: {e}")
     finally:
