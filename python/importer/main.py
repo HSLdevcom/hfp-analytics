@@ -16,7 +16,7 @@ import time
 
 # Import other event types as well when needed.
 event_types_to_import = ['VP', 'DOC', 'DOO']
-
+max_blobs_to_import = 200
 logger = logging.getLogger('importer')
 
 
@@ -145,13 +145,21 @@ def import_data(import_date):
 
     conn.close()
 
-    logger.debug(f"Running import for {blob_names}")
+    sorted_blob_names = sorted(blob_names, key=extract_timestamp)
 
-    for b in blob_names:
+    if len(sorted_blob_names) > max_blobs_to_import:
+        sorted_blob_names = sorted_blob_names[-max_blobs_to_import:]
+
+    logger.debug(f"Running import for {sorted_blob_names}. Importing {len(sorted_blob_names)} blobs.")
+
+    for b in sorted_blob_names:
         import_blob(b)
 
     return info
 
+
+def extract_timestamp(filename):
+    return filename.split('_')[0]
 
 def import_blob(blob_name):
     # TODO: Use connection pooling
