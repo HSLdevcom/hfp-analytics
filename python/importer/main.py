@@ -152,7 +152,10 @@ def import_data(import_date):
 
     logger.debug(f"Running import for {sorted_blob_names}. Importing {len(sorted_blob_names)} blobs.")
 
+    blobs_processed = 0
     for b in sorted_blob_names:
+        blobs_processed += 1
+        logger.debug(f"Processing blob: {b}. {blobs_processed}/{len(sorted_blob_names)}")
         import_blob(b)
 
     return info
@@ -165,7 +168,6 @@ def import_blob(blob_name):
     # TODO: Use connection pooling
     connection = psycopg.connect(get_conn_params())
     cur = connection.cursor()
-    logger.debug(f"Processing blob: {blob_name}")
     blob_start_time = time.time()
     cur.execute("UPDATE importer.blob SET import_started = %s, import_status = 'importing' WHERE name = %s", (datetime.utcnow(), blob_name,))
     connection.commit()
