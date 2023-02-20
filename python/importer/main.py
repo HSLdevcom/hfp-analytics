@@ -16,7 +16,7 @@ import time
 
 # Import other event types as well when needed.
 event_types_to_import = ['VP', 'DOC', 'DOO']
-max_blobs_to_import = 200
+max_blobs_to_import = 100
 logger = logging.getLogger('importer')
 
 
@@ -156,10 +156,7 @@ def import_data(import_date):
     for b in sorted_blob_names:
         blobs_processed += 1
         logger.debug(f"Processing blob: {b}. {blobs_processed}/{len(sorted_blob_names)}")
-        try:
-            import_blob(b)
-        except Exception as e:
-            logger.error(f"Error processing blob {b}: {e}")
+        import_blob(b)
 
     return info
 
@@ -199,7 +196,7 @@ def import_blob(blob_name):
     connection.close()
 
 
-def read_imported_data_to_db(cur, downloader, chunk_size=10000):
+def read_imported_data_to_db(cur, downloader):
     compressed_content = downloader.content_as_bytes()
     reader = zstandard.ZstdDecompressor().stream_reader(compressed_content)
     bytes = reader.readall()
@@ -213,33 +210,20 @@ def read_imported_data_to_db(cur, downloader, chunk_size=10000):
     writer = csv.DictWriter(import_io, fieldnames=selected_fields)
 
     calculator = 0
-    rows_processed = 0
     for old_row in hfp_dict_reader:
         calculator += 1
         new_row = {key: old_row[key] for key in selected_fields}
         if not any(old_row[key] is None for key in ["tst", "oper", "vehicleNumber"]):
             writer.writerow(new_row)
-            rows_processed += 1
         else:
             invalid_row_count += 1
 
-        if rows_processed >= chunk_size:
-            import_io.seek(0)
-            cur.copy_expert(sql="COPY hfp.view_as_original_hfp_event FROM STDIN WITH CSV",
-                            file=import_io)
-            import_io.seek(0)
-            import_io.truncate()
-            rows_processed = 0
-    
-    if rows_processed > 0:
-        import_io.seek(0)
-        cur.copy_expert(sql="COPY hfp.view_as_original_hfp_event FROM STDIN WITH CSV",
-                        file=import_io)
-        import_io.seek(0)
-        import_io.truncate()
-
     if invalid_row_count > 0:
         logger.error(f'Import invalid row count: {invalid_row_count}')
+
+    import_io.seek(0)
+    cur.copy_expert(sql="COPY hfp.view_as_original_hfp_event FROM STDIN WITH CSV",
+                    file=import_io)
 
     return calculator
 
