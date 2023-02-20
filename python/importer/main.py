@@ -150,6 +150,7 @@ def import_data(import_date):
     if len(sorted_blob_names) > max_blobs_to_import:
         sorted_blob_names = sorted_blob_names[-max_blobs_to_import:]
 
+    sorted_blob_names = sorted_blob_names[::-1]
     logger.debug(f"Running import for {sorted_blob_names}. Importing {len(sorted_blob_names)} blobs.")
 
     blobs_processed = 0
