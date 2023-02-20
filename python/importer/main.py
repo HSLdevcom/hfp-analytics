@@ -195,51 +195,55 @@ def import_blob(blob_name):
     cur.close()
     pool.putconn(connection)
 
-
 def read_imported_data_to_db(cur, downloader, chunk_size=10000):
     logger = logging.getLogger('importer')
     compressed_content = downloader.content_as_bytes()
     reader = zstandard.ZstdDecompressor().stream_reader(compressed_content)
     bytes = reader.readall()
     hfp_dict_reader = csv.DictReader(StringIO(bytes.decode('utf-8')))
-    import_io = StringIO()
 
     invalid_row_count = 0
     selected_fields = ["tst", "eventType", "receivedAt", "ownerOperatorId", "vehicleNumber", "mode",
                        "routeId", "dir", "oday", "start", "oper", "odo", "drst", "locationQualityMethod",
                         "stop", "longitude", "latitude"]
-    writer = csv.DictWriter(import_io, fieldnames=selected_fields)
-
     calculator = 0
     rows_processed = 0
+    chunk = []
     for old_row in hfp_dict_reader:
         calculator += 1
         new_row = {key: old_row[key] for key in selected_fields}
         if not any(old_row[key] is None for key in ["tst", "oper", "vehicleNumber"]):
-            writer.writerow(new_row)
+            chunk.append(new_row)
             rows_processed += 1
         else:
             invalid_row_count += 1
 
         if rows_processed >= chunk_size:
-            import_io.seek(0)
-            cur.copy_expert(sql="COPY hfp.view_as_original_hfp_event FROM STDIN WITH CSV",
-                            file=import_io)
-            import_io.seek(0)
-            import_io.truncate()
+            import_chunk(cur, chunk)
+            chunk = []
             rows_processed = 0
     
-    if rows_processed > 0:
-        import_io.seek(0)
-        cur.copy_expert(sql="COPY hfp.view_as_original_hfp_event FROM STDIN WITH CSV",
-                        file=import_io)
-        import_io.seek(0)
-        import_io.truncate()
+    if chunk:
+        import_chunk(cur, chunk)
 
     if invalid_row_count > 0:
         logger.error(f'Import invalid row count: {invalid_row_count}')
 
     return calculator
+
+def import_chunk(cur, chunk):
+    selected_fields = ["tst", "eventType", "receivedAt", "ownerOperatorId", "vehicleNumber", "mode",
+                    "routeId", "dir", "oday", "start", "oper", "odo", "drst", "locationQualityMethod",
+                    "stop", "longitude", "latitude"]
+    import_io = StringIO()
+    writer = csv.DictWriter(import_io, fieldnames=selected_fields)
+    for row in chunk:
+        writer.writerow(row)
+    import_io.seek(0)
+    cur.copy_expert(sql="COPY hfp.view_as_original_hfp_event FROM STDIN WITH CSV",
+                    file=import_io)
+    import_io.seek(0)
+    import_io.truncate()
 
 
 def main(importer: func.TimerRequest, context: func.Context) -> None:
