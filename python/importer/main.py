@@ -16,7 +16,7 @@ import time
 
 # Import other event types as well when needed.
 event_types_to_import = ['VP', 'DOC', 'DOO']
-max_blobs_to_import = 200
+max_blobs_to_import = 300
 logger = logging.getLogger('importer')
 
 
