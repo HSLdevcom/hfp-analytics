@@ -16,8 +16,8 @@ def main():
     try:
         with conn:
             with conn.cursor() as cur:
-                cur.execute('SELECT vmrf.* FROM view_median_report_fields AS vmrf \
-                             INNER JOIN stop_median AS sm ON (vmrf.stop_id = sm.stop_id)\
+                cur.execute('SELECT vmrf.* FROM stopcorr.view_median_report_fields AS vmrf \
+                             INNER JOIN stopcorr.stop_median AS sm ON (vmrf.stop_id = sm.stop_id)\
                              WHERE (sm.n_stop_known + sm.n_stop_guessed) >= %s\
                                AND sm.dist_to_jore_point_m >= %s\
                                 OR sm.dist_to_jore_point_m IS NULL',

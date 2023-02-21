@@ -35,7 +35,7 @@ async def get_hfp_data(route_id: Optional[str],
                     longitude,
                     odo,
                     drst
-                FROM hfp.view_as_original_hfp_event
+                FROM api.view_as_original_hfp_event
                 WHERE
                     (%(route_id)s IS NULL OR route_id = %(route_id)s) AND
                     (

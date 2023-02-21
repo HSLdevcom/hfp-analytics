@@ -64,10 +64,57 @@ CREATE TABLE hfp.assumed_monitored_vehicle_journey (
 	max_timestamp         timestamptz   NOT NULL,
 	modified_at           timestamptz   NULL        DEFAULT now(),
 
-	CONSTRAINT assumed_monitored_vehicle_journey_pkey PRIMARY KEY (vehicle_operator_id, vehicle_number, oday, route_id, direction_id, "start")
+	CONSTRAINT assumed_monitored_vehicle_journey_pkey PRIMARY KEY (vehicle_operator_id, vehicle_number, oday, route_id, direction_id, "start", observed_operator_id)
 );
 
 COMMENT ON TABLE hfp.assumed_monitored_vehicle_journey IS
 'Assumed monitored vehicle journey (or part of a journey) with the same vehicle
 including min and max timestamps. Assumed here means that this journey might
 be invalid (e.g. driver accidentally logged into a wrong departure)';
+
+
+CREATE FUNCTION hfp.insert_assumed_monitored_vehicle_journeys(min_tst timestamptz)
+RETURNS void
+VOLATILE
+LANGUAGE SQL
+AS $func$
+  INSERT INTO hfp.assumed_monitored_vehicle_journey (
+    vehicle_operator_id, vehicle_number, transport_mode, route_id, direction_id, oday, "start", observed_operator_id, min_timestamp, max_timestamp
+  )
+  SELECT
+    vehicle_operator_id,
+    vehicle_number,
+    transport_mode,
+    route_id,
+    direction_id,
+    oday,
+    "start",
+    observed_operator_id,
+    min(point_timestamp) AS min_timestamp,
+    max(point_timestamp) AS max_timestamp
+  -- (Add further aggregates such as N of hfp_point rows here, if required later.
+  -- Be careful about min_tst, because aggregate might not give all records, if there were ones before min_tst.
+  -- Perhaps fetch more points before tst, e.g. 6 hours, to get a bit historical data for aggregation, but update only the ones that overlaps with the tst limit.)
+  FROM hfp.hfp_point
+  WHERE point_timestamp >= min_tst - INTERVAL '1 minutes'
+  GROUP BY
+    vehicle_operator_id, vehicle_number, transport_mode, route_id, direction_id, oday, "start", observed_operator_id
+  -- Update existing rows in target table by (vehicle_id, journey_id),
+  -- update min and max timestamps as we might get new values for them
+  -- when importing hfp data to fill a gap or if more recent data is available
+  -- when running import.
+  ON CONFLICT ON CONSTRAINT assumed_monitored_vehicle_journey_pkey DO UPDATE SET
+    max_timestamp = greatest(assumed_monitored_vehicle_journey.max_timestamp, EXCLUDED.max_timestamp),
+    min_timestamp = least(assumed_monitored_vehicle_journey.min_timestamp, EXCLUDED.min_timestamp),
+    modified_at = now()
+  WHERE
+  -- Update only if values are actually changed, so that modified_at -field shows the correct time.
+    assumed_monitored_vehicle_journey.min_timestamp != EXCLUDED.min_timestamp OR
+  	assumed_monitored_vehicle_journey.max_timestamp != EXCLUDED.max_timestamp;
+$func$;
+
+COMMENT ON FUNCTION hfp.insert_assumed_monitored_vehicle_journeys IS
+'Populates hfp.assumed_monitored_vehicle_journey with min_timestamp
+and max_timestamp of a journey with a specific vehicle. If new hfp.hfp_point
+data has been imported, updates min and max timestamps of existing journey
+rows accordingly.';
