@@ -8,7 +8,7 @@ CREATE TABLE hfp.hfp_point (
 	hfp_event             text          NOT NULL,
 	received_at           timestamptz,
 	vehicle_operator_id   smallint      NOT NULL,
-	vehicle_number        smallint      NOT NULL,
+	vehicle_number        integer       NOT NULL,
 	transport_mode        text,
 	route_id              text,
 	direction_id          smallint,
@@ -53,7 +53,7 @@ COMMENT ON INDEX hfp.hfp_point_journey_idx IS 'Index for journey related columns
 
 CREATE TABLE hfp.assumed_monitored_vehicle_journey (
 	vehicle_operator_id   smallint      NOT NULL,
-	vehicle_number        smallint      NOT NULL,
+	vehicle_number        integer       NOT NULL,
 	transport_mode        text,
 	route_id              text,
 	direction_id          smallint,
