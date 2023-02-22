@@ -14,7 +14,7 @@ def main():
             with conn.cursor() as cur:
                 cur.execute(
                     "CREATE TEMPORARY TABLE _import ( \
-                    LIKE observation) \
+                    LIKE stopcorr.observation) \
                     ON COMMIT DROP")
                 cur.execute(
                     "COPY _import (\
@@ -31,7 +31,7 @@ def main():
                 )
                 cur.execute(
                     "WITH inserted AS ( \
-                    INSERT INTO observation ( \
+                    INSERT INTO stopcorr.observation ( \
                     tst,event,oper,veh,route,dir,oday,start,stop_id,stop_id_guessed,long,lat) \
                     SELECT tst,event,oper,veh,route,dir,oday,start,stop_id,stop_id_guessed,long,lat \
                     FROM _import \

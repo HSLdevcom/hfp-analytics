@@ -212,8 +212,11 @@ def read_imported_data_to_db(cur, downloader):
         logger.error(f'Import invalid row count: {invalid_row_count}')
 
     import_io.seek(0)
-    cur.copy_expert(sql="COPY hfp.view_as_original_hfp_event FROM STDIN WITH CSV",
+    cur.execute("DELETE FROM staging.hfp_raw")
+    cur.copy_expert(sql="COPY staging.hfp_raw FROM STDIN WITH CSV",
                     file=import_io)
+    cur.execute("CALL staging.import_and_normalize_hfp()")
+    cur.execute("DELETE FROM staging.hfp_raw")
 
     return calculator
 
