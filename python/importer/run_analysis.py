@@ -36,7 +36,7 @@ def run_analysis(info = {}):
 
                 min_tst = info.get('min_tst')
                 logger.info(f"Min timestamp for analysis is {min_tst}")
-                cur.execute('SELECT insert_assumed_monitored_vehicle_journeys(%s)', (min_tst,))
+                cur.execute('SELECT hfp.insert_assumed_monitored_vehicle_journeys(%s)', (min_tst,))
 
                 logger.info(f'Assumed monitored vehicle journeys updated.')
                 duration = time.time() - start_time

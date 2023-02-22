@@ -2,7 +2,7 @@
 -- Views for reporting.
 --
 
-CREATE VIEW view_median_report_fields AS (
+CREATE VIEW stopcorr.view_median_report_fields AS (
   WITH
     radii_info AS (
       SELECT
@@ -10,7 +10,7 @@ CREATE VIEW view_median_report_fields AS (
         string_agg(
           round((percentile*100)::numeric) || ' % ' || round(radius_m::numeric) || ' m',
            ', ' ORDER BY percentile) AS radii_info
-      FROM percentile_radii
+      FROM stopcorr.percentile_radii
       GROUP BY stop_id
     )
   SELECT
@@ -32,22 +32,22 @@ CREATE VIEW view_median_report_fields AS (
     'https://reittiloki.hsl.fi/?date=' ||
       to_char(coalesce(js.date_imported, CURRENT_DATE), 'YYYY-MM-DD') ||
       '&stop=' || sm.stop_id AS transitlog_url
-  FROM stop_median AS sm
+  FROM stopcorr.stop_median AS sm
   INNER JOIN radii_info AS ri
     ON (sm.stop_id = ri.stop_id)
-  LEFT JOIN jore_stop AS js
+  LEFT JOIN jore.jore_stop AS js
     ON (sm.stop_id = js.stop_id)
 );
 
-COMMENT ON VIEW view_median_report_fields IS
+COMMENT ON VIEW stopcorr.view_median_report_fields IS
 'Text field contents by "stop_median"."stop_id" for report slides.';
 
 
-CREATE VIEW view_report_viewport AS (
+CREATE VIEW stopcorr.view_report_viewport AS (
   WITH
     max_percentile_radii AS (
       SELECT stop_id, max(radius_m) AS radius_m
-      FROM percentile_radii
+      FROM stopcorr.percentile_radii
       GROUP BY stop_id
     )
   SELECT
@@ -60,23 +60,23 @@ CREATE VIEW view_report_viewport AS (
         ),
       4326)
     ) AS geom
-  FROM stop_median AS sm
+  FROM stopcorr.stop_median AS sm
   INNER JOIN max_percentile_radii AS mpr
     ON (sm.stop_id = mpr.stop_id)
 );
 
-COMMENT ON VIEW view_report_viewport IS
+COMMENT ON VIEW stopcorr.view_report_viewport IS
 'Viewports for reporting stop medians, containing the median and Jore stop point
 and the highest available percentile of observations around the stop.';
 
-CREATE VIEW view_median_to_jore_lines AS (
+CREATE VIEW stopcorr.view_median_to_jore_lines AS (
   SELECT
     sm.stop_id,
     ST_MakeLine(sm.geom, js.geom) AS geom
-  FROM stop_median AS sm
-  INNER JOIN jore_stop AS js
+  FROM stopcorr.stop_median AS sm
+  INNER JOIN jore.jore_stop AS js
     ON (sm.stop_id = js.stop_id)
 );
 
-COMMENT ON VIEW view_median_to_jore_lines IS
+COMMENT ON VIEW stopcorr.view_median_to_jore_lines IS
 'LINESTRING geometries from "stop_median" to "jore_stop" by stop_id.';

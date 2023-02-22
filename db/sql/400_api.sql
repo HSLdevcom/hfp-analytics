@@ -4,6 +4,31 @@
 
 CREATE SCHEMA api;
 
+
+CREATE OR REPLACE VIEW api.view_as_original_hfp_event AS (
+  SELECT
+    point_timestamp AS tst,
+    hfp_event AS event_type,
+    received_at,
+    vehicle_operator_id,
+    vehicle_number,
+    transport_mode,
+    route_id,
+    direction_id,
+    oday,
+    start,
+    observed_operator_id,
+    odo,
+    drst,
+    loc,
+    stop,
+    ST_X(ST_Transform(geom, 4326)) AS longitude,
+    ST_Y(ST_Transform(geom, 4326)) AS latitude
+  FROM hfp.hfp_point
+);
+COMMENT ON VIEW api.view_as_original_hfp_event IS 'View HFP points named like in original HFP data format.';
+
+
 CREATE VIEW api.view_jore_stop_4326 AS (
   WITH selected_cols AS (
     SELECT
@@ -15,7 +40,7 @@ CREATE VIEW api.view_jore_stop_4326 AS (
       route_dirs_via_stop,
       date_imported,
       ST_Transform(geom, 4326) as geometry
-     FROM public.jore_stop
+     FROM jore.jore_stop
   )
   SELECT cast(ST_AsGeoJSON(sc.*) AS json)
   FROM selected_cols AS sc
@@ -44,8 +69,8 @@ CREATE VIEW api.view_stop_median_4326 AS (
         )
       ) as percentile_radii_list,
       ST_Transform(sm.geom, 4326) as geometry
-     FROM public.stop_median sm
-     LEFT JOIN percentile_radii pr ON sm.stop_id = pr.stop_id
+     FROM stopcorr.stop_median sm
+     LEFT JOIN stopcorr.percentile_radii pr ON sm.stop_id = pr.stop_id
      GROUP BY sm.stop_id
   )
   SELECT cast(ST_AsGeoJSON(sc.*) AS json)
@@ -63,7 +88,7 @@ CREATE VIEW api.view_observation_4326 AS (
       dist_to_jore_point_m,
       dist_to_median_point_m,
       ST_Transform(geom, 4326) as geometry
-     FROM public.observation
+     FROM stopcorr.observation
   )
   SELECT cast(ST_AsGeoJSON(sc.*) AS json)
   FROM selected_cols AS sc
@@ -81,9 +106,9 @@ RETURNS setof json as $$
       found_ob_stops.dist_to_jore_point_m,
       found_ob_stops.dist_to_median_point_m,
       ST_Transform(found_ob_stops.geom, 4326) as geometry
-    FROM jore_stop js
+    FROM jore.jore_stop js
     INNER JOIN LATERAL (
-      SELECT * FROM observation AS ob
+      SELECT * FROM stopcorr.observation AS ob
       WHERE ob.stop_id IS NULL AND
       ST_DWithin(ob.geom, js.geom, $2)
     ) as found_ob_stops
@@ -110,22 +135,19 @@ COMMENT ON FUNCTION api.get_percentile_circles_with_stop_id IS
 
 CREATE VIEW api.view_assumed_monitored_vehicle_journey AS (
   SELECT
-    oj.route_id,
-    oj.direction_id,
-    oj.oday,
+    route_id,
+    direction_id,
+    oday,
     -- Format: hhmmss, can implement 30h-transformed format later if requested.
-    to_char(oj.start, 'HH24:MI:SS') AS start_24h,
+    to_char("start", 'HH24:MI:SS') AS start_24h,
     -- Using a clearer name for Jubumera context.
-    oj.observed_operator_id AS journey_operator_id,
-    ve.vehicle_operator_id,
-    ve.vehicle_number,
-    amvj.min_timestamp,
-    amvj.max_timestamp,
-    amvj.modified_at
-  FROM
-    hfp.assumed_monitored_vehicle_journey AS amvj
-    INNER JOIN hfp.observed_journey AS oj ON (amvj.journey_id = oj.journey_id)
-    INNER JOIN hfp.vehicle AS ve ON (amvj.vehicle_id = ve.vehicle_id)
+    observed_operator_id AS journey_operator_id,
+    vehicle_operator_id,
+    vehicle_number,
+    min_timestamp,
+    max_timestamp,
+    modified_at
+  FROM hfp.assumed_monitored_vehicle_journey
 );
 COMMENT ON VIEW api.view_assumed_monitored_vehicle_journey IS
 'Returns all monitored vehicle journeys.';

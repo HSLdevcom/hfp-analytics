@@ -58,18 +58,18 @@ def run_analysis():
                 conn.commit()
 
                 cur.execute(
-                    'UPDATE observation \
+                    'UPDATE stopcorr.observation \
                     SET stop_id_guessed = false \
                     WHERE stop_id IS NOT NULL'
                 )
 
-                cur.execute('SELECT * FROM guess_missing_stop_ids(%s)',
+                cur.execute('SELECT * FROM stopcorr.guess_missing_stop_ids(%s)',
                             (stop_near_limit_m, ))
                 logger.info(f'{get_time()} {cur.fetchone()[0]} observations updated with guessed stop_id')
 
                 conn.commit()
 
-                cur.execute('SELECT stop_id FROM observed_stop_not_in_jore_stop')
+                cur.execute('SELECT stop_id FROM stopcorr.observed_stop_not_in_jore_stop')
                 res = [str(x[0]) for x in cur.fetchall()]
                 n_stops = len(res)
                 if n_stops > 10:
@@ -78,33 +78,33 @@ def run_analysis():
                     stops_str = ', '.join(res)
                     logger.info(f'stop_id values in "observation" not found in "jore_stop": {stops_str}')
 
-                cur.execute('SELECT * FROM calculate_jore_distances()')
+                cur.execute('SELECT * FROM stopcorr.calculate_jore_distances()')
                 logger.info(f'{get_time()} {cur.fetchone()[0]} observations updated with dist_to_jore_point_m')
 
                 conn.commit()
 
-                cur.execute('WITH deleted AS (DELETE FROM stop_median RETURNING 1)\
+                cur.execute('WITH deleted AS (DELETE FROM stopcorr.stop_median RETURNING 1)\
                             SELECT count(*) FROM deleted')
                 logger.info(f'{get_time()} {cur.fetchone()[0]} rows deleted from "stop_median"')
 
-                cur.execute('SELECT * FROM calculate_medians(%s, %s)',
+                cur.execute('SELECT * FROM stopcorr.calculate_medians(%s, %s)',
                             (min_observations_per_stop, max_null_stop_dist_m))
                 logger.info(f'{get_time()} {cur.fetchone()[0]} rows inserted into "stop_median"')
 
                 conn.commit()
 
-                cur.execute('SELECT * FROM calculate_median_distances()')
+                cur.execute('SELECT * FROM stopcorr.calculate_median_distances()')
                 logger.info(f'{get_time()} {cur.fetchone()[0]} observations updated with dist_to_median_point_m')
 
                 conn.commit()
 
-                cur.execute('SELECT * FROM calculate_percentile_radii(%s)',
+                cur.execute('SELECT * FROM stopcorr.calculate_percentile_radii(%s)',
                             (radius_percentiles, ))
                 logger.info(f'{get_time()} {cur.fetchone()[0]} "percentile_radii" created using percentiles {radius_percentiles_str}')
 
                 conn.commit()
 
-                cur.execute('CALL classify_medians(%s, %s, %s, %s, %s, %s, %s, %s)',
+                cur.execute('CALL stopcorr.classify_medians(%s, %s, %s, %s, %s, %s, %s, %s)',
                             (min_radius_percentiles_to_sum,
                              default_min_radius_m,
                              manual_acceptance_min_radius_m,
@@ -114,7 +114,7 @@ def run_analysis():
                              stop_guessed_percentage,
                              terminal_ids)
                             )
-                cur.execute('SELECT count(*) FROM stop_median WHERE result_class IS NOT NULL')
+                cur.execute('SELECT count(*) FROM stopcorr.stop_median WHERE result_class IS NOT NULL')
                 logger.info(f'{get_time()} {cur.fetchone()[0]} "stop_median" updated with "result_class", "recommended_min_radius_m" and "manual_acceptance_needed"')
 
                 conn.commit()
