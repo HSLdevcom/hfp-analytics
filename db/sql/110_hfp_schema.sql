@@ -45,7 +45,7 @@ COMMENT ON COLUMN hfp.hfp_point.stop IS 'Id of the stop that the HFP point was r
 COMMENT ON COLUMN hfp.hfp_point.geom IS 'Vehicle position point in ETRS-TM35 coordinates.';
 
 
-SELECT create_hypertable('hfp.hfp_point', 'point_timestamp', chunk_time_interval => INTERVAL '1 day');
+SELECT create_hypertable('hfp.hfp_point', 'point_timestamp', chunk_time_interval => INTERVAL '6 hours');
 
 CREATE INDEX hfp_point_journey_idx ON hfp.hfp_point (oday, route_id, direction_id, "start", point_timestamp DESC);
 COMMENT ON INDEX hfp.hfp_point_journey_idx IS 'Index for journey related columns.';
@@ -54,12 +54,12 @@ COMMENT ON INDEX hfp.hfp_point_journey_idx IS 'Index for journey related columns
 CREATE TABLE hfp.assumed_monitored_vehicle_journey (
 	vehicle_operator_id   smallint      NOT NULL,
 	vehicle_number        integer       NOT NULL,
-	transport_mode        text,
-	route_id              text,
-	direction_id          smallint,
-	oday                  date,
-	"start"               interval,
-	observed_operator_id  smallint,
+	transport_mode        text,         NOT NULL,
+	route_id              text,         NOT NULL,
+	direction_id          smallint,     NOT NULL,
+	oday                  date,         NOT NULL,
+	"start"               interval,     NOT NULL,
+	observed_operator_id  smallint,     NOT NULL,
 	min_timestamp         timestamptz   NOT NULL,
 	max_timestamp         timestamptz   NOT NULL,
 	modified_at           timestamptz   NULL        DEFAULT now(),
