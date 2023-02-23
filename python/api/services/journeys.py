@@ -14,8 +14,9 @@ async def get_journeys_by_oday(oday: date) -> list:
                 SELECT
                     route_id,
                     direction_id,
-                    "start",
-                    operator_id,
+                    oday,
+                    start_24h,
+                    journey_operator_id,
                     vehicle_operator_id,
                     vehicle_number,
                     min_timestamp,
@@ -26,25 +27,25 @@ async def get_journeys_by_oday(oday: date) -> list:
                 """,
                 {"oday": oday}
             )
-        rows = await cur.fetchall()
+            rows = await cur.fetchall()
 
-        data = [
-            {
-                "route_id": r[0],
-                "direction_id": r[1],
-                "oday": r[2],
-                "start_24h": str(r[3]),
-                "operator_id": r[4],
-                "vehicle_operator_id": r[5],
-                "vehicle_number": r[6],
-                "min_timestamp": r[7],
-                "max_timestamp": r[8],
-                "modified_at": r[9].isoformat(timespec="seconds")
-            }
-            for r in rows
-        ]
+            data = [
+                {
+                    "route_id": r[0],
+                    "direction_id": r[1],
+                    "oday": r[2],
+                    "start_24h": r[3],
+                    "operator_id": r[4],
+                    "vehicle_operator_id": r[5],
+                    "vehicle_number": r[6],
+                    "min_timestamp": r[7],
+                    "max_timestamp": r[8],
+                    "modified_at": r[9].isoformat(timespec="seconds")
+                }
+                for r in rows
+            ]
 
-        return data
+            return data
 
 
 async def get_last_modified_of_oday(oday: date):
@@ -55,5 +56,5 @@ async def get_last_modified_of_oday(oday: date):
                 "SELECT MAX(modified_at) FROM api.view_assumed_monitored_vehicle_journey WHERE oday = %(oday)s",
                 {"oday": oday}
             )
-        rows = await cur.fetchone()
-        return rows[0] if rows else None
+            rows = await cur.fetchone()
+            return rows[0] if rows else None
