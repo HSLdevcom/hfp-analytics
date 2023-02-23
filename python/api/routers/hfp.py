@@ -5,10 +5,16 @@ import gzip
 from typing import Optional
 from datetime import datetime, timezone, timedelta
 
+import time
+import logging
+from common.logger_util import CustomDbLogHandler
+
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 
 from api.services.hfp import get_hfp_data
+
+logger = logging.getLogger('api')
 
 router = APIRouter(
     prefix="/hfp",
@@ -54,34 +60,42 @@ async def get_hfp_raw_data(
     """
     Get hfp data in raw csv format filtered by parameters.
     """
-    if not route_id and not (oper and veh):
-        raise HTTPException(400, detail="Either route_id or oper and veh -parameters are required!")
+    with CustomDbLogHandler('api'):
+        fetch_start_time = time.time()
+        logger.debug(f"Fetching raw hfp data. route_id: {route_id}, oper: {oper}, veh: {veh}, from_tst: {from_tst}, "
+                     f"to_tst: {to_tst}")
 
-    # Input stream for csv data from database, output stream for compressed data
-    input_stream = io.BytesIO()
-    output_stream = io.BytesIO()
+        if not route_id and not (oper and veh):
+            logger.error("Missing required parameters.")
+            raise HTTPException(400, detail="Either route_id or oper and veh -parameters are required!")
 
-    # Set to_tst default 24 hours
-    if not to_tst:
-        to_tst = from_tst + timedelta(hours=24)
+        # Input stream for csv data from database, output stream for compressed data
+        input_stream = io.BytesIO()
+        output_stream = io.BytesIO()
 
-    # Set timestamp information
-    tzone = timezone(timedelta(hours=tz))
-    from_tst = from_tst.replace(tzinfo=tzone)
-    to_tst = to_tst.replace(tzinfo=tzone)
+        # Set to_tst default 24 hours
+        if not to_tst:
+            to_tst = from_tst + timedelta(hours=24)
 
-    await get_hfp_data(route_id, oper, veh, from_tst, to_tst, input_stream)
+        # Set timestamp information
+        tzone = timezone(timedelta(hours=tz))
+        from_tst = from_tst.replace(tzinfo=tzone)
+        to_tst = to_tst.replace(tzinfo=tzone)
 
-    data = input_stream.getvalue()
+        await get_hfp_data(route_id, oper, veh, from_tst, to_tst, input_stream)
 
-    with gzip.GzipFile(fileobj=output_stream, mode='wb') as compressed_data_stream:
-        compressed_data_stream.write(data)
+        logger.debug("Hfp data received. Compressing.")
+        data = input_stream.getvalue()
 
-    response = Response(content=output_stream.getvalue(),
-                        media_type="application/gzip")
+        with gzip.GzipFile(fileobj=output_stream, mode='wb') as compressed_data_stream:
+            compressed_data_stream.write(data)
 
-    filename = f"hfp-export-{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv.gz"
-    # Send as an attachment
-    response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+        response = Response(content=output_stream.getvalue(),
+                            media_type="application/gzip")
 
-    return response
+        filename = f"hfp-export-{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv.gz"
+        # Send as an attachment
+        response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+        duration = time.time() - fetch_start_time
+        logger.debug(f"Hfp raw data fetch finished in {int(duration)} seconds. Exported file: {filename}")
+        return response

@@ -36,6 +36,8 @@ def remove_old_data():
                 logger.info(f"{cur.rowcount} rows deleted from importer.blob .")
                 cur.execute("DELETE FROM logs.importer_log WHERE log_timestamp < now() - interval '4 week'")
                 logger.info(f"{cur.rowcount} rows deleted from logs.importer_log.")
+                cur.execute("DELETE FROM logs.api_log WHERE log_timestamp < now() - interval '4 week'")
+                logger.info(f"{cur.rowcount} rows deleted from logs.api_log.")
 
     except psycopg2.OperationalError as err:
         logger.error(f"Old data removal failed: {err}")
