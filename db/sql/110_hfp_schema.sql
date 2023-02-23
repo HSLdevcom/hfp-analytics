@@ -96,7 +96,13 @@ AS $func$
   -- Be careful about min_tst, because aggregate might not give all records, if there were ones before min_tst.
   -- Perhaps fetch more points before tst, e.g. 6 hours, to get a bit historical data for aggregation, but update only the ones that overlaps with the tst limit.)
   FROM hfp.hfp_point
-  WHERE point_timestamp >= min_tst - INTERVAL '1 minutes'
+  WHERE point_timestamp >= min_tst - INTERVAL '1 minutes' AND
+    transport_mode IS NOT NULL AND
+    route_id IS NOT NULL AND
+    direction_id IS NOT NULL AND
+    oday IS NOT NULL AND
+    "start" IS NOT NULL AND
+    observed_operator_id IS NOT NULL
   GROUP BY
     vehicle_operator_id, vehicle_number, transport_mode, route_id, direction_id, oday, "start", observed_operator_id
   -- Update existing rows in target table by (vehicle_id, journey_id),
