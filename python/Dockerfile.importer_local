@@ -14,5 +14,5 @@ ENV WORK_DIR=${AzureWebJobsScriptRoot}
 RUN mkdir -p ${FUNCTIONS_SECRETS_PATH}
 ADD local_host_secrets.json ${FUNCTIONS_SECRETS_PATH}/host.json
 
-COPY requirements.txt ${WORK_DIR}
+COPY requirements.txt ${WORK_DIR}/
 RUN pip install -r ${WORK_DIR}/requirements.txt
