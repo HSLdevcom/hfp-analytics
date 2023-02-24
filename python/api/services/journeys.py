@@ -19,6 +19,7 @@ async def get_journeys_by_oday(oday: date) -> list:
                     journey_operator_id,
                     vehicle_operator_id,
                     vehicle_number,
+                    transport_mode,
                     min_timestamp,
                     max_timestamp,
                     modified_at
@@ -38,9 +39,10 @@ async def get_journeys_by_oday(oday: date) -> list:
                     "operator_id": r[4],
                     "vehicle_operator_id": r[5],
                     "vehicle_number": r[6],
-                    "min_timestamp": r[7],
-                    "max_timestamp": r[8],
-                    "modified_at": r[9].isoformat(timespec="seconds")
+                    "transport_mode": r[7],
+                    "min_timestamp": r[8],
+                    "max_timestamp": r[9],
+                    "modified_at": r[10].isoformat(timespec="seconds")
                 }
                 for r in rows
             ]
