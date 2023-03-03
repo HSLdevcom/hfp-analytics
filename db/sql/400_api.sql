@@ -142,6 +142,7 @@ CREATE VIEW api.view_assumed_monitored_vehicle_journey AS (
     to_char("start", 'HH24:MI:SS') AS start_24h,
     -- Using a clearer name for Jubumera context.
     observed_operator_id AS journey_operator_id,
+    transport_mode,
     vehicle_operator_id,
     vehicle_number,
     min_timestamp,

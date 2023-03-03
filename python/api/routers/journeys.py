@@ -3,10 +3,10 @@
 
 from datetime import date
 from fastapi import APIRouter, Query
-import psycopg2 as psycopg
 import logging
 from common.logger_util import CustomDbLogHandler
-from common.utils import get_conn_params
+
+from api.services.journeys import get_last_modified_of_oday, get_journeys_by_oday
 
 logger = logging.getLogger('api')
 
@@ -24,31 +24,13 @@ async def get_monitored_vehicle_journeys(operating_day: date = Query(..., descri
     a journey where bus driver signed in to a wrong departure.
     """
     logger.debug(f'Monitored vehicle journeys. Operating_day: {operating_day}')
-    with psycopg.connect(get_conn_params()) as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT * FROM api.view_assumed_monitored_vehicle_journey where oday = %(operating_day)s", {'operating_day': operating_day})
-            vehicle_journeys = cur.fetchall()
 
-            cur.execute("SELECT MAX(modified_at) FROM api.view_assumed_monitored_vehicle_journey where oday = %(operating_day)s", {'operating_day': operating_day})
-            last_updated = cur.fetchone()[0]
+    vehicle_journeys = await get_journeys_by_oday(operating_day)
+    last_updated = await get_last_modified_of_oday(operating_day)
 
-            results = []
-            for vehicle_journey in vehicle_journeys:
-                results.append({
-                    "route_id": vehicle_journey[0],
-                    "direction_id": vehicle_journey[1],
-                    "oday": vehicle_journey[2],
-                    "start_24h": str(vehicle_journey[3]),
-                    "operator_id": vehicle_journey[4],
-                    "vehicle_operator_id": vehicle_journey[5],
-                    "vehicle_number": vehicle_journey[6],
-                    "min_timestamp": vehicle_journey[7],
-                    "max_timestamp": vehicle_journey[8],
-                    "modified_at": vehicle_journey[9].isoformat(timespec="seconds")
-                })
-            return {
-                "data": {
-                    "monitoredVehicleJourneys": results
-                },
-                "last_updated": last_updated.isoformat(timespec="seconds")
-            }
+    return {
+        "data": {
+            "monitoredVehicleJourneys": vehicle_journeys
+        },
+        "last_updated": last_updated.isoformat(timespec="seconds") if last_updated else None
+    }
