@@ -47,9 +47,12 @@ COMMENT ON COLUMN hfp.hfp_point.geom IS 'Vehicle position point in ETRS-TM35 coo
 
 SELECT create_hypertable('hfp.hfp_point', 'point_timestamp', chunk_time_interval => INTERVAL '6 hours');
 
-CREATE INDEX hfp_point_journey_idx ON hfp.hfp_point (oday, route_id, direction_id, "start", point_timestamp DESC);
-COMMENT ON INDEX hfp.hfp_point_journey_idx IS 'Index for journey related columns.';
-
+CREATE INDEX hfp_point_point_timestamp_idx ON hfp.hfp_point (point_timestamp DESC); -- This could be covered by other indices?
+COMMENT ON INDEX hfp.hfp_point_point_timestamp_idx IS 'Index timestamp filtering.';
+CREATE INDEX hfp_point_route_vehicle_idx ON hfp.hfp_point (route_id, vehicle_operator_id, vehicle_number, point_timestamp DESC);
+COMMENT ON INDEX hfp.hfp_point_route_vehicle_idx IS 'Index for hfp raw data queries.';
+CREATE INDEX hfp_point_event_idx ON hfp.hfp_point (hfp_event, point_timestamp DESC);
+COMMENT ON INDEX hfp.hfp_point_event_idx IS 'Index for hfp event filter (used at least by the stop analysis).';
 
 CREATE TABLE hfp.assumed_monitored_vehicle_journey (
 	vehicle_operator_id   smallint      NOT NULL,
