@@ -11,7 +11,6 @@ import psycopg2 as psycopg
 from common.logger_util import CustomDbLogHandler
 from common.utils import get_conn_params
 import common.constants as constants
-from .run_analysis import run_analysis
 import time
 
 # Import other event types as well when needed.
@@ -58,7 +57,6 @@ def start_import():
 
     try:
         info = import_day_data_from_past(13)
-        logger.info("Importing done - next up: analysis.")
 
     except Exception as e:
         logger.error(f'Error when running importer: {e}')
@@ -69,9 +67,7 @@ def start_import():
             conn.commit()
         conn.close()
 
-    logger.info("Importer done. Starting minianalysis")
-
-    run_analysis(info)
+    logger.info("Importer done.")
 
 
 def import_day_data_from_past(day_since_today):
