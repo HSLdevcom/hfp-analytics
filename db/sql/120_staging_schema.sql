@@ -15,6 +15,7 @@ CREATE TABLE staging.hfp_raw (
 	"start"               interval,
 	observed_operator_id  smallint,
 	odo                   real,
+  spd                   real,
 	drst                  bool,
 	loc                   text,
 	stop                  integer,
@@ -40,6 +41,7 @@ AS $procedure$
     hfp_event,
     received_at,
     odo,
+    spd,
     drst,
     loc,
     stop,
@@ -58,11 +60,13 @@ AS $procedure$
     event_type,
     received_at,
     odo,
+    spd,
     drst,
     loc,
     stop,
     ST_Transform( ST_SetSRID( ST_MakePoint(longitude, latitude), 4326), 3067)
   FROM staging.hfp_raw
+  -- Ordering is here for a reason. It makes data clustered inside a blob so querying by route / vehicle is more efficient.
   ORDER BY route_id, vehicle_number
   ON CONFLICT DO NOTHING;
 

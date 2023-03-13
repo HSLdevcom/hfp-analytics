@@ -19,6 +19,7 @@ CREATE OR REPLACE VIEW api.view_as_original_hfp_event AS (
     start,
     observed_operator_id,
     odo,
+    spd,
     drst,
     loc,
     stop,

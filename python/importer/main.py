@@ -179,8 +179,8 @@ def read_imported_data_to_db(cur, downloader):
 
     invalid_row_count = 0
     selected_fields = ["tst", "eventType", "receivedAt", "ownerOperatorId", "vehicleNumber", "mode",
-                       "routeId", "dir", "oday", "start", "oper", "odo", "drst", "locationQualityMethod",
-                        "stop", "longitude", "latitude"]
+                       "routeId", "dir", "oday", "start", "oper", "odo", "spd", "drst", "locationQualityMethod",
+                       "stop", "longitude", "latitude"]
     writer = csv.DictWriter(import_io, fieldnames=selected_fields)
 
     calculator = 0

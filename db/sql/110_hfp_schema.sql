@@ -16,6 +16,7 @@ CREATE TABLE hfp.hfp_point (
 	"start"               interval,
 	observed_operator_id  smallint,
 	odo                   real,
+	spd										real,
 	drst                  bool,
 	loc                   text,
 	stop                  integer,
@@ -39,6 +40,7 @@ N.B. HFP uses 24h clock which can break journeys originally planned beyond >24:0
 Interval type is used for future support of such start times.';
 COMMENT ON COLUMN hfp.hfp_point.observed_operator_id IS 'Id of the operator the journey was assigned to. `oper` in HFP payload.';
 COMMENT ON COLUMN hfp.hfp_point.odo IS 'Odometer value of the vehicle.';
+COMMENT ON COLUMN hfp.hfp_point.spd IS 'Speed of the vehicle (m/s).';
 COMMENT ON COLUMN hfp.hfp_point.drst IS 'Door status of the vehicle. TRUE if any door is open, FALSE if all closed, NULL if unknown.';
 COMMENT ON COLUMN hfp.hfp_point.loc IS 'Source of the vehicle position information. Ideally GPS.';
 COMMENT ON COLUMN hfp.hfp_point.stop IS 'Id of the stop that the HFP point was related to.';

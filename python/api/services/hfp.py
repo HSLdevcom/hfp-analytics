@@ -35,6 +35,7 @@ async def get_hfp_data(route_id: Optional[str],
                     latitude,
                     longitude,
                     odo,
+                    spd,
                     drst
                 FROM api.view_as_original_hfp_event
                 WHERE
