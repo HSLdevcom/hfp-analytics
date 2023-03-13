@@ -7,7 +7,7 @@ CREATE TABLE staging.hfp_raw (
 	event_type            text          NOT NULL,
 	received_at           timestamptz,
 	vehicle_operator_id   smallint      NOT NULL,
-	vehicle_number        smallint      NOT NULL,
+	vehicle_number        integer       NOT NULL,
 	transport_mode        text,
 	route_id              text,
 	direction_id          smallint,
@@ -63,6 +63,7 @@ AS $procedure$
     stop,
     ST_Transform( ST_SetSRID( ST_MakePoint(longitude, latitude), 4326), 3067)
   FROM staging.hfp_raw
+  ORDER BY route_id, vehicle_number
   ON CONFLICT DO NOTHING;
 
   INSERT INTO hfp.assumed_monitored_vehicle_journey (
