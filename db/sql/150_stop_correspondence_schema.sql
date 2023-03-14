@@ -22,7 +22,6 @@ CREATE TABLE stopcorr.observation (
   dist_to_jore_point_m    real,
   dist_to_median_point_m  real,
   geom                    geometry(POINT, 3067),
-
   PRIMARY KEY (tst, event, oper, veh)
 );
 
@@ -129,7 +128,6 @@ CREATE TABLE stopcorr.percentile_radii (
   percentile real NOT NULL CHECK (percentile BETWEEN 0.0 AND 1.0),
   radius_m real,
   n_observations bigint,
-
   PRIMARY KEY (stop_id, percentile)
 );
 

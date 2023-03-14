@@ -4,24 +4,23 @@ COMMENT ON SCHEMA hfp IS 'Models transit vehicle state, position and event data 
 
 
 CREATE TABLE hfp.hfp_point (
-	point_timestamp       timestamptz   NOT NULL,
-	hfp_event             text          NOT NULL,
-	received_at           timestamptz,
-	vehicle_operator_id   smallint      NOT NULL,
-	vehicle_number        integer       NOT NULL,
-	transport_mode        text,
-	route_id              text,
-	direction_id          smallint,
-	oday                  date,
-	"start"               interval,
-	observed_operator_id  smallint,
-	odo                   real,
-	spd										real,
-	drst                  bool,
-	loc                   text,
-	stop                  integer,
-	geom                  geometry(POINT, 3067),
-
+  point_timestamp       timestamptz   NOT NULL,
+  hfp_event             text          NOT NULL,
+  received_at           timestamptz,
+  vehicle_operator_id   smallint      NOT NULL,
+  vehicle_number        integer       NOT NULL,
+  transport_mode        text,
+  route_id              text,
+  direction_id          smallint,
+  oday                  date,
+  "start"               interval,
+  observed_operator_id  smallint,
+  odo                   real,
+  spd                   real,
+  drst                  bool,
+  loc                   text,
+  stop                  integer,
+  geom                  geometry(POINT, 3067),
   CONSTRAINT hfp_point_pkey PRIMARY KEY (point_timestamp, vehicle_operator_id, vehicle_number, hfp_event)
 );
 COMMENT ON TABLE hfp.hfp_point IS 'State of a transit vehicle at a time instant, based on HFP.';
@@ -57,19 +56,18 @@ CREATE INDEX hfp_point_event_idx ON hfp.hfp_point (hfp_event, point_timestamp DE
 COMMENT ON INDEX hfp.hfp_point_event_idx IS 'Index for hfp event filter (used at least by the stop analysis).';
 
 CREATE TABLE hfp.assumed_monitored_vehicle_journey (
-	vehicle_operator_id   smallint      NOT NULL,
-	vehicle_number        integer       NOT NULL,
-	transport_mode        text,         NOT NULL,
-	route_id              text,         NOT NULL,
-	direction_id          smallint,     NOT NULL,
-	oday                  date,         NOT NULL,
-	"start"               interval,     NOT NULL,
-	observed_operator_id  smallint,     NOT NULL,
-	min_timestamp         timestamptz   NOT NULL,
-	max_timestamp         timestamptz   NOT NULL,
-	modified_at           timestamptz   NULL        DEFAULT now(),
-
-	CONSTRAINT assumed_monitored_vehicle_journey_pkey PRIMARY KEY (vehicle_operator_id, vehicle_number, oday, route_id, direction_id, "start", observed_operator_id)
+  vehicle_operator_id   smallint      NOT NULL,
+  vehicle_number        integer       NOT NULL,
+  transport_mode        text,         NOT NULL,
+  route_id              text,         NOT NULL,
+  direction_id          smallint,     NOT NULL,
+  oday                  date,         NOT NULL,
+  "start"               interval,     NOT NULL,
+  observed_operator_id  smallint,     NOT NULL,
+  min_timestamp         timestamptz   NOT NULL,
+  max_timestamp         timestamptz   NOT NULL,
+  modified_at           timestamptz   NULL        DEFAULT now(),
+  CONSTRAINT assumed_monitored_vehicle_journey_pkey PRIMARY KEY (vehicle_operator_id, vehicle_number, oday, route_id, direction_id, "start", observed_operator_id)
 );
 
 COMMENT ON TABLE hfp.assumed_monitored_vehicle_journey IS

@@ -3,23 +3,23 @@ COMMENT ON SCHEMA staging IS 'Schema containing temporal data to be imported.';
 
 
 CREATE TABLE staging.hfp_raw (
-	tst                   timestamptz   NOT NULL,
-	event_type            text          NOT NULL,
-	received_at           timestamptz,
-	vehicle_operator_id   smallint      NOT NULL,
-	vehicle_number        integer       NOT NULL,
-	transport_mode        text,
-	route_id              text,
-	direction_id          smallint,
-	oday                  date,
-	"start"               interval,
-	observed_operator_id  smallint,
-	odo                   real,
+  tst                   timestamptz   NOT NULL,
+  event_type            text          NOT NULL,
+  received_at           timestamptz,
+  vehicle_operator_id   smallint      NOT NULL,
+  vehicle_number        integer       NOT NULL,
+  transport_mode        text,
+  route_id              text,
+  direction_id          smallint,
+  oday                  date,
+  "start"               interval,
+  observed_operator_id  smallint,
+  odo                   real,
   spd                   real,
-	drst                  bool,
-	loc                   text,
-	stop                  integer,
-	longitude             double precision,
+  drst                  bool,
+  loc                   text,
+  stop                  integer,
+  longitude             double precision,
   latitude              double precision
 );
 COMMENT ON TABLE staging.hfp_raw IS 'Table where the client copies hfp data to be imported to hfp schema.';
@@ -107,7 +107,7 @@ AS $procedure$
   WHERE
   -- Update only if values are actually changed, so that modified_at -field shows the correct time.
     assumed_monitored_vehicle_journey.min_timestamp != EXCLUDED.min_timestamp OR
-  	assumed_monitored_vehicle_journey.max_timestamp != EXCLUDED.max_timestamp;
+    assumed_monitored_vehicle_journey.max_timestamp != EXCLUDED.max_timestamp;
 $procedure$;
 
 COMMENT ON PROCEDURE staging.import_and_normalize_hfp IS 'Procedure to copy data from staging schema to hfp schema.';
