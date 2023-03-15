@@ -11,7 +11,6 @@ import psycopg2 as psycopg
 from common.logger_util import CustomDbLogHandler
 from common.utils import get_conn_params
 import common.constants as constants
-from .run_analysis import run_analysis
 import time
 
 # Import other event types as well when needed.
@@ -34,8 +33,6 @@ def start_import():
     global is_importer_locked
     conn = psycopg.connect(get_conn_params())
 
-    info = {}
-
     # Create a lock for import
     try:
         with conn:
@@ -57,8 +54,7 @@ def start_import():
         logger.error(f'Error when creating locks for importer: {e}')
 
     try:
-        info = import_day_data_from_past(13)
-        logger.info("Importing done - next up: analysis.")
+        import_day_data_from_past(13)
 
     except Exception as e:
         logger.error(f'Error when running importer: {e}')
@@ -69,9 +65,7 @@ def start_import():
             conn.commit()
         conn.close()
 
-    logger.info("Importer done. Starting minianalysis")
-
-    run_analysis(info)
+    logger.info("Importer done.")
 
 
 def import_day_data_from_past(day_since_today):
@@ -79,8 +73,7 @@ def import_day_data_from_past(day_since_today):
 
     import_date = datetime.now() - timedelta(day_since_today)
     import_date = datetime.strftime(import_date, '%Y-%m-%d')
-    info = import_data(import_date=import_date)
-    return info
+    import_data(import_date=import_date)
 
 
 def import_data(import_date):
@@ -122,21 +115,14 @@ def import_data(import_date):
 
             conn.commit()
 
-            logger.info("Importer ready for next step")
-
-            cur.execute("SELECT name FROM importer.blob WHERE covered_by_import AND import_status IN ('not started', 'pending')")
+            cur.execute(
+                """
+                SELECT name
+                FROM importer.blob
+                WHERE covered_by_import AND import_status IN ('not started', 'pending')
+                ORDER BY type, name
+                """)
             names = cur.fetchall()
-            cur.execute("SELECT min(min_oday), max(max_oday), min(min_tst), max(max_tst), count(*), sum(row_count) FROM importer.blob WHERE covered_by_import AND import_status IN ('not started', 'pending')")
-            data = cur.fetchone() or {}
-
-            info = {
-                'min_oday': data[0],
-                'max_oday': data[1],
-                'min_tst': data[2],
-                'max_tst': data[3],
-                'files': data[4],
-                'rows': data[5]
-            }
 
             for n in names:
                 blob_names.append(n[0])
@@ -149,8 +135,6 @@ def import_data(import_date):
 
     for b in blob_names:
         import_blob(b)
-
-    return info
 
 
 def import_blob(blob_name):
@@ -195,8 +179,8 @@ def read_imported_data_to_db(cur, downloader):
 
     invalid_row_count = 0
     selected_fields = ["tst", "eventType", "receivedAt", "ownerOperatorId", "vehicleNumber", "mode",
-                       "routeId", "dir", "oday", "start", "oper", "odo", "drst", "locationQualityMethod",
-                        "stop", "longitude", "latitude"]
+                       "routeId", "dir", "oday", "start", "oper", "odo", "spd", "drst", "locationQualityMethod",
+                       "stop", "longitude", "latitude"]
     writer = csv.DictWriter(import_io, fieldnames=selected_fields)
 
     calculator = 0

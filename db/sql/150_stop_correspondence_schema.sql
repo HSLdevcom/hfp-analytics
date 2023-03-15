@@ -1,8 +1,5 @@
 ---
 --- Tables for stop correspondence analysis.
---- TODO: Move all tables under stopcorr schema
----       This way, objects related to particular business cases
----       are easy to group and identify together on db side.
 ---
 CREATE SCHEMA stopcorr;
 COMMENT ON SCHEMA stopcorr IS
@@ -25,12 +22,10 @@ CREATE TABLE stopcorr.observation (
   dist_to_jore_point_m    real,
   dist_to_median_point_m  real,
   geom                    geometry(POINT, 3067),
-
   PRIMARY KEY (tst, event, oper, veh)
 );
 
-CREATE INDEX ON stopcorr.observation USING BTREE (stop_id, stop_id_guessed)
-  WHERE stop_id IS NOT NULL;
+CREATE INDEX observation_stop_idx ON stopcorr.observation (stop_id);
 CREATE INDEX ON stopcorr.observation USING GIST (geom);
 
 COMMENT ON TABLE stopcorr.observation IS
@@ -133,7 +128,6 @@ CREATE TABLE stopcorr.percentile_radii (
   percentile real NOT NULL CHECK (percentile BETWEEN 0.0 AND 1.0),
   radius_m real,
   n_observations bigint,
-
   PRIMARY KEY (stop_id, percentile)
 );
 

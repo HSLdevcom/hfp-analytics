@@ -4,23 +4,23 @@ COMMENT ON SCHEMA hfp IS 'Models transit vehicle state, position and event data 
 
 
 CREATE TABLE hfp.hfp_point (
-	point_timestamp       timestamptz   NOT NULL,
-	hfp_event             text          NOT NULL,
-	received_at           timestamptz,
-	vehicle_operator_id   smallint      NOT NULL,
-	vehicle_number        integer       NOT NULL,
-	transport_mode        text,
-	route_id              text,
-	direction_id          smallint,
-	oday                  date,
-	"start"               interval,
-	observed_operator_id  smallint,
-	odo                   real,
-	drst                  bool,
-	loc                   text,
-	stop                  integer,
-	geom                  geometry(POINT, 3067),
-
+  point_timestamp       timestamptz   NOT NULL,
+  hfp_event             text          NOT NULL,
+  received_at           timestamptz,
+  vehicle_operator_id   smallint      NOT NULL,
+  vehicle_number        integer       NOT NULL,
+  transport_mode        text,
+  route_id              text,
+  direction_id          smallint,
+  oday                  date,
+  "start"               interval,
+  observed_operator_id  smallint,
+  odo                   real,
+  spd                   real,
+  drst                  bool,
+  loc                   text,
+  stop                  integer,
+  geom                  geometry(POINT, 3067),
   CONSTRAINT hfp_point_pkey PRIMARY KEY (point_timestamp, vehicle_operator_id, vehicle_number, hfp_event)
 );
 COMMENT ON TABLE hfp.hfp_point IS 'State of a transit vehicle at a time instant, based on HFP.';
@@ -39,6 +39,7 @@ N.B. HFP uses 24h clock which can break journeys originally planned beyond >24:0
 Interval type is used for future support of such start times.';
 COMMENT ON COLUMN hfp.hfp_point.observed_operator_id IS 'Id of the operator the journey was assigned to. `oper` in HFP payload.';
 COMMENT ON COLUMN hfp.hfp_point.odo IS 'Odometer value of the vehicle.';
+COMMENT ON COLUMN hfp.hfp_point.spd IS 'Speed of the vehicle (m/s).';
 COMMENT ON COLUMN hfp.hfp_point.drst IS 'Door status of the vehicle. TRUE if any door is open, FALSE if all closed, NULL if unknown.';
 COMMENT ON COLUMN hfp.hfp_point.loc IS 'Source of the vehicle position information. Ideally GPS.';
 COMMENT ON COLUMN hfp.hfp_point.stop IS 'Id of the stop that the HFP point was related to.';
@@ -47,24 +48,26 @@ COMMENT ON COLUMN hfp.hfp_point.geom IS 'Vehicle position point in ETRS-TM35 coo
 
 SELECT create_hypertable('hfp.hfp_point', 'point_timestamp', chunk_time_interval => INTERVAL '6 hours');
 
-CREATE INDEX hfp_point_journey_idx ON hfp.hfp_point (oday, route_id, direction_id, "start", point_timestamp DESC);
-COMMENT ON INDEX hfp.hfp_point_journey_idx IS 'Index for journey related columns.';
-
+CREATE INDEX hfp_point_point_timestamp_idx ON hfp.hfp_point (point_timestamp DESC); -- This could be covered by other indices?
+COMMENT ON INDEX hfp.hfp_point_point_timestamp_idx IS 'Index timestamp filtering.';
+CREATE INDEX hfp_point_route_vehicle_idx ON hfp.hfp_point (route_id, vehicle_operator_id, vehicle_number, point_timestamp DESC);
+COMMENT ON INDEX hfp.hfp_point_route_vehicle_idx IS 'Index for hfp raw data queries.';
+CREATE INDEX hfp_point_event_idx ON hfp.hfp_point (hfp_event, point_timestamp DESC);
+COMMENT ON INDEX hfp.hfp_point_event_idx IS 'Index for hfp event filter (used at least by the stop analysis).';
 
 CREATE TABLE hfp.assumed_monitored_vehicle_journey (
-	vehicle_operator_id   smallint      NOT NULL,
-	vehicle_number        integer       NOT NULL,
-	transport_mode        text,         NOT NULL,
-	route_id              text,         NOT NULL,
-	direction_id          smallint,     NOT NULL,
-	oday                  date,         NOT NULL,
-	"start"               interval,     NOT NULL,
-	observed_operator_id  smallint,     NOT NULL,
-	min_timestamp         timestamptz   NOT NULL,
-	max_timestamp         timestamptz   NOT NULL,
-	modified_at           timestamptz   NULL        DEFAULT now(),
-
-	CONSTRAINT assumed_monitored_vehicle_journey_pkey PRIMARY KEY (vehicle_operator_id, vehicle_number, oday, route_id, direction_id, "start", observed_operator_id)
+  vehicle_operator_id   smallint      NOT NULL,
+  vehicle_number        integer       NOT NULL,
+  transport_mode        text,         NOT NULL,
+  route_id              text,         NOT NULL,
+  direction_id          smallint,     NOT NULL,
+  oday                  date,         NOT NULL,
+  "start"               interval,     NOT NULL,
+  observed_operator_id  smallint,     NOT NULL,
+  min_timestamp         timestamptz   NOT NULL,
+  max_timestamp         timestamptz   NOT NULL,
+  modified_at           timestamptz   NULL        DEFAULT now(),
+  CONSTRAINT assumed_monitored_vehicle_journey_pkey PRIMARY KEY (vehicle_operator_id, vehicle_number, oday, route_id, direction_id, "start", observed_operator_id)
 );
 
 COMMENT ON TABLE hfp.assumed_monitored_vehicle_journey IS
@@ -72,55 +75,4 @@ COMMENT ON TABLE hfp.assumed_monitored_vehicle_journey IS
 including min and max timestamps. Assumed here means that this journey might
 be invalid (e.g. driver accidentally logged into a wrong departure)';
 
-
-CREATE FUNCTION hfp.insert_assumed_monitored_vehicle_journeys(min_tst timestamptz)
-RETURNS void
-VOLATILE
-LANGUAGE SQL
-AS $func$
-  INSERT INTO hfp.assumed_monitored_vehicle_journey (
-    vehicle_operator_id, vehicle_number, transport_mode, route_id, direction_id, oday, "start", observed_operator_id, min_timestamp, max_timestamp
-  )
-  SELECT
-    vehicle_operator_id,
-    vehicle_number,
-    transport_mode,
-    route_id,
-    direction_id,
-    oday,
-    "start",
-    observed_operator_id,
-    min(point_timestamp) AS min_timestamp,
-    max(point_timestamp) AS max_timestamp
-  -- (Add further aggregates such as N of hfp_point rows here, if required later.
-  -- Be careful about min_tst, because aggregate might not give all records, if there were ones before min_tst.
-  -- Perhaps fetch more points before tst, e.g. 6 hours, to get a bit historical data for aggregation, but update only the ones that overlaps with the tst limit.)
-  FROM hfp.hfp_point
-  WHERE point_timestamp >= min_tst - INTERVAL '1 minutes' AND
-    transport_mode IS NOT NULL AND
-    route_id IS NOT NULL AND
-    direction_id IS NOT NULL AND
-    oday IS NOT NULL AND
-    "start" IS NOT NULL AND
-    observed_operator_id IS NOT NULL
-  GROUP BY
-    vehicle_operator_id, vehicle_number, transport_mode, route_id, direction_id, oday, "start", observed_operator_id
-  -- Update existing rows in target table by (vehicle_id, journey_id),
-  -- update min and max timestamps as we might get new values for them
-  -- when importing hfp data to fill a gap or if more recent data is available
-  -- when running import.
-  ON CONFLICT ON CONSTRAINT assumed_monitored_vehicle_journey_pkey DO UPDATE SET
-    max_timestamp = greatest(assumed_monitored_vehicle_journey.max_timestamp, EXCLUDED.max_timestamp),
-    min_timestamp = least(assumed_monitored_vehicle_journey.min_timestamp, EXCLUDED.min_timestamp),
-    modified_at = now()
-  WHERE
-  -- Update only if values are actually changed, so that modified_at -field shows the correct time.
-    assumed_monitored_vehicle_journey.min_timestamp != EXCLUDED.min_timestamp OR
-  	assumed_monitored_vehicle_journey.max_timestamp != EXCLUDED.max_timestamp;
-$func$;
-
-COMMENT ON FUNCTION hfp.insert_assumed_monitored_vehicle_journeys IS
-'Populates hfp.assumed_monitored_vehicle_journey with min_timestamp
-and max_timestamp of a journey with a specific vehicle. If new hfp.hfp_point
-data has been imported, updates min and max timestamps of existing journey
-rows accordingly.';
+CREATE INDEX assumed_monitored_vehicle_journey_oday_idx ON hfp.assumed_monitored_vehicle_journey USING btree(oday);
