@@ -6,7 +6,7 @@ from fastapi.openapi.docs import (
     get_swagger_ui_html,
 )
 
-from api.routers import hfp, stops, journeys
+from api.routers import hfp, stops, journeys, vehicles
 
 app = FastAPI(
     title="HSL Analytics REST API",
@@ -35,6 +35,8 @@ app.include_router(hfp.router)
 app.include_router(stops.router)
 # /journeys/***
 app.include_router(journeys.router)
+# /vehicles/***
+app.include_router(vehicles.router)
 
 
 @app.get("/docs", include_in_schema=False)
