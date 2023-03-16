@@ -41,7 +41,8 @@ async def get_hfp_raw_data(
                                description=("The timestamp from which the data will be queried. "
                                             "Timestamp will be read as UTC if `tz` parameter is not specified. "
                                             "Format `yyyy-MM-dd'T'HH:mm:ss`. "
-                                            "Timestamp can be shortened - empty field defaults to zero. "
+                                            "Timestamp can be shortened - optional formats are `yyyy-MM-dd'T'HH:mm` "
+                                            "and `yyyy-MM-dd` "
                                             "Remember that the database contains data from previous 14 days."),
                                example="2023-01-12T14:20:30"),
     to_tst: Optional[datetime] = Query(default=None,
@@ -50,13 +51,14 @@ async def get_hfp_raw_data(
                                                     "Timestamp will be read as UTC if `tz` parameter is not specified. "
                                                     "Default value is 24 hours later than `from_tst`"
                                                     "Format `yyyy-MM-dd'T'HH:mm:ss`. "
-                                                    "Timestamp can be shortened - empty field defaults to zero."),
-                                       example="2023-01-12T15"),
+                                                    "Timestamp can be shortened - optional formats are "
+                                                    "`yyyy-MM-dd'T'HH:mm` and `yyyy-MM-dd` "),
+                                       example="2023-01-12T15:00"),
     tz: int = Query(default=0,
                     title="Timezone",
                     description=("Timezone of the timestamps. "
                                  "If not given, timestamps are expected to be in UTC time."),
-                    example="+2")):
+                    example=2)) -> Response:
     """
     Get hfp data in raw csv format filtered by parameters.
     """
