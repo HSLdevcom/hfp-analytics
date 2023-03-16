@@ -22,6 +22,9 @@ app = FastAPI(
     openapi_tags=[{"name": "HFP data", "description": "API to query raw HFP data."}],
     docs_url=None,
     redoc_url=None,
+    responses={
+        504: {"description": "Gateway timeout. The query took too long to be accomplished."}
+    }
 )
 
 
