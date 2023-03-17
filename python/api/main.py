@@ -19,7 +19,10 @@ app = FastAPI(
         "name": "MIT License",
         "url": "https://github.com/HSLdevcom/hfp-analytics/blob/main/LICENSE"
     },
-    openapi_tags=[{"name": "HFP data", "description": "API to query raw HFP data."}],
+    openapi_tags=[
+        {"name": "HFP data", "description": "API to query raw HFP data."},
+        {"name": "Journey analytics data", "description": "API to query analytics data of journeys."}
+    ],
     docs_url=None,
     redoc_url=None,
     responses={

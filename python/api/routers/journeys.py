@@ -1,9 +1,16 @@
 """ Routes for /journeys endpoint """
-# TODO: Move data queries to services/journeys
 
-from datetime import date
-from fastapi import APIRouter, Query
+from datetime import date, datetime
 import logging
+
+from fastapi import APIRouter, Query
+from fastapi.responses import JSONResponse
+
+from pydantic import BaseModel
+from typing import Dict, List, Union
+
+from api.schemas import JourneyResponse
+
 from common.logger_util import CustomDbLogHandler
 
 from api.services.journeys import get_last_modified_of_oday, get_journeys_by_oday
@@ -16,7 +23,14 @@ router = APIRouter(
 )
 
 
-@router.get("/monitored_vehicle_journeys")
+@router.get("/monitored_vehicle_journeys",
+            summary="Get monitored vehicle journeys of an operating day.",
+            description="Returns assumed monitored vehicle journeys from given operating day. "
+                        "Assumed here means that the journeys might be valid or not, API doesn't know it. "
+                        "Invalid journey is example a journey where bus driver signed in to a wrong departure.",
+            response_class=JSONResponse,
+            response_model=JourneyResponse
+            )
 async def get_monitored_vehicle_journeys(operating_day: date = Query(..., description="Format YYYY-MM-DD")):
     """
     Returns assumed monitored vehicle journeys from given operating day. Assumed here means
