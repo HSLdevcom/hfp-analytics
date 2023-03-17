@@ -90,7 +90,7 @@ async def get_vehicles(
                 error_types_str = ', '.join(error_types)
                 row_data = {
                     **common_data,
-                    "Havaittu ongelma": "Ongelmia havaittu", 
+                    "Havaittu ongelma": "Epäluotettava ovitieto", 
                     "Syyt": error_types_str
                 }
                 writer.writerow(row_data)
