@@ -5,7 +5,7 @@ from common.database import pool
 from datetime import date, datetime, time
 
 
-async def get_vehicles_by_timestamp(date: date, vehicle_operator_id: int) -> list:
+async def get_vehicles_by_timestamp(date: date, operator_id: int) -> list:
     """Query all vehicles filtered by oday and return them as a list of dicts"""
     date_str = str(date)
 
@@ -16,9 +16,9 @@ async def get_vehicles_by_timestamp(date: date, vehicle_operator_id: int) -> lis
 
     where_clause = "WHERE tst > %(start)s AND tst < %(end)s AND event_type = 'VP'"
     
-    if vehicle_operator_id is not None:
+    if operator_id is not None:
         where_clause += " AND vehicle_operator_id = %(vehicle_operator_id)s"
-        query_params["vehicle_operator_id"] = vehicle_operator_id
+        query_params["vehicle_operator_id"] = operator_id
 
     async with pool.connection() as conn:
         async with conn.cursor() as cur:
@@ -54,7 +54,7 @@ async def get_vehicles_by_timestamp(date: date, vehicle_operator_id: int) -> lis
                     "tst": r[0],
                     "event_type": r[1],
                     "received_at": r[2],
-                    "vehicle_operator_id": r[3],
+                    "operator_id": r[3],
                     "vehicle_number": r[4],
                     "transport_mode": r[5],
                     "route_id": r[6],
