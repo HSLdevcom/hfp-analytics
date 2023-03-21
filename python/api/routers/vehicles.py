@@ -122,7 +122,7 @@ async def get_vehicle_data(date, operator_id):
     return formatted_data
 
 def analyze_vehicle_data(vehicle_data):
-    analysis = defaultdict(lambda: {'null': 0, 'true': 0, 'false': 0, 'errors': {'amount': 0, 'events': []}})
+    analysis = defaultdict(lambda: {'null': 0, 'true': 0, 'false': 0, 'errors': {'amount': 0, 'types': []}})
 
     for data in vehicle_data:
         data_list = data.get('data', [])
@@ -141,7 +141,8 @@ def analyze_vehicle_data(vehicle_data):
             if drst and spd is not None and spd > spd_threshold:
                 analysis[data['vehicle_number']]['errors']['amount'] += 1
                 event = f'Speed over {spd_threshold} m/s when doors open'
-                analysis[data['vehicle_number']]['errors']['events'].append(error_obj(d, event))            
+                if event not in analysis[data['vehicle_number']]['errors']['types']:
+                    analysis[data['vehicle_number']]['errors']['types'].append(event)      
 
     result = []
     for vehicle_number, analysis_data in analysis.items():
@@ -151,21 +152,21 @@ def analyze_vehicle_data(vehicle_data):
         false_ratio = round(analysis_data['false']/total, 3)
         null_ratio = round(analysis_data['null']/total, 3)
 
-        if true_ratio > false_ratio:
+        if true_ratio > 0.5 and true_ratio < 1:
             analysis_data['errors']['amount'] += 1
-            analysis_data['errors']['events'].append({'type': "Drst inverted"})
+            analysis_data['errors']['types'].append("Drst inverted")
         if null_ratio == 1:
             analysis_data['errors']['amount'] += 1
-            analysis_data['errors']['events'].append({'type': "Drst missing"})
+            analysis_data['errors']['types'].append("Drst missing")
         if null_ratio > 0 and null_ratio < 1:
             analysis_data['errors']['amount'] += 1
-            analysis_data['errors']['events'].append({'type': "Some of the drst values are missing"})
+            analysis_data['errors']['types'].append("Some of the drst values are missing")
         if true_ratio == 1:
             analysis_data['errors']['amount'] += 1
-            analysis_data['errors']['events'].append({'type': "Drst always true"})
+            analysis_data['errors']['types'].append("Drst always true")
         if false_ratio == 1:
             analysis_data['errors']['amount'] += 1
-            analysis_data['errors']['events'].append({'type': "Drst always false"})
+            analysis_data['errors']['types'].append("Drst always false")
 
         analysis_data = {
             'null': null_ratio,

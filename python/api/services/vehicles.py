@@ -10,8 +10,8 @@ async def get_vehicles_by_timestamp(date: date, operator_id: int) -> list:
     date_str = str(date)
 
     query_params = {
-        "start": datetime.strptime(date_str + " 15:00:00.000+00", '%Y-%m-%d %H:%M:%S.%f+00'),
-        "end": datetime.strptime(date_str + " 15:30:00.000+00", '%Y-%m-%d %H:%M:%S.%f+00')
+        "start": datetime.strptime(date_str + " 14:00:00.000+00", '%Y-%m-%d %H:%M:%S.%f+00'),
+        "end": datetime.strptime(date_str + " 14:30:00.000+00", '%Y-%m-%d %H:%M:%S.%f+00')
     }
 
     where_clause = "WHERE tst > %(start)s AND tst < %(end)s AND event_type = 'VP'"
