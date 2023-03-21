@@ -10,9 +10,12 @@ from api.routers import hfp, stops, journeys, vehicles
 
 app = FastAPI(
     title="HSL Analytics REST API",
-    description="This REST API is used to get results from analytics done with Jore-data and HFP-data.",
+    description="This REST API is used to get results from analytics done with Jore-data and HFP-data. "
+                "The documentation of HFP schema is here: "
+                "<a href=https://digitransit.fi/en/developers/apis/4-realtime-api/vehicle-positions/ > "
+                "https://digitransit.fi/en/developers/apis/4-realtime-api/vehicle-positions/  </a>",
     contact={
-        "name": "HSL",
+        "name": "HSL Analytics",
         "url": "https://github.com/HSLdevcom/hfp-analytics"
     },
     license_info={
@@ -21,7 +24,8 @@ app = FastAPI(
     },
     openapi_tags=[
         {"name": "HFP data", "description": "API to query raw HFP data."},
-        {"name": "Journey analytics data", "description": "API to query analytics data of journeys."}
+        {"name": "Journey analytics data", "description": "API to query analytics data of journeys."},
+        {"name": "Stop analycis data", "description": "API to query analytics data of stops."}
     ],
     docs_url=None,
     redoc_url=None,
