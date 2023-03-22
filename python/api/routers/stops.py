@@ -64,7 +64,7 @@ async def get_jore_stops(
                 raise HTTPException(status_code=404, detail="Have you ran Jore & HFP data imports and then analysis?")
 
             if stop_id:
-                stops = list(filter(lambda item: str(item[0]["properties"]["stop_id"]) == stop_id, stops))
+                stops = list(filter(lambda item: item[0]["properties"]["stop_id"] == stop_id, stops))
 
                 if len(stops) == 0:
                     raise HTTPException(status_code=404, detail=f"Did not find stop with given stop_id: {stop_id}")
@@ -100,7 +100,7 @@ async def get_stop_medians(
                 raise HTTPException(status_code=404, detail="Have you ran Jore & HFP data imports and then analysis?")
 
             if stop_id:
-                stop_medians = list(filter(lambda item: str(item[0]["properties"]["stop_id"]) == stop_id, stop_medians))
+                stop_medians = list(filter(lambda item: item[0]["properties"]["stop_id"] == stop_id, stop_medians))
                 if len(stop_medians) == 0:
                     raise HTTPException(
                         status_code=404, detail=f"Did not find stop median with given stop_id: {stop_id}"
