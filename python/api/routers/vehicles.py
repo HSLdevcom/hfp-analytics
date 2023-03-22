@@ -27,7 +27,13 @@ error_types_translations = {
     'Drst missing': 'Ovitiedon arvo puuttuu',
     'Some of the drst values are missing': 'Ovitiedon arvo puuttuu osasta tapahtumia',
     'Drst always true': 'Ovitieto aina auki',
-    'Drst always false': 'Ovitieto aina kiinni'
+    'Drst always false': 'Ovitieto aina kiinni',
+    'Identical first and last odo values': 'ODO-metrin arvo ei muutu',
+    'Odo value over 100000': 'ODO-metri tuottaa liian suuria arvoja',
+    'Odo value decreased between events': 'ODO-metri tuottaa negatiivisia arvoja',
+    'Odo values missing': 'ODO-metrin arvo puuttuu',
+    'Some odo values missing': 'ODO-metrin arvo puuttuu osasta tapahtumia',
+    'Odo changed when stationary': 'ODO-metrin arvo muuttuu kun ajoneuvo on paikallaan'
 }
 
 @router.get("/doors")
@@ -63,7 +69,7 @@ async def get_vehicles(
     analyzed_data = analyze_vehicle_data(formatted_data)
     if errorsOnly:
         analyzed_data = [vehicle for vehicle in analyzed_data if vehicle['errors']['amount'] > 0]
-    csv_filename = "empty.csv"
+    csv_filename = "doors.csv"
 
     with open(csv_filename, "w", newline="", encoding='utf-8') as csvfile:
         fieldnames = ["Päivämäärä", "Operaattori", "Kylkinumero", "Havaittu ongelma", "Syyt"]
@@ -97,7 +103,55 @@ async def get_vehicles(
                 }
                 writer.writerow(row_data)
 
-    return FileResponse(csv_filename, media_type="text/csv", filename="empty.csv")
+    return FileResponse(csv_filename, media_type="text/csv", filename="doors.csv")
+
+@router.get("/odo/csv")
+async def get_vehicles(
+    date: date = Query(..., description="Format YYYY-MM-DD"),
+    operator_id: Optional[int] = Query(None, description="HFP topic's vehicle id. Use without prefix zeros."),
+    errorsOnly: Optional[bool] = Query(None, description="Only return vehicles that triggered an error")
+):
+    """
+    Vehicle odo analysis as csv.
+    """
+    formatted_data = await get_vehicle_data(date, operator_id)
+    analyzed_data = analyze_odo(formatted_data)
+    if errorsOnly:
+        analyzed_data = [vehicle for vehicle in analyzed_data if vehicle['errors']['amount'] > 0]
+    csv_filename = "odo.csv"
+    with open(csv_filename, "w", newline="", encoding='utf-8') as csvfile:
+        fieldnames = ["Päivämäärä", "Operaattori", "Kylkinumero", "Havaittu ongelma", "Syyt"]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for item in analyzed_data:
+            common_data = {                    
+                "Päivämäärä": date, 
+                "Operaattori": item['operator_id'], 
+                "Kylkinumero": item['vehicle_number']
+            }
+            if item['errors']['amount'] == 0:
+                row_data = {
+                    **common_data,
+                    "Havaittu ongelma": "Ei havaittu ongelmia", 
+                    "Syyt": ""
+                }
+                writer.writerow(row_data)
+            else:
+                error_types = set()
+                for event in item['errors']['events']:
+                    event_type = event['type']
+                    error_types.add(error_types_translations[event_type])
+                error_types = list(error_types)
+                error_types_str = ', '.join(error_types)
+                row_data = {
+                    **common_data,
+                    "Havaittu ongelma": "Epäluotettava odo-tieto", 
+                    "Syyt": error_types_str
+                }
+                writer.writerow(row_data)
+
+    return FileResponse(csv_filename, media_type="text/csv", filename="odo.csv")
 
 async def get_vehicle_data(date, operator_id):
     vehicle_data = await get_vehicles_by_timestamp(date, operator_id)
@@ -203,6 +257,8 @@ def analyze_odo(vehicle_data):
     analysis = defaultdict(lambda: {'odo': 0, 'null': 0, 'errors': {'amount': 0, 'events': []}})
     for data in vehicle_data:
         data_list = data.get('data', [])
+        operator_id = data.get('operator_id')
+        analysis[data['vehicle_number']]['operator_id'] = operator_id
         firstEvent = data_list[0]
         lastEvent = data_list[len(data_list) - 1]
         if firstEvent is not None and lastEvent is not None:
@@ -210,7 +266,7 @@ def analyze_odo(vehicle_data):
             lastOdo = lastEvent.get('odo')
             if firstOdo == lastOdo:
                 analysis[data['vehicle_number']]['errors']['amount'] += 1
-                analysis[data['vehicle_number']]['errors']['events'].append(error_obj(d, "Identical first and last odo values "))
+                analysis[data['vehicle_number']]['errors']['events'].append(error_obj(d, "Identical first and last odo values"))
             if lastOdo is not None and lastOdo > 100000:
                 analysis[data['vehicle_number']]['errors']['amount'] += 1
                 analysis[data['vehicle_number']]['errors']['events'].append(error_obj(d, "Odo value over 100000"))
@@ -231,7 +287,7 @@ def analyze_odo(vehicle_data):
             if odo is None:
                 analysis[data['vehicle_number']]['errors']['amount'] += 1
                 analysis[data['vehicle_number']]['null'] += 1
-                analysis[data['vehicle_number']]['errors']['events'].append(error_obj(d, "Odo value missing"))
+                analysis[data['vehicle_number']]['errors']['events'].append(error_obj(d, "Odo values missing"))
             else:
                 analysis[data['vehicle_number']]['odo'] += 1
             prevOdo = odo
@@ -265,7 +321,8 @@ def analyze_odo(vehicle_data):
             'odo_ratio': odo_ratio,
             'null_ratio': null_ratio,
             'vehicle_number': vehicle_number,
-            'errors': analysis_data['errors']
+            'errors': analysis_data['errors'],
+            'operator_id': analysis_data['operator_id'],
         }
         result.append(analysis_data)
     
