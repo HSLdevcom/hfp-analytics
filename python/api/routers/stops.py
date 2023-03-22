@@ -31,16 +31,17 @@ router = APIRouter(
     response_class=PlainTextResponse,
     responses={"200": {"content": {"text/plain": {"example": "Importer done."}}}},
 )
-async def run_import():
+async def run_import() -> PlainTextResponse:
     print("Running import...")
     run_digitransit_import()
-    return "Import done."
+    return PlainTextResponse(content="Import done.")
 
 
 @router.get(
     "/jore_stops",
     summary="Get JORE stops",
-    description="Returns a GeoJSON FeatureCollection of either all jore stops or one jore stop found with given stop_id",
+    description="Returns a GeoJSON FeatureCollection of either all jore stops "
+    "or one jore stop found with given stop_id",
     response_class=JSONResponse,
     response_model=JoreStopFeatureCollection,
 )

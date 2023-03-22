@@ -1,25 +1,10 @@
 from datetime import date
-
-from pydantic import BaseModel, Field
 from typing import Dict, List, Optional
 
+from pydantic import BaseModel, Field, create_model
 
-# Geometry types
+from .common import get_feature_collection_model
 
-
-class PointGeometry(BaseModel):
-    type: str = "Point"
-    crs: Optional[Dict]
-    coordinates: List[int] = Field(example=[24.92371, 60.17971])
-
-
-class PolygonGeometry(BaseModel):
-    type: str = "Polygon"
-    crs: Optional[dict]
-    coordinates: List[List[int]] = Field(example=[[384792, 6673806], [384678, 6673810], [384880, 6673826]])
-
-
-# /jore_stops geojson response schema
 
 class JoreStop(BaseModel):
     stop_id: int = Field(title="Stop ID", description="Long stop ID", example="2222214")
@@ -38,19 +23,6 @@ class JoreStop(BaseModel):
         title="Import date", description="The date when the stop was imported last time to Analytics."
     )
 
-
-class JoreStopFeature(BaseModel):
-    type: str = "Feature"
-    geometry: PointGeometry
-    properties: JoreStop
-
-
-class JoreStopFeatureCollection(BaseModel):
-    type: str = "FeatureCollection"
-    features: List[JoreStopFeature]
-
-
-# /stop_medians geojson response schema
 
 class PercendileRadii(BaseModel):
     percentile: float = Field(
@@ -112,19 +84,6 @@ class StopMedian(BaseModel):
     )
 
 
-class StopMedianFeature(BaseModel):
-    type: str = "Feature"
-    geometry: PointGeometry
-    properties: StopMedian
-
-
-class StopMedianFeatureCollection(BaseModel):
-    type: str = "FeatureCollection"
-    features: List[StopMedianFeature]
-
-
-# /percentile_circes geojson response schema
-
 class StopMedianPercentile(BaseModel):
     stop_id: int = Field(title="Stop ID", description="Long stop ID", example="2222214")
     percentile: float = Field(title="Percentile", description="Percentile value.", example=0.75)
@@ -135,19 +94,6 @@ class StopMedianPercentile(BaseModel):
         title="Number of observations", description="Number of observations covered by the percentile", example=4334
     )
 
-
-class StopMedianPercentileFeature(BaseModel):
-    type: str = "Feature"
-    geometry: PolygonGeometry
-    properties: List[StopMedianPercentile]
-
-
-class StopMedianPercentileFeatureCollection(BaseModel):
-    type: str = "FeatureCollection"
-    features: List[StopMedianPercentileFeature]
-
-
-# /hfp_points geojson response schema
 
 class HFPStopPoint(BaseModel):
     stop_id: int = Field(title="Stop ID", description="Long stop ID", example="2222214")
@@ -171,12 +117,9 @@ class HFPStopPoint(BaseModel):
     )
 
 
-class HFPStopPointFeature(BaseModel):
-    type: str = "Feature"
-    geometry: PointGeometry
-    properties: HFPStopPoint
-
-
-class HFPStopPointFeatureCollection(BaseModel):
-    type: str = "FeatureCollection"
-    features: List[HFPStopPointFeature]
+JoreStopFeatureCollection = get_feature_collection_model("JoreStop", JoreStop)
+StopMedianFeatureCollection = get_feature_collection_model("StopMedian", StopMedian)
+StopMedianPercentileFeatureCollection = get_feature_collection_model(
+    "StopMedianPercentile", StopMedianPercentile, "Polygon"
+)
+HFPStopPointFeatureCollection = get_feature_collection_model("HFPStopPoint", HFPStopPoint)
