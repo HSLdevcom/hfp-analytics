@@ -1,6 +1,6 @@
 """ Routes for /vehicles endpoint """
 
-from datetime import date
+from datetime import date, datetime, timedelta, time
 from fastapi import APIRouter, Query
 import logging
 from common.logger_util import CustomDbLogHandler
@@ -132,6 +132,16 @@ def analyze_vehicle_data(vehicle_data):
             drst = d.get('drst')
             stop = d.get('stop')
             spd = d.get('spd')
+            start = d.get('start')
+            start_seconds = int(start.total_seconds())
+            start_hours, remainder = divmod(start_seconds, 3600)
+            start_minutes, start_seconds = divmod(remainder, 60)
+            start_utc = time(start_hours, start_minutes, start_seconds)
+            tst_str = d.get('tst').strftime('%Y-%m-%d %H:%M:%S.%f%z')
+            tst = datetime.strptime(tst_str, '%Y-%m-%d %H:%M:%S.%f%z')
+            tst += timedelta(hours=2)
+            if tst.time() < start_utc:
+                continue
             if drst is None:
                 analysis[data['vehicle_number']]['null'] += 1
             elif drst:
@@ -145,8 +155,12 @@ def analyze_vehicle_data(vehicle_data):
 
     result = []
     for vehicle_number, analysis_data in analysis.items():
-        total = sum([analysis_data[key] for key in analysis_data if key not in ['errors', 'operator_id']])
+        total = sum([analysis_data[key] for key in analysis_data if key in ['null', 'true', 'false']])
         events_amount = analysis_data['null'] + analysis_data['true'] + analysis_data['false']
+        if total == 0:
+            continue
+        if events_amount < 100:
+            continue
         true_ratio = round(analysis_data['true']/total, 3)
         false_ratio = round(analysis_data['false']/total, 3)
         null_ratio = round(analysis_data['null']/total, 3)
@@ -183,6 +197,7 @@ def analyze_vehicle_data(vehicle_data):
     return sortedResult
 
 def error_obj(d, event):
+    start_str = str(d.get('start'))
     return {
         'tst': d.get('tst'),
         'oday': d.get('oday'),
@@ -192,7 +207,7 @@ def error_obj(d, event):
         'loc': d.get('loc'),
         'route_id': d.get('route_id'),
         'operator_id': d.get('operator_id'),
-        'start': d.get('start'),
+        'start': start_str,
         'longitude': d.get('longitude'),
         'latitude': d.get('latitude'),
         'direction_id': d.get('direction_id')
