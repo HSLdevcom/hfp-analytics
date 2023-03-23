@@ -63,7 +63,7 @@ async def get_vehicles(
     analyzed_data = analyze_vehicle_data(formatted_data)
     if errorsOnly:
         analyzed_data = [vehicle for vehicle in analyzed_data if vehicle['errors']['amount'] > 0]
-    csv_filename = "empty.csv"
+    csv_filename = "doors.csv"
 
     with open(csv_filename, "w", newline="", encoding='utf-8') as csvfile:
         fieldnames = ["Päivämäärä", "Operaattori", "Kylkinumero", "Havaittu ongelma", "Syyt"]
@@ -97,7 +97,7 @@ async def get_vehicles(
                 }
                 writer.writerow(row_data)
 
-    return FileResponse(csv_filename, media_type="text/csv", filename="empty.csv")
+    return FileResponse(csv_filename, media_type="text/csv", filename="doors.csv")
 
 async def get_vehicle_data(date, operator_id):
     vehicle_data = await get_vehicles_by_timestamp(date, operator_id)
