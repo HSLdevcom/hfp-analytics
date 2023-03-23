@@ -1,15 +1,16 @@
 """ Routes for /vehicles endpoint """
 
-from datetime import date, datetime, timedelta, time
-from fastapi import APIRouter, Query
+import csv
 import logging
-from common.logger_util import CustomDbLogHandler
 import itertools
+import os
+import pytz
 from collections import defaultdict
 from typing import Optional
 from starlette.responses import FileResponse
-import csv
-import os
+from common.logger_util import CustomDbLogHandler
+from datetime import date, datetime, timedelta, time
+from fastapi import APIRouter, Query
 
 from api.services.vehicles import get_vehicles_by_timestamp
 
@@ -121,6 +122,12 @@ async def get_vehicle_data(date, operator_id):
 
     return formatted_data
 
+def tz_diff(tz1, tz2):
+    date = datetime.now()
+    return (tz1.localize(date) - 
+            tz2.localize(date).astimezone(tz1))\
+            .seconds/3600
+
 def analyze_vehicle_data(vehicle_data):
     analysis = defaultdict(lambda: {'null': 0, 'true': 0, 'false': 0, 'errors': {'amount': 0, 'events': []}})
 
@@ -132,16 +139,35 @@ def analyze_vehicle_data(vehicle_data):
             drst = d.get('drst')
             stop = d.get('stop')
             spd = d.get('spd')
-            start = d.get('start')
-            start_seconds = int(start.total_seconds())
-            start_hours, remainder = divmod(start_seconds, 3600)
+
+            utc = pytz.timezone('UTC')
+            helsinki = pytz.timezone('Europe/Helsinki')
+
+            # Get timezone offset
+            tz_offset = tz_diff(utc, helsinki)
+
+            # 'start' is stored as timedelta
+            start_duration = d.get('start')
+
+            # Convert to seconds, hours, minutes, and seconds
+            start_seconds_total = int(start_duration.total_seconds())
+            start_hours, remainder = divmod(start_seconds_total, 3600)
             start_minutes, start_seconds = divmod(remainder, 60)
-            start_utc = time(start_hours, start_minutes, start_seconds)
-            tst_str = d.get('tst').strftime('%Y-%m-%d %H:%M:%S.%f%z')
-            tst = datetime.strptime(tst_str, '%Y-%m-%d %H:%M:%S.%f%z')
-            tst += timedelta(hours=2)
-            if tst.time() < start_utc:
+
+            # Create a time object using hours, minutes, and seconds
+            start_time = time(start_hours, start_minutes, start_seconds)
+
+            # Convert tst to datetime object
+            tst_string = d.get('tst').strftime('%Y-%m-%d %H:%M:%S.%f%z')
+            tst_datetime = datetime.strptime(tst_string, '%Y-%m-%d %H:%M:%S.%f%z')
+
+            # Add the timezone offset to the tst datetime object
+            tst_datetime += timedelta(hours=tz_offset)
+
+            # Don't iterate through events where tst is before journey start time
+            if tst_datetime.time() < start_time:
                 continue
+            
             if drst is None:
                 analysis[data['vehicle_number']]['null'] += 1
             elif drst:
@@ -156,10 +182,7 @@ def analyze_vehicle_data(vehicle_data):
     result = []
     for vehicle_number, analysis_data in analysis.items():
         total = sum([analysis_data[key] for key in analysis_data if key in ['null', 'true', 'false']])
-        events_amount = analysis_data['null'] + analysis_data['true'] + analysis_data['false']
-        if total == 0:
-            continue
-        if events_amount < 100:
+        if total == 0 or total < 100:
             continue
         true_ratio = round(analysis_data['true']/total, 3)
         false_ratio = round(analysis_data['false']/total, 3)
@@ -186,7 +209,7 @@ def analyze_vehicle_data(vehicle_data):
             'true': true_ratio,
             'false': false_ratio,
             'operator_id': analysis_data['operator_id'],
-            'eventsAmount': events_amount,
+            'eventsAmount': total,
             'vehicle_number': vehicle_number,
             'errors': analysis_data['errors']
         }
