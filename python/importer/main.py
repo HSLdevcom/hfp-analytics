@@ -12,11 +12,22 @@ from common.logger_util import CustomDbLogHandler
 from common.utils import get_conn_params
 import common.constants as constants
 import time
+from typing import List
 
-# Import other event types as well when needed.
-event_types_to_import = ['VP', 'DOC', 'DOO']
 
 logger = logging.getLogger('importer')
+
+
+def get_event_types_to_import() -> List[str]:
+    """ Helper function to read hfp event types from env """
+    event_type_string = os.getenv("HFP_EVENTS_TO_IMPORT")
+    if not event_type_string:
+        logger.error("HFP_EVENTS_TO_IMPORT not defined. Nothing will be imported!")
+        return []
+
+    # Split to list, remove spaces and convert UPPERCASE
+    event_types = [e.strip().upper() for e in event_type_string.split(",")]
+    return event_types
 
 
 def get_azure_container_client() -> ContainerClient:
@@ -54,7 +65,7 @@ def start_import():
         logger.error(f'Error when creating locks for importer: {e}')
 
     try:
-        import_day_data_from_past(13)
+        import_day_data_from_past(os.getenv("IMPORT_COVERAGE_DAYS", 14))
 
     except Exception as e:
         logger.error(f'Error when running importer: {e}')
@@ -107,7 +118,7 @@ def import_data(import_date):
 
                 event_type = tags.get('eventType')
 
-                covered_by_import = event_type in event_types_to_import
+                covered_by_import = event_type in get_event_types_to_import()
 
 
                 cur.execute("INSERT INTO importer.blob(name, type, min_oday, max_oday, min_tst, max_tst, row_count, covered_by_import) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING",
