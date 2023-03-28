@@ -16,6 +16,7 @@ How to use envs in the app:
 import os
 import logging
 from collections.abc import Callable
+from typing import Union
 
 
 def dummy(env: str) -> str:
@@ -43,12 +44,12 @@ def env_as_float_list(env: str) -> list[float]:
     return [float(item.strip()) for item in env.split(",")]
 
 
-def get_env(var_name: str, default_value: str = "", modifier: Callable = dummy):
+def get_env(var_name: str, default_value: Union[str, None] = None, modifier: Callable = dummy):
     """Function to read env and modify it with modifier function.
     Raises error if env is not available and default_value is not given."""
     env = os.getenv(var_name)
     if env is None:
-        if default_value:
+        if default_value is not None:
             env = default_value
             logging.warning(f"{var_name} not set in env, falling back to default value {default_value}")
         else:
