@@ -12,3 +12,4 @@ azure-functions==1.10.1
 azure-storage-blob==12.14.1
 zstandard==0.17.0
 uvicorn==0.18.2
+pytz==2022.7.1
