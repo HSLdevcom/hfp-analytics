@@ -69,8 +69,8 @@ IMPORT_COVERAGE_DAYS: int = get_env("IMPORT_COVERAGE_DAYS", "14", modifier=env_a
 DEFAULT_AUTH_CODE: str = get_env("DEFAULT_AUTH_CODE", "")
 
 # Envs for stop analysis
-STOP_NEAR_LIMIT_M: float = get_env("STOP_NEAR_LIMIT", "25.0", modifier=env_as_float)
-MIN_OBSERVATIONS_PER_STOP: int = get_env("MIN_OBSERVATIONS_PER_STOP", "100", modifier=env_as_int)
+STOP_NEAR_LIMIT_M: float = get_env("STOP_NEAR_LIMIT_M", "50.0", modifier=env_as_float)
+MIN_OBSERVATIONS_PER_STOP: int = get_env("MIN_OBSERVATIONS_PER_STOP", "10", modifier=env_as_int)
 MAX_NULL_STOP_DIST_M: float = get_env("MAX_NULL_STOP_DIST_M", "100.0", modifier=env_as_float)
 RADIUS_PERCENTILES: list[float] = get_env("RADIUS_PERCENTILES", "0.5,0.75,0.9,0.95", modifier=env_as_float_list)
 MIN_RADIUS_PERCENTILES_TO_SUM: list[float] = get_env(
