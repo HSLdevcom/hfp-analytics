@@ -15,7 +15,6 @@ async def get_vehicles_by_timestamp(date: date, operator_id: int) -> list:
     }
 
     where_clause = "WHERE tst > %(start)s AND tst < %(end)s AND event_type = 'VP'"
-    
     if operator_id is not None:
         where_clause += " AND vehicle_operator_id = %(vehicle_operator_id)s"
         query_params["vehicle_operator_id"] = operator_id
