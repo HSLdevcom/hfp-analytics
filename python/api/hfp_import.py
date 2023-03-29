@@ -2,13 +2,13 @@
 
 import psycopg2
 from datetime import datetime
-from common.utils import get_conn_params
+from common.config import POSTGRES_CONNECTION_STRING
 
 def main():
     starttime = datetime.now()
     print(f'[{starttime}] Importing HFP events to database')
 
-    conn = psycopg2.connect(get_conn_params())
+    conn = psycopg2.connect(POSTGRES_CONNECTION_STRING)
     try:
         with conn:
             with conn.cursor() as cur:

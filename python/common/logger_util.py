@@ -1,7 +1,7 @@
 import logging
 import psycopg2
 from psycopg2 import sql
-from common.utils import get_conn_params
+from common.config import POSTGRES_CONNECTION_STRING
 
 
 class PostgresDBHandler(logging.Handler):
@@ -17,7 +17,7 @@ class PostgresDBHandler(logging.Handler):
     def __init__(self, function_name: str):
         super().__init__()
         try:
-            self.sql_conn = psycopg2.connect(get_conn_params())
+            self.sql_conn = psycopg2.connect(POSTGRES_CONNECTION_STRING)
             self.sql_cursor = self.sql_conn.cursor()
         except psycopg2.OperationalError as err:
             self.sql_conn, self.sql_cursor = None, None

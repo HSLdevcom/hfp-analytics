@@ -2,36 +2,35 @@
 import azure.functions as func
 from azure.storage.blob import ContainerClient
 from io import StringIO
-import os
 import csv
 import logging
 import zstandard
+import time
 from datetime import datetime, timedelta
 import psycopg2 as psycopg
 from common.logger_util import CustomDbLogHandler
-from common.utils import get_conn_params
 import common.constants as constants
-import time
+from common.config import (
+    HFP_STORAGE_CONTAINER_NAME,
+    HFP_STORAGE_CONNECTION_STRING,
+    POSTGRES_CONNECTION_STRING,
+    HFP_EVENTS_TO_IMPORT,
+    IMPORT_COVERAGE_DAYS,
+)
 
-# Import other event types as well when needed.
-event_types_to_import = ['VP', 'DOC', 'DOO']
 
 logger = logging.getLogger('importer')
 
 
 def get_azure_container_client() -> ContainerClient:
-    hfp_storage_container_name = os.getenv('HFP_STORAGE_CONTAINER_NAME', '')
-    if not hfp_storage_container_name:
-        logger.error("HFP_STORAGE_CONTAINER_NAME env not found, have you defined it?")
-    hfp_storage_connection_string = os.getenv('HFP_STORAGE_CONNECTION_STRING', '')
-    if not hfp_storage_connection_string:
-        logger.error("HFP_STORAGE_CONNECTION_STRING env not found, have you defined it?")
-    return ContainerClient.from_connection_string(conn_str=hfp_storage_connection_string, container_name=hfp_storage_container_name)
+    return ContainerClient.from_connection_string(
+        conn_str=HFP_STORAGE_CONNECTION_STRING, container_name=HFP_STORAGE_CONTAINER_NAME
+    )
 
 
 def start_import():
     global is_importer_locked
-    conn = psycopg.connect(get_conn_params())
+    conn = psycopg.connect(POSTGRES_CONNECTION_STRING)
 
     # Create a lock for import
     try:
@@ -54,7 +53,7 @@ def start_import():
         logger.error(f'Error when creating locks for importer: {e}')
 
     try:
-        import_day_data_from_past(13)
+        import_day_data_from_past(IMPORT_COVERAGE_DAYS)
 
     except Exception as e:
         logger.error(f'Error when running importer: {e}')
@@ -91,7 +90,7 @@ def import_data(import_date):
 
     blob_names = []
 
-    conn = psycopg.connect(get_conn_params())
+    conn = psycopg.connect(POSTGRES_CONNECTION_STRING)
     with conn:
         with conn.cursor() as cur:
             for i, name in enumerate(storage_blob_names):
@@ -107,7 +106,7 @@ def import_data(import_date):
 
                 event_type = tags.get('eventType')
 
-                covered_by_import = event_type in event_types_to_import
+                covered_by_import = event_type in HFP_EVENTS_TO_IMPORT
 
 
                 cur.execute("INSERT INTO importer.blob(name, type, min_oday, max_oday, min_tst, max_tst, row_count, covered_by_import) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING",
@@ -139,7 +138,7 @@ def import_data(import_date):
 
 def import_blob(blob_name):
     # TODO: Use connection pooling
-    connection = psycopg.connect(get_conn_params())
+    connection = psycopg.connect(POSTGRES_CONNECTION_STRING)
     cur = connection.cursor()
     logger.debug(f"Processing blob: {blob_name}")
     blob_start_time = time.time()
