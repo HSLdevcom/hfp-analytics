@@ -4,14 +4,11 @@ import pptx
 import psycopg2
 import os
 from datetime import date
-from common.utils import get_conn_params
-from common.utils import env_with_default
+from common.config import POSTGRES_CONNECTION_STRING, MIN_OBSERVATIONS_PER_STOP, LARGE_JORE_DIST_M
+
 
 def main():
-    min_observations_per_stop = env_with_default('MIN_OBSERVATIONS_PER_STOP', 100)
-    large_jore_dist_m = env_with_default('LARGE_JORE_DIST_M', 25.0)
-
-    conn = psycopg2.connect(get_conn_params())
+    conn = psycopg2.connect(POSTGRES_CONNECTION_STRING)
 
     try:
         with conn:
@@ -21,8 +18,8 @@ def main():
                              WHERE (sm.n_stop_known + sm.n_stop_guessed) >= %s\
                                AND sm.dist_to_jore_point_m >= %s\
                                 OR sm.dist_to_jore_point_m IS NULL',
-                            (min_observations_per_stop,
-                             large_jore_dist_m))
+                            (MIN_OBSERVATIONS_PER_STOP,
+                             LARGE_JORE_DIST_M))
                 colnames = [desc[0] for desc in cur.description]
                 res = [{col: row[idx] for idx, col in enumerate(colnames)} for row in cur.fetchall()]
     finally:

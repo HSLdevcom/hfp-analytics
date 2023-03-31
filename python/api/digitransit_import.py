@@ -5,7 +5,7 @@ import requests
 import csv
 from datetime import date
 from psycopg2 import sql
-from common.utils import get_conn_params
+from common.config import POSTGRES_CONNECTION_STRING
 
 GRAPHQL_URL = 'https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql'
 
@@ -106,7 +106,7 @@ def import_dataset(query_type, to_table, conn):
 def main():
     conn = None
     try:
-        with psycopg2.connect(get_conn_params()) as conn:
+        with psycopg2.connect(POSTGRES_CONNECTION_STRING) as conn:
             import_dataset(query_type='stations', to_table='jore.jore_station', conn=conn)
             import_dataset(query_type='stops', to_table='jore.jore_stop', conn=conn)
     finally:

@@ -1,15 +1,14 @@
 import psycopg2
 import logging
-from common.utils import get_conn_params
 import common.constants as constants
-
+from common.config import POSTGRES_CONNECTION_STRING
 
 logger = logging.getLogger('importer')
 
 
 def remove_old_data():
 
-    conn = psycopg2.connect(get_conn_params())
+    conn = psycopg2.connect(POSTGRES_CONNECTION_STRING)
     try:
         with conn:
             with conn.cursor() as cur:
