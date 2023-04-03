@@ -128,7 +128,7 @@ async def get_hfp_points(
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT * FROM api.view_observation_4326 \
-                WHERE st_asgeojson -> 'properties' ->> 'stop_id' = %(stop_id)s",
+                WHERE st_asgeojson -> 'properties' ->> 'stop_id' = %(stop_id)s::text",
                 {"stop_id": stop_id},
             )
             stop_id_observations = cur.fetchall()
