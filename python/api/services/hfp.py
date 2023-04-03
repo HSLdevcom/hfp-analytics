@@ -10,8 +10,8 @@ from common.database import pool
 
 
 async def get_hfp_data(route_id: Optional[str],
-                       oper: Optional[int],
-                       veh: Optional[int],
+                       operator_id: Optional[int],
+                       vehicle_number: Optional[int],
                        from_tst: datetime,
                        to_tst: datetime,
                        stream: BytesIO) -> None:
@@ -41,16 +41,16 @@ async def get_hfp_data(route_id: Optional[str],
                 WHERE
                     (%(route_id)s IS NULL OR route_id = %(route_id)s) AND
                     (
-                        (%(oper)s IS NULL AND %(veh)s IS NULL ) OR
-                        (vehicle_operator_id = %(oper)s AND vehicle_number = %(veh)s)
+                        (%(operator_id)s IS NULL AND %(vehicle_number)s IS NULL ) OR
+                        (vehicle_operator_id = %(operator_id)s AND vehicle_number = %(vehicle_number)s)
                     ) AND
                     tst >= %(from_tst)s AND tst <= %(to_tst)s
             ) TO STDOUT WITH CSV HEADER
             """,
                 {
                     "route_id": route_id,
-                    "oper": oper,
-                    "veh": veh,
+                    "operator_id": operator_id,
+                    "veh": vehicle_number,
                     "from_tst": from_tst.isoformat(),
                     "to_tst": to_tst.isoformat()
                 }) as copy:
