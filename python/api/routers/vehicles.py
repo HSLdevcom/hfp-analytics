@@ -67,7 +67,7 @@ async def get_vehicles(
     Vehicle doors analysis as csv.
     """
     formatted_data = await get_vehicle_data(date, operator_id)
-    analyzed_data = analyze_vehicle_data(formatted_data)
+    analyzed_data = analyze_vehicle_data(formatted_data, True)
     if errorsOnly:
         analyzed_data = [vehicle for vehicle in analyzed_data if vehicle['errors']['amount'] > 0]
     csv_filename = "doors.csv"
@@ -83,7 +83,7 @@ async def get_vehicles(
                 "Operaattori": item['operator_id'], 
                 "Kylkinumero": item['vehicle_number']
             }
-            if item['errors']['amount'] == 0:
+            if len(item['errors']['types']) == 0:
                 row_data = {
                     **common_data,
                     "Havaittu ongelma": "Ei havaittu ongelmia", 
@@ -91,12 +91,11 @@ async def get_vehicles(
                 }
                 writer.writerow(row_data)
             else:
-                error_types = set()
-                for event in item['errors']['events']:
-                    event_type = event['type']
-                    error_types.add(error_types_translations[event_type])
-                error_types = list(error_types)
-                error_types_str = ', '.join(error_types)
+                translated_error_types = []
+                error_types = item['errors']['types']
+                for error_type in error_types:
+                    translated_error_types.append(error_types_translations[error_type])
+                error_types_str = ', '.join(translated_error_types)
                 row_data = {
                     **common_data,
                     "Havaittu ongelma": "Epäluotettava ovitieto", 
@@ -182,13 +181,13 @@ def tz_diff(tz1, tz2):
             tz2.localize(date).astimezone(tz1))\
             .seconds/3600
 
-def analyze_vehicle_data(vehicle_data):
+def analyze_vehicle_data(vehicle_data, includeErrorTypes=False):
     analysis = defaultdict(lambda: {'null': 0, 'true': 0, 'false': 0, 'errors': {'amount': 0, 'events': []}})
-
     for data in vehicle_data:
         data_list = data.get('data', [])
         operator_id = data.get('operator_id')
         analysis[data['vehicle_number']]['operator_id'] = operator_id
+
         for d in data_list:
             drst = d.get('drst')
             stop = d.get('stop')
@@ -229,9 +228,9 @@ def analyze_vehicle_data(vehicle_data):
             else:
                 analysis[data['vehicle_number']]['false'] += 1
             if drst and spd is not None and spd > spd_threshold:
-                analysis[data['vehicle_number']]['errors']['amount'] += 1
                 event = f'Speed over {spd_threshold} m/s when doors open'
-                analysis[data['vehicle_number']]['errors']['events'].append(error_obj(d, event))   
+                analysis[data['vehicle_number']]['errors']['events'].append(error_obj(d, event))  
+                analysis[data['vehicle_number']]['errors']['amount'] += 1 
 
     result = []
     for vehicle_number, analysis_data in analysis.items():
@@ -242,21 +241,29 @@ def analyze_vehicle_data(vehicle_data):
         false_ratio = round(analysis_data['false']/total, 3)
         null_ratio = round(analysis_data['null']/total, 3)
 
+        error_types = set()
+        for event in analysis_data['errors']['events']:
+            event_type = event['type']
+            error_types.add(event_type)
+
         if true_ratio > 0.5 and true_ratio < 1:
-            analysis_data['errors']['amount'] += 1
-            analysis_data['errors']['events'].append(error_obj(d, "Drst inverted"))
+            error_types.add("Drst inverted")  
         if null_ratio == 1:
-            analysis_data['errors']['amount'] += 1
-            analysis_data['errors']['events'].append(error_obj(d, "Drst missing"))
+            error_types.add("Drst missing")  
         if null_ratio > 0 and null_ratio < 1:
-            analysis_data['errors']['amount'] += 1
-            analysis_data['errors']['events'].append(error_obj(d, "Some of the drst values are missing"))
+            error_types.add("Some of the drst values are missing")  
         if true_ratio == 1:
-            analysis_data['errors']['amount'] += 1
-            analysis_data['errors']['events'].append(error_obj(d, "Drst always true"))
+            error_types.add("Drst always true")  
         if false_ratio == 1:
-            analysis_data['errors']['amount'] += 1
-            analysis_data['errors']['events'].append(error_obj(d, "Drst always false"))
+            error_types.add("Drst always false")  
+
+        if includeErrorTypes:
+            if error_types:
+                error_types = list(error_types)
+                analysis_data['errors']['types'] = error_types
+            else:
+                analysis_data['errors']['types'] = []
+
 
         analysis_data = {
             'null': null_ratio,
@@ -279,6 +286,7 @@ def error_obj(d, event):
         'tst': d.get('tst'),
         'oday': d.get('oday'),
         'type': event,
+        'drst': d.get('drst'),
         'spd': d.get('spd'),
         'odo': d.get('odo'),
         'loc': d.get('loc'),
