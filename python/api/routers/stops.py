@@ -8,7 +8,8 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 
 import psycopg2 as psycopg
 
-from common.utils import get_conn_params, tuples_to_feature_collection
+from common.utils import tuples_to_feature_collection
+from common.config import POSTGRES_CONNECTION_STRING
 from api.digitransit_import import main as run_digitransit_import
 from api.schemas.stops import (
     JoreStopFeatureCollection,
@@ -53,7 +54,7 @@ async def get_jore_stops(
         example=1140439,
     )
 ) -> JSONResponse:
-    with psycopg.connect(get_conn_params()) as conn:
+    with psycopg.connect(POSTGRES_CONNECTION_STRING) as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM api.view_jore_stop_4326")
             stops = cur.fetchall()
@@ -89,7 +90,7 @@ async def get_stop_medians(
         example=1140439,
     )
 ) -> JSONResponse:
-    with psycopg.connect(get_conn_params()) as conn:
+    with psycopg.connect(POSTGRES_CONNECTION_STRING) as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM api.view_stop_median_4326")
             stop_medians = cur.fetchall()
@@ -123,7 +124,7 @@ async def get_stop_medians(
 async def get_hfp_points(
     stop_id: int = Path(title="Stop ID", description="JORE ID of the stop.", example=1140439)
 ) -> JSONResponse:
-    with psycopg.connect(get_conn_params()) as conn:
+    with psycopg.connect(POSTGRES_CONNECTION_STRING) as conn:
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT * FROM api.view_observation_4326 \
@@ -164,7 +165,7 @@ async def get_hfp_points(
 async def get_percentile_circles(
     stop_id: int = Path(title="Stop ID", description="JORE ID of the stop.", example=1140439)
 ) -> JSONResponse:
-    with psycopg.connect(get_conn_params()) as conn:
+    with psycopg.connect(POSTGRES_CONNECTION_STRING) as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT api.get_percentile_circles_with_stop_id(%(stop_id)s)", {"stop_id": stop_id})
             percentile_circles = cur.fetchall()
