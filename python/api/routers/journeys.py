@@ -5,6 +5,7 @@ import logging
 
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 
 from api.services.journeys import get_last_modified_of_oday, get_journeys_by_oday
 from api.schemas.journeys import JourneyResponse
@@ -36,4 +37,4 @@ async def get_monitored_vehicle_journeys(
         "last_updated": last_updated.isoformat(timespec="seconds") if last_updated else None,
     }
 
-    return JSONResponse(content=data)
+    return JSONResponse(content=jsonable_encoder(data))

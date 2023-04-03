@@ -5,6 +5,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, Path
 from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.encoders import jsonable_encoder
 
 import psycopg2 as psycopg
 
@@ -71,7 +72,7 @@ async def get_jore_stops(
                     raise HTTPException(status_code=404, detail=f"Did not find stop with given stop_id: {stop_id}")
 
             data = tuples_to_feature_collection(geom_tuples=stops)
-            return JSONResponse(content=data)
+            return JSONResponse(content=jsonable_encoder(data))
 
 
 @router.get(
@@ -109,7 +110,7 @@ async def get_stop_medians(
 
             data = tuples_to_feature_collection(geom_tuples=stop_medians)
 
-            return JSONResponse(content=data)
+            return JSONResponse(content=jsonable_encoder(data))
 
 
 @router.get(
@@ -151,7 +152,7 @@ async def get_hfp_points(
 
             data = tuples_to_feature_collection(geom_tuples=total_observations)
 
-            return JSONResponse(content=data)
+            return JSONResponse(content=jsonable_encoder(data))
 
 
 @router.get(
@@ -172,4 +173,4 @@ async def get_percentile_circles(
 
         data = tuples_to_feature_collection(geom_tuples=percentile_circles)
 
-        return JSONResponse(content=data)
+        return JSONResponse(content=jsonable_encoder(data))
