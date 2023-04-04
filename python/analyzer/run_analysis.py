@@ -5,10 +5,29 @@ import logging
 import time
 from common.utils import env_with_default, comma_separated_floats_to_list, comma_separated_integers_to_list, get_conn_params
 import common.constants as constants
+from datetime import date, timedelta, datetime
+from common.database import pool
+from common.vehicle_analysis_utils import analyze_vehicle_data, get_vehicle_data, get_vehicle_ids, insert_data
 
 start_time = 0
 logger = logging.getLogger('importer')
 
+async def run_vehicle_analysis():
+    today = date.today()
+
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+    logger.info(f"Starting vehicle analysis for day {yesterday}.")
+    vehicle_numbers = await get_vehicle_ids(yesterday)
+    count = 0
+    for vehicle_number in vehicle_numbers:
+        formatted_data = await get_vehicle_data(yesterday, None, vehicle_number)
+        analyzed_data = analyze_vehicle_data(formatted_data)
+        await insert_data(analyzed_data)
+        count = count + 1
+        print(f'Vehicle number: {vehicle_number} analyzed. {count}/{len(vehicle_numbers)}')
+    logger.info("Vehicle analysis done.")
+    return count
 
 def get_time():
     return f'[{round(time.time() - start_time)}s]'
@@ -126,4 +145,3 @@ def run_analysis():
     finally:
         conn.cursor().execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
         conn.close()
-
