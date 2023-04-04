@@ -3,11 +3,26 @@
 import psycopg2
 import logging
 import time
-from common.utils import env_with_default, comma_separated_floats_to_list, comma_separated_integers_to_list, get_conn_params
 import common.constants as constants
 from datetime import date, timedelta, datetime
 from common.database import pool
 from common.vehicle_analysis_utils import analyze_vehicle_data, get_vehicle_data, get_vehicle_ids, insert_data
+from common.config import (
+    POSTGRES_CONNECTION_STRING,
+    STOP_NEAR_LIMIT_M,
+    MIN_OBSERVATIONS_PER_STOP,
+    MAX_NULL_STOP_DIST_M,
+    RADIUS_PERCENTILES,
+    MIN_RADIUS_PERCENTILES_TO_SUM,
+    DEFAULT_MIN_RADIUS_M,
+    MANUAL_ACCEPTANCE_MIN_RADIUS_M,
+    LARGE_SCATTER_PERCENTILE,
+    LARGE_SCATTER_RADIUS_M,
+    LARGE_JORE_DIST_M,
+    STOP_GUESSED_PERCENTAGE,
+    TERMINAL_IDS
+)
+
 
 start_time = 0
 logger = logging.getLogger('importer')
@@ -36,24 +51,7 @@ def get_time():
 def run_analysis():
     global start_time
 
-    stop_near_limit_m = env_with_default('STOP_NEAR_LIMIT_M', 50.0)
-    min_observations_per_stop = env_with_default('MIN_OBSERVATIONS_PER_STOP', 10)
-    max_null_stop_dist_m = env_with_default('MAX_NULL_STOP_DIST_M', 100.0)
-    radius_percentiles_str = env_with_default('RADIUS_PERCENTILES', '0.5,0.75,0.9,0.95')
-    radius_percentiles = comma_separated_floats_to_list(radius_percentiles_str)
-
-    min_radius_percentiles_to_sum_str = env_with_default('MIN_RADIUS_PERCENTILES_TO_SUM', '0.5,0.95')
-    min_radius_percentiles_to_sum = comma_separated_floats_to_list(min_radius_percentiles_to_sum_str)
-    default_min_radius_m = env_with_default('DEFAULT_MIN_RADIUS_M', 20.0)
-    manual_acceptance_min_radius_m = env_with_default('MANUAL_ACCEPTANCE_MIN_RADIUS_M', 40.0)
-    large_scatter_percentile = env_with_default('LARGE_SCATTER_PERCENTILE', 0.9)
-    large_scatter_radius_m = env_with_default('LARGE_SCATTER_RADIUS_M', 10.0)
-    large_jore_dist_m = env_with_default('LARGE_JORE_DIST_M', 25.0)
-    stop_guessed_percentage = env_with_default('STOP_GUESSED_PERCENTAGE', 0.05)
-    terminal_ids_str = env_with_default('TERMINAL_IDS', '1000001,1000015,2000002,2000003,2000212,4000011')
-    terminal_ids = comma_separated_integers_to_list(terminal_ids_str)
-
-    conn = psycopg2.connect(get_conn_params())
+    conn = psycopg2.connect(POSTGRES_CONNECTION_STRING)
     try:
         with conn:
             with conn.cursor() as cur:
@@ -83,7 +81,7 @@ def run_analysis():
                 )
 
                 cur.execute('SELECT * FROM stopcorr.guess_missing_stop_ids(%s)',
-                            (stop_near_limit_m, ))
+                            (STOP_NEAR_LIMIT_M, ))
                 logger.info(f'{get_time()} {cur.fetchone()[0]} observations updated with guessed stop_id')
 
                 conn.commit()
@@ -107,7 +105,7 @@ def run_analysis():
                 logger.info(f'{get_time()} {cur.fetchone()[0]} rows deleted from "stop_median"')
 
                 cur.execute('SELECT * FROM stopcorr.calculate_medians(%s, %s)',
-                            (min_observations_per_stop, max_null_stop_dist_m))
+                            (MIN_OBSERVATIONS_PER_STOP, MAX_NULL_STOP_DIST_M))
                 logger.info(f'{get_time()} {cur.fetchone()[0]} rows inserted into "stop_median"')
 
                 conn.commit()
@@ -118,20 +116,20 @@ def run_analysis():
                 conn.commit()
 
                 cur.execute('SELECT * FROM stopcorr.calculate_percentile_radii(%s)',
-                            (radius_percentiles, ))
-                logger.info(f'{get_time()} {cur.fetchone()[0]} "percentile_radii" created using percentiles {radius_percentiles_str}')
+                            (RADIUS_PERCENTILES, ))
+                logger.info(f'{get_time()} {cur.fetchone()[0]} "percentile_radii" created using percentiles {RADIUS_PERCENTILES}')
 
                 conn.commit()
 
                 cur.execute('CALL stopcorr.classify_medians(%s, %s, %s, %s, %s, %s, %s, %s)',
-                            (min_radius_percentiles_to_sum,
-                             default_min_radius_m,
-                             manual_acceptance_min_radius_m,
-                             large_scatter_percentile,
-                             large_scatter_radius_m,
-                             large_jore_dist_m,
-                             stop_guessed_percentage,
-                             terminal_ids)
+                            (MIN_RADIUS_PERCENTILES_TO_SUM,
+                             DEFAULT_MIN_RADIUS_M,
+                             MANUAL_ACCEPTANCE_MIN_RADIUS_M,
+                             LARGE_SCATTER_PERCENTILE,
+                             LARGE_SCATTER_RADIUS_M,
+                             LARGE_JORE_DIST_M,
+                             STOP_GUESSED_PERCENTAGE,
+                             TERMINAL_IDS)
                             )
                 cur.execute('SELECT count(*) FROM stopcorr.stop_median WHERE result_class IS NOT NULL')
                 logger.info(f'{get_time()} {cur.fetchone()[0]} "stop_median" updated with "result_class", "recommended_min_radius_m" and "manual_acceptance_needed"')

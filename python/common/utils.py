@@ -1,18 +1,6 @@
-import os
 import pptx
 import logging as logger
 
-
-def get_conn_params() -> str:
-    return os.getenv("POSTGRES_CONNECTION_STRING", "")
-
-
-def env_with_default(var_name, default_value):
-    res = os.getenv(var_name)
-    if res is None:
-        res = default_value
-        print(f'{var_name} not set, falling back to default value {default_value}')
-    return res
 
 def tuples_to_feature_collection(geom_tuples: list[tuple]) -> dict:
     """Transforms GeoJSON tuples returned by psycopg into a FeatureCollection dict for REST API."""
@@ -22,17 +10,6 @@ def tuples_to_feature_collection(geom_tuples: list[tuple]) -> dict:
         "features": features
     }
 
-def comma_separated_floats_to_list(val_str):
-    res = val_str.split(',')
-    res = [x.strip() for x in res]
-    res = [float(x) for x in res]
-    return res
-
-def comma_separated_integers_to_list(val_str):
-    res = val_str.split(',')
-    res = [x.strip() for x in res]
-    res = [int(x) for x in res]
-    return res
 
 # From https://pbpython.com/creating-powerpoint.html
 def analyze_pptx(input_pptx, output_pptx):
