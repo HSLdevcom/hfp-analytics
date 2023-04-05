@@ -5,7 +5,7 @@ import requests
 import csv
 from datetime import date
 from psycopg2 import sql
-from common.utils import get_conn_params
+from common.config import POSTGRES_CONNECTION_STRING
 
 GRAPHQL_URL = 'https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql'
 
@@ -88,10 +88,10 @@ def copy_from_file_to_db(conn, to_table, from_file='/tmp/tmp.csv'):
     with open(from_file, mode='r') as fobj:
         with conn.cursor() as cur:
             cur.execute(sql.SQL('WITH deleted AS (DELETE FROM {} RETURNING 1)\
-                                SELECT count(*) FROM deleted').format(sql.Identifier(to_table)))
+                                SELECT count(*) FROM deleted').format(sql.Identifier(*to_table.split("."))))
             print(f'{cur.fetchone()[0]} rows deleted from "{to_table}"')
-            cur.copy_from(file=fobj, table=to_table, sep='\t', null='')
-            cur.execute(sql.SQL('SELECT count(*) FROM {}').format(sql.Identifier(to_table)))
+            cur.copy_expert(sql=sql.SQL("COPY {} FROM STDIN WITH (FORMAT CSV, DELIMITER '\t')").format(sql.Identifier(*to_table.split("."))), file=fobj)
+            cur.execute(sql.SQL('SELECT count(*) FROM {}').format(sql.Identifier(*to_table.split("."))))
             print(f'{cur.fetchone()[0]} rows inserted into "{to_table}"')
 
 def import_dataset(query_type, to_table, conn):
@@ -106,9 +106,9 @@ def import_dataset(query_type, to_table, conn):
 def main():
     conn = None
     try:
-        with psycopg2.connect(get_conn_params()) as conn:
-            import_dataset(query_type='stations', to_table='jore_station', conn=conn)
-            import_dataset(query_type='stops', to_table='jore_stop', conn=conn)
+        with psycopg2.connect(POSTGRES_CONNECTION_STRING) as conn:
+            import_dataset(query_type='stations', to_table='jore.jore_station', conn=conn)
+            import_dataset(query_type='stops', to_table='jore.jore_stop', conn=conn)
     finally:
         if conn:
             conn.close()

@@ -1,7 +1,8 @@
 import logging
 import psycopg2
 from psycopg2 import sql
-from common.utils import get_conn_params
+from common.config import POSTGRES_CONNECTION_STRING
+
 
 class PostgresDBHandler(logging.Handler):
     """
@@ -16,7 +17,7 @@ class PostgresDBHandler(logging.Handler):
     def __init__(self, function_name: str):
         super().__init__()
         try:
-            self.sql_conn = psycopg2.connect(get_conn_params())
+            self.sql_conn = psycopg2.connect(POSTGRES_CONNECTION_STRING)
             self.sql_cursor = self.sql_conn.cursor()
         except psycopg2.OperationalError as err:
             self.sql_conn, self.sql_cursor = None, None
@@ -43,37 +44,60 @@ class PostgresDBHandler(logging.Handler):
         if self.sql_conn:
             self.sql_conn.close()
 
-class CustomDbLogHandler():
+
+# Store handlers here to prevent doubled instances
+log_handler_store = {}
+
+
+class CustomDbLogHandler:
     """
-    Create an instance of this class once at the start of every function app endpoint
+    Use this context manager once at the start of every function app endpoint
     where you need db logging. After this, you can reference to the logger by calling
     logger = logging.getLogger(<function_name>)
-
-    NOTE: remember to call remove_handlers() in the end of the function app endpoint
     """
     def __init__(self, function_name: str):
-        logger = logging.getLogger('importer')
-        logger.setLevel('DEBUG')
+        self.logger_name = function_name
+        self.logger = logging.getLogger(function_name)
 
-        logging_formatter = logging.Formatter(
-            "%(name)-12s %(asctime)s %(levelname)-8s %(filename)s:%(funcName)s %(message)s")
+        if self.logger_name not in log_handler_store:
+            # Logger not initialized before, create handlers
+            self.logger.setLevel('DEBUG')
+            logging_formatter = logging.Formatter(
+                "%(name)-12s %(asctime)s %(levelname)-8s %(filename)s:%(funcName)s %(message)s")
 
-        console_log_handler = logging.StreamHandler()
-        console_log_handler.setFormatter(logging_formatter)
-        console_log_handler.addFilter(logging.Filter('importer'))
-        logger.addHandler(console_log_handler)
+            console_log_handler = logging.StreamHandler()
+            console_log_handler.setFormatter(logging_formatter)
+            console_log_handler.addFilter(logging.Filter(function_name))
+            self.logger.addHandler(console_log_handler)
 
-        db_log_handler = PostgresDBHandler(function_name=function_name)
-        db_log_handler.setFormatter(logging_formatter)
-        db_log_handler.addFilter(logging.Filter('importer'))
-        logger.addHandler(db_log_handler)
+            db_log_handler = PostgresDBHandler(function_name=function_name)
+            db_log_handler.setFormatter(logging_formatter)
+            db_log_handler.addFilter(logging.Filter(function_name))
+            self.logger.addHandler(db_log_handler)
 
-        self.db_log_handler = db_log_handler
-        self.console_log_handler = console_log_handler
-        self.logger = logger
+            log_handler_store[function_name] = {
+                'db_log_handler': db_log_handler,
+                'console_log_handler': console_log_handler,
+                'count': 1
+            }
+        else:
+            # Logger already initialized, just increase count
+            log_handler_store[function_name]['count'] += 1
 
-    def remove_handlers(self):
-        self.logger.removeHandler(self.console_log_handler)
-        self.console_log_handler.close()
-        self.logger.removeHandler(self.db_log_handler)
-        self.db_log_handler.close()
+        self.db_log_handler = log_handler_store[function_name]['db_log_handler']
+        self.console_log_handler = log_handler_store[function_name]['console_log_handler']
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        # Execution done, decrease count
+        log_handler_store[self.logger_name]['count'] -= 1
+
+        if log_handler_store[self.logger_name]['count'] == 0:
+            # If no one is using logger, remove handlers.
+            self.logger.removeHandler(self.console_log_handler)
+            self.console_log_handler.close()
+            self.logger.removeHandler(self.db_log_handler)
+            self.db_log_handler.close()
+            del log_handler_store[self.logger_name]

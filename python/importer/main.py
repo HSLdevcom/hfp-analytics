@@ -2,40 +2,36 @@
 import azure.functions as func
 from azure.storage.blob import ContainerClient
 from io import StringIO
-import os
 import csv
 import logging
 import zstandard
+import time
 from datetime import datetime, timedelta
 import psycopg2 as psycopg
 from common.logger_util import CustomDbLogHandler
-from common.utils import get_conn_params
 import common.constants as constants
-from .run_analysis import run_analysis
-import time
 import common.slack as slack
+from common.config import (
+    HFP_STORAGE_CONTAINER_NAME,
+    HFP_STORAGE_CONNECTION_STRING,
+    POSTGRES_CONNECTION_STRING,
+    HFP_EVENTS_TO_IMPORT,
+    IMPORT_COVERAGE_DAYS,
+)
 
-# Import other event types as well when needed.
-event_types_to_import = ['VP', 'DOC', 'DOO']
+
+logger = logging.getLogger('importer')
+
 
 def get_azure_container_client() -> ContainerClient:
-    logger = logging.getLogger('importer')
-    hfp_storage_container_name = os.getenv('HFP_STORAGE_CONTAINER_NAME', '')
-    if not hfp_storage_container_name:
-        logger.error("HFP_STORAGE_CONTAINER_NAME env not found, have you defined it?")
-    hfp_storage_connection_string = os.getenv('HFP_STORAGE_CONNECTION_STRING', '')
-    if not hfp_storage_connection_string:
-        logger.error("HFP_STORAGE_CONNECTION_STRING env not found, have you defined it?")
-    return ContainerClient.from_connection_string(conn_str=hfp_storage_connection_string, container_name=hfp_storage_container_name)
+    return ContainerClient.from_connection_string(
+        conn_str=HFP_STORAGE_CONNECTION_STRING, container_name=HFP_STORAGE_CONTAINER_NAME
+    )
 
-def main(importer: func.TimerRequest, context: func.Context):
-    custom_db_log_handler = CustomDbLogHandler(function_name='importer')
-    logger = logging.getLogger('importer')
 
+def start_import():
     global is_importer_locked
-    conn = psycopg.connect(get_conn_params())
-
-    info = {}
+    conn = psycopg.connect(POSTGRES_CONNECTION_STRING)
 
     # Create a lock for import
     try:
@@ -49,7 +45,6 @@ def main(importer: func.TimerRequest, context: func.Context):
                 if is_importer_locked:
                     logger.error("Importer is LOCKED which means that importer should be already running. You can get"
                                 "rid of the lock by restarting the database if needed.")
-                    custom_db_log_handler.remove_handlers()
                     return
 
                 logger.info("Going to run importer.")
@@ -60,8 +55,7 @@ def main(importer: func.TimerRequest, context: func.Context):
         slack.send_to_channel(f'Error when creating locks for importer: {e}', alert=True)
 
     try:
-        info = import_day_data_from_past(1)
-        logger.info("Importing done - next up: analysis.")
+        import_day_data_from_past(IMPORT_COVERAGE_DAYS)
 
     except Exception as e:
         logger.error(f'Error when running importer: {e}')
@@ -73,27 +67,19 @@ def main(importer: func.TimerRequest, context: func.Context):
             conn.commit()
         conn.close()
 
-
-    logger.info("Importer done. Starting minianalysis")
-
-
-    run_analysis(info)
-
-    custom_db_log_handler.remove_handlers()
+    logger.info("Importer done.")
 
 
 def import_day_data_from_past(day_since_today):
-    logger = logging.getLogger('importer')
     logger.info(f"Importing HFP data {day_since_today} days from past.")
 
     import_date = datetime.now() - timedelta(day_since_today)
     import_date = datetime.strftime(import_date, '%Y-%m-%d')
-    info = import_data(import_date=import_date)
-    return info
+    import_data(import_date=import_date)
+
 
 def import_data(import_date):
     info = {}
-    logger = logging.getLogger('importer')
     container_client = get_azure_container_client()
     storage_blob_names = []
     import_date_obj = datetime.strptime(import_date, "%Y-%m-%d")
@@ -107,7 +93,7 @@ def import_data(import_date):
 
     blob_names = []
 
-    conn = psycopg.connect(get_conn_params())
+    conn = psycopg.connect(POSTGRES_CONNECTION_STRING)
     with conn:
         with conn.cursor() as cur:
             for i, name in enumerate(storage_blob_names):
@@ -131,7 +117,7 @@ def import_data(import_date):
                     logger.warning(f"Bad oday data found in {name}")
                     slack.send_to_channel(f"Bad oday data found in {name}", alert=True)
 
-                covered_by_import = event_type in event_types_to_import
+                covered_by_import = event_type in HFP_EVENTS_TO_IMPORT
 
 
                 cur.execute("INSERT INTO importer.blob(name, type, min_oday, max_oday, min_tst, max_tst, row_count, covered_by_import) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING",
@@ -139,21 +125,14 @@ def import_data(import_date):
 
             conn.commit()
 
-            logger.info("Importer ready for next step")
-
-            cur.execute("SELECT name FROM importer.blob WHERE covered_by_import AND import_status IN ('not started', 'pending')")
+            cur.execute(
+                """
+                SELECT name
+                FROM importer.blob
+                WHERE covered_by_import AND import_status IN ('not started', 'pending')
+                ORDER BY type, name
+                """)
             names = cur.fetchall()
-            cur.execute("SELECT min(min_oday), max(max_oday), min(min_tst), max(max_tst), count(*), sum(row_count) FROM importer.blob WHERE covered_by_import AND import_status IN ('not started', 'pending')")
-            data = cur.fetchone() or {}
-
-            info = {
-                'min_oday': data[0],
-                'max_oday': data[1],
-                'min_tst': data[2],
-                'max_tst': data[3],
-                'files': data[4],
-                'rows': data[5]
-            }
 
             for n in names:
                 blob_names.append(n[0])
@@ -167,15 +146,11 @@ def import_data(import_date):
     for b in blob_names:
         import_blob(b)
 
-    return info
-
-
 
 def import_blob(blob_name):
     # TODO: Use connection pooling
-    connection = psycopg.connect(get_conn_params())
+    connection = psycopg.connect(POSTGRES_CONNECTION_STRING)
     cur = connection.cursor()
-    logger = logging.getLogger('importer')
     logger.debug(f"Processing blob: {blob_name}")
     blob_start_time = time.time()
     cur.execute("UPDATE importer.blob SET import_started = %s, import_status = 'importing' WHERE name = %s", (datetime.utcnow(), blob_name,))
@@ -206,7 +181,6 @@ def import_blob(blob_name):
 
 
 def read_imported_data_to_db(cur, downloader, blob_name):
-    logger = logging.getLogger('importer')
     compressed_content = downloader.content_as_bytes()
     reader = zstandard.ZstdDecompressor().stream_reader(compressed_content)
     bytes = reader.readall()
@@ -215,8 +189,8 @@ def read_imported_data_to_db(cur, downloader, blob_name):
 
     invalid_row_count = 0
     selected_fields = ["tst", "eventType", "receivedAt", "ownerOperatorId", "vehicleNumber", "mode",
-                       "routeId", "dir", "oday", "start", "oper", "odo", "drst", "locationQualityMethod",
-                        "stop", "longitude", "latitude"]
+                       "routeId", "directionId", "oday", "start", "oper", "odo", "spd", "drst", "locationQualityMethod",
+                       "stop", "longitude", "latitude"]
     writer = csv.DictWriter(import_io, fieldnames=selected_fields)
 
     calculator = 0
@@ -233,7 +207,16 @@ def read_imported_data_to_db(cur, downloader, blob_name):
         slack.send_to_channel(f'Analytics found {invalid_row_count} invalid rows in blob {blob_name}', alert=True)
 
     import_io.seek(0)
-    cur.copy_expert(sql="COPY hfp.view_as_original_hfp_event FROM STDIN WITH CSV",
+    cur.execute("DELETE FROM staging.hfp_raw")
+    cur.copy_expert(sql="COPY staging.hfp_raw FROM STDIN WITH CSV",
                     file=import_io)
+    cur.execute("CALL staging.import_and_normalize_hfp()")
+    cur.execute("DELETE FROM staging.hfp_raw")
 
     return calculator
+
+
+def main(importer: func.TimerRequest, context: func.Context) -> None:
+    """ Main function to be called by Azure Function """
+    with CustomDbLogHandler('importer'):
+        start_import()

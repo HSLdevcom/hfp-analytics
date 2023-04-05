@@ -2,19 +2,19 @@
 
 import psycopg2
 from datetime import datetime
-from common.utils import get_conn_params
+from common.config import POSTGRES_CONNECTION_STRING
 
 def main():
     starttime = datetime.now()
     print(f'[{starttime}] Importing HFP events to database')
 
-    conn = psycopg2.connect(get_conn_params())
+    conn = psycopg2.connect(POSTGRES_CONNECTION_STRING)
     try:
         with conn:
             with conn.cursor() as cur:
                 cur.execute(
                     "CREATE TEMPORARY TABLE _import ( \
-                    LIKE observation) \
+                    LIKE stopcorr.observation) \
                     ON COMMIT DROP")
                 cur.execute(
                     "COPY _import (\
@@ -31,7 +31,7 @@ def main():
                 )
                 cur.execute(
                     "WITH inserted AS ( \
-                    INSERT INTO observation ( \
+                    INSERT INTO stopcorr.observation ( \
                     tst,event,oper,veh,route,dir,oday,start,stop_id,stop_id_guessed,long,lat) \
                     SELECT tst,event,oper,veh,route,dir,oday,start,stop_id,stop_id_guessed,long,lat \
                     FROM _import \
