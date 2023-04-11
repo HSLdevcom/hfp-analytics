@@ -29,8 +29,6 @@ logger = logging.getLogger('importer')
 
 async def run_vehicle_analysis():
     today = date.today()
-
-    today = date.today()
     yesterday = today - timedelta(days=1)
     logger.info(f"Starting vehicle analysis for day {yesterday}.")
     vehicle_numbers = await get_vehicle_ids(yesterday)

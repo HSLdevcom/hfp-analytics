@@ -17,10 +17,10 @@ async def start_analysis():
     logger.info("Going to run analysis.")
     run_analysis()
 
-    logger.info("Analyzer done.")
-
     logger.info("Going to run vehicle analysis.")
     await run_vehicle_analysis()
+
+    logger.info("Analyzer done.")
 
 async def main(analyzer: func.TimerRequest, context: func.Context):
     with CustomDbLogHandler('importer'):
