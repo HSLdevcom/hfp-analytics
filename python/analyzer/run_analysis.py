@@ -6,7 +6,7 @@ import time
 import common.constants as constants
 from datetime import date, timedelta, datetime
 from common.database import pool
-from common.vehicle_analysis_utils import analyze_vehicle_data, get_vehicle_data, get_vehicle_ids, insert_data
+from common.vehicle_analysis_utils import analyze_vehicle_data, get_vehicle_data, get_vehicle_ids, insert_vehicle_data
 from common.config import (
     POSTGRES_CONNECTION_STRING,
     STOP_NEAR_LIMIT_M,
@@ -38,7 +38,7 @@ async def run_vehicle_analysis():
     for vehicle_number in vehicle_numbers:
         formatted_data = await get_vehicle_data(yesterday, None, vehicle_number)
         analyzed_data = analyze_vehicle_data(formatted_data)
-        await insert_data(analyzed_data)
+        await insert_vehicle_data(analyzed_data)
         count = count + 1
         print(f'Vehicle number: {vehicle_number} analyzed. {count}/{len(vehicle_numbers)}')
     logger.info("Vehicle analysis done.")

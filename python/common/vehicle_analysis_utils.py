@@ -46,7 +46,7 @@ async def get_vehicle_ids(date: date) -> list:
             vehicle_numbers = [d["vehicle_number"] for d in unique_data]
             return vehicle_numbers
 
-async def insert_data(vehicle_data):
+async def insert_vehicle_data(vehicle_data):
     """Insert analysis data to db"""
     async with pool.connection() as conn:
         async with conn.cursor() as cur:
@@ -227,7 +227,7 @@ async def get_vehicles_by_timestamp(date: date, operator_id: int, vehicle_number
 
     query_params = {
         "start": datetime.strptime(date_str + " 14:00:00.000+00", '%Y-%m-%d %H:%M:%S.%f+00'),
-        "end": datetime.strptime(date_str + " 14:05:00.000+00", '%Y-%m-%d %H:%M:%S.%f+00')
+        "end": datetime.strptime(date_str + " 15:00:00.000+00", '%Y-%m-%d %H:%M:%S.%f+00')
     }
 
     where_clause = "WHERE tst > %(start)s AND tst < %(end)s AND event_type = 'VP'"
