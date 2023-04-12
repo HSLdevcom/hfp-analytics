@@ -172,6 +172,10 @@ def import_blob(blob_name):
             logger.error(f'Blob {blob_name} not found.')
         else:
             logger.error(f'Error after {int(time.time() - blob_start_time)} seconds when reading blob chunks: {e}')
+            slack.send_to_channel(
+                f"Error after {int(time.time() - blob_start_time)} seconds when reading blob chunks: {e}",
+                alert=True,
+            )
         connection.rollback()
         cur.execute("UPDATE importer.blob SET (import_finished, import_status) = (%s, 'failed') WHERE name = %s", (datetime.utcnow(), blob_name,))
         connection.commit()
