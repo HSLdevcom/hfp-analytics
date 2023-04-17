@@ -111,3 +111,50 @@ AS $procedure$
 $procedure$;
 
 COMMENT ON PROCEDURE staging.import_and_normalize_hfp IS 'Procedure to copy data from staging schema to hfp schema.';
+
+
+CREATE OR REPLACE PROCEDURE staging.import_invalid_hfp()
+LANGUAGE sql
+AS $procedure$
+  INSERT INTO hfp.hfp_point_invalid (
+    point_timestamp,
+    vehicle_operator_id,
+    vehicle_number,
+    transport_mode,
+    route_id,
+    direction_id,
+    oday,
+    "start",
+    observed_operator_id,
+    hfp_event,
+    received_at,
+    odo,
+    spd,
+    drst,
+    loc,
+    stop,
+    geom
+  )
+  SELECT
+    tst,
+    vehicle_operator_id,
+    vehicle_number,
+    transport_mode,
+    route_id,
+    direction_id,
+    oday,
+    "start",
+    observed_operator_id,
+    event_type,
+    received_at,
+    odo,
+    spd,
+    drst,
+    loc,
+    stop,
+    ST_Transform( ST_SetSRID( ST_MakePoint(longitude, latitude), 4326), 3067)
+  FROM staging.hfp_raw
+  ON CONFLICT DO NOTHING;
+$procedure$;
+
+COMMENT ON PROCEDURE staging.import_invalid_hfp IS 'Procedure to copy data marked as invalid from staging schema to hfp schema.';

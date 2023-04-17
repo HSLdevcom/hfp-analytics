@@ -23,6 +23,7 @@ CREATE TABLE importer.blob (
   min_tst           timestamptz,
   max_tst           timestamptz,
   row_count         integer,
+  invalid           boolean       DEFAULT FALSE,
   listed_at         timestamptz   DEFAULT NOW(),
   covered_by_import boolean       DEFAULT FALSE,
   import_status     text REFERENCES importer.import_status(status) DEFAULT 'not started',

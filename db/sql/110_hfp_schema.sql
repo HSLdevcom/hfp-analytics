@@ -55,6 +55,11 @@ COMMENT ON INDEX hfp.hfp_point_route_vehicle_idx IS 'Index for hfp raw data quer
 CREATE INDEX hfp_point_event_idx ON hfp.hfp_point (hfp_event, point_timestamp DESC);
 COMMENT ON INDEX hfp.hfp_point_event_idx IS 'Index for hfp event filter (used at least by the stop analysis).';
 
+-- The similar schema as previously, but this time for invalid points
+CREATE TABLE hfp.hfp_point_invalid (LIKE hfp.hfp_point INCLUDING ALL);
+-- Timescaledb hypertable for hfp data. Invalid data shouldn't need this because there's (hopefully not so much data in it.)
+
+
 CREATE TABLE hfp.assumed_monitored_vehicle_journey (
   vehicle_operator_id   smallint      NOT NULL,
   vehicle_number        integer       NOT NULL,
