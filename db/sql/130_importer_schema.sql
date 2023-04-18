@@ -44,6 +44,8 @@ COMMENT ON COLUMN importer.blob.min_tst IS
 'Minimum timestamp in the data claimed by the tags of the blob.';
 COMMENT ON COLUMN importer.blob.max_tst IS
 'Maximum timestamp in the data claimed by the tags of the blob.';
+COMMENT ON COLUMN importer.blob.invalid IS
+'If the blob was marked by Transitdata to contain invalid data.';
 COMMENT ON COLUMN importer.blob.listed_at IS
 'When the blob was recognized by the importer.';
 COMMENT ON COLUMN importer.blob.covered_by_import IS

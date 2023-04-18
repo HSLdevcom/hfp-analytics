@@ -1,13 +1,17 @@
 """HFP Analytics data importer"""
 import azure.functions as func
 from azure.storage.blob import ContainerClient
-from io import StringIO
+from io import StringIO, TextIOWrapper
 import csv
 import logging
 import zstandard
 import time
 from datetime import datetime, timedelta
-import psycopg2 as psycopg
+
+import psycopg2
+from psycopg_pool import ConnectionPool  # todo: refactor to use common.database pool
+from psycopg import sql
+
 from common.logger_util import CustomDbLogHandler
 import common.constants as constants
 from common.config import (
@@ -17,7 +21,7 @@ from common.config import (
     HFP_EVENTS_TO_IMPORT,
     IMPORT_COVERAGE_DAYS,
 )
-from psycopg_pool import ConnectionPool  # todo: refactor to use common.database pool
+
 
 logger = logging.getLogger("importer")
 
@@ -31,7 +35,7 @@ def get_azure_container_client() -> ContainerClient:
 
 
 def start_import():
-    conn = psycopg.connect(POSTGRES_CONNECTION_STRING)
+    conn = psycopg2.connect(POSTGRES_CONNECTION_STRING)
 
     # Create a lock for import
     try:
@@ -137,7 +141,7 @@ def import_day_data_from_past(day_since_today):
                 """
             )
 
-            blob_names = list(cur.fetchall())
+            blob_names = [r[0] for r in cur.fetchall()]
 
     logger.debug(f"Running import for {blob_names}")
 
@@ -164,7 +168,8 @@ def import_blob(blob_name):
                 ),
             )
             res = cur.fetchone()
-            if res and len(res) != 2:
+
+            if res and len(res) == 2:
                 blob_row_count = res[0]
                 blob_invalid = res[1]
             else:
@@ -177,13 +182,14 @@ def import_blob(blob_name):
                 blob_client = container_client.get_blob_client(blob=blob_name)
                 storage_stream_downloader = blob_client.download_blob()
 
-                read_imported_data_to_db(cur=cur, downloader=storage_stream_downloader, is_invalid=blob_invalid)
+                read_imported_data_to_db(cur=cur, downloader=storage_stream_downloader, blob_invalid=blob_invalid)
 
                 duration = time.time() - blob_start_time
 
                 logger.debug(
                     f"{blob_name} is done. "
-                    f"Imported {blob_row_count} rows in {int(duration)} seconds ({int(blob_row_count/duration)} rows/second)"
+                    f"Imported {blob_row_count} rows in {int(duration)} seconds "
+                    f"({int(blob_row_count/duration)} rows/second)"
                 )
                 conn.commit()
                 success_status = "imported"
@@ -213,54 +219,62 @@ def import_blob(blob_name):
 def read_imported_data_to_db(cur, downloader, blob_invalid: bool):
     compressed_content = downloader.content_as_bytes()
     reader = zstandard.ZstdDecompressor().stream_reader(compressed_content)
-    bytes = reader.readall()
-    hfp_dict_reader = csv.DictReader(StringIO(bytes.decode("utf-8")))
-    import_io = StringIO()
+    hfp_dict_reader = csv.DictReader(TextIOWrapper(reader, encoding="utf-8"))
 
-    selected_fields = [
-        "tst",
-        "eventType",
-        "receivedAt",
-        "ownerOperatorId",
-        "vehicleNumber",
-        "mode",
-        "routeId",
-        "dir",
-        "oday",
-        "start",
-        "oper",
-        "odo",
-        "spd",
-        "drst",
-        "locationQualityMethod",
-        "stop",
-        "longitude",
-        "latitude",
-    ]
-    writer = csv.DictWriter(import_io, fieldnames=selected_fields)
+    # These fields will be imported. Keys are from csv, values are db columns.
+    # Order is guaranteed, so they are used with .keys() and .values() -methods
+    selected_fields = {
+        "tst": "tst",
+        "eventType": "event_type",
+        "receivedAt": "received_at",
+        "ownerOperatorId": "vehicle_operator_id",
+        "vehicleNumber": "vehicle_number",
+        "mode": "transport_mode",
+        "routeId": "route_id",
+        "dir": "direction_id",
+        "oday": "oday",
+        "start": "start",
+        "oper": "observed_operator_id",
+        "odo": "odo",
+        "spd": "spd",
+        "drst": "drst",
+        "locationQualityMethod": "loc",
+        "stop": "stop",
+        "longitude": "longitude",
+        "latitude": "latitude",
+    }
+
+    required_fields = ["tst", "oper", "vehicleNumber"]  # These are used for unique index
+
+    # Create a copy statement from selected field list
+    copy_sql = sql.SQL("COPY staging.hfp_raw ({fields}) FROM STDIN").format(
+        fields=sql.SQL(",").join([sql.Identifier(f) for f in selected_fields.values()])
+    )
 
     invalid_row_count = 0
 
-    for old_row in hfp_dict_reader:
-        new_row = {key: old_row[key] for key in selected_fields}
-        if not any(old_row[key] is None for key in ["tst", "oper", "vehicleNumber"]):
-            writer.writerow(new_row)
-        else:
-            logger.error(f"Invalid row found that contains unique key error: {new_row}")
-            invalid_row_count += 1
+    cur.execute("DELETE FROM staging.hfp_raw")
+
+    with cur.copy(copy_sql) as copy:
+        for row in hfp_dict_reader:
+            if any(row[key] is None for key in required_fields):
+                logger.error(f"Found a row with an unique key error: {row}")
+                invalid_row_count += 1
+                continue
+
+            # Construct a tuple from a row based on selected rows
+            # Convert empty string to None to avoid db type errors
+            row_obj = (row[f] if row[f] != "" else None for f in selected_fields.keys())
+            copy.write_row(row_obj)
 
     if invalid_row_count > 0:
-        logger.error(f"Invalid row count for the blob: {invalid_row_count}")
-
-    # TODO: fix copy expert to use psycopg3
-    import_io.seek(0)
-    cur.execute("DELETE FROM staging.hfp_raw")
-    cur.copy_expert(sql="COPY staging.hfp_raw FROM STDIN WITH CSV", file=import_io)
+        logger.error(f"Unique key error count for the blob: {invalid_row_count}")
 
     if not blob_invalid:
         cur.execute("CALL staging.import_and_normalize_hfp()")
     else:
         cur.execute("CALL stating.import_invalid_hfp()")
+
     cur.execute("DELETE FROM staging.hfp_raw")
 
 
