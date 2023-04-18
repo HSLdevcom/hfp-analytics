@@ -8,7 +8,6 @@ import zstandard
 import time
 from datetime import datetime, timedelta
 
-import psycopg2
 from psycopg_pool import ConnectionPool  # todo: refactor to use common.database pool
 from psycopg import sql
 
@@ -35,11 +34,9 @@ def get_azure_container_client() -> ContainerClient:
 
 
 def start_import():
-    conn = psycopg2.connect(POSTGRES_CONNECTION_STRING)
-
     # Create a lock for import
     try:
-        with conn:
+        with pool.connection() as conn:
             with conn.cursor() as cur:
                 # Check if importer is locked or not. We use lock strategy to prevent executing importer
                 # and analysis more than once at a time
@@ -48,14 +45,14 @@ def start_import():
 
                 if is_importer_locked:
                     logger.error(
-                        "Importer is LOCKED which means that importer should be already running. You can get"
-                        "rid of the lock by restarting the database if needed."
+                        "Importer is LOCKED which means that importer should be already running. "
+                        "You can get rid of the lock by restarting the database if needed."
                     )
                     return
 
                 logger.info("Going to run importer.")
                 cur.execute("SELECT pg_advisory_lock(%s)", (constants.IMPORTER_LOCK_ID,))
-                conn.commit()
+
     except Exception as e:
         logger.error(f"Error when creating locks for importer: {e}")
 
@@ -66,10 +63,9 @@ def start_import():
         logger.error(f"Error when running importer: {e}")
     finally:
         # Remove lock at this point
-        with conn.cursor() as cur:
-            cur.execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
-            conn.commit()
-        conn.close()
+        with pool.connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
 
     logger.info("Importer done.")
 
