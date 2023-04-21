@@ -50,7 +50,7 @@ async def get_hfp_data(route_id: Optional[str],
                 {
                     "route_id": route_id,
                     "operator_id": operator_id,
-                    "veh": vehicle_number,
+                    "vehicle_number": vehicle_number,
                     "from_tst": from_tst.isoformat(),
                     "to_tst": to_tst.isoformat()
                 }) as copy:
