@@ -478,8 +478,8 @@ async def get_vehicles_by_timestamp(date: date, vehicle_operator_id: int, vehicl
     date_str = str(date)
 
     query_params = {
-        "start": datetime.strptime(date_str + " 14:00:00.000+00", '%Y-%m-%d %H:%M:%S.%f+00'),
-        "end": datetime.strptime(date_str + " 15:00:00.000+00", '%Y-%m-%d %H:%M:%S.%f+00')
+        "start": datetime.strptime(date_str + " 00:00:00.000+00", '%Y-%m-%d %H:%M:%S.%f+00'),
+        "end": datetime.strptime(date_str + " 23:59:00.000+00", '%Y-%m-%d %H:%M:%S.%f+00')
     }
 
     if customTimeInterval:
