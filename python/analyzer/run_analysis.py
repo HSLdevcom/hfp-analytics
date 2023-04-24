@@ -5,8 +5,9 @@ import logging
 import time
 import common.constants as constants
 from datetime import date, timedelta, datetime
+from itertools import chain
 from common.database import pool
-from common.vehicle_analysis_utils import analyze_vehicle_data, get_vehicle_data, get_vehicle_ids, insert_vehicle_data
+from common.vehicle_analysis_utils import analyze_vehicle_door_data, analyze_odo_data, get_vehicle_data, get_vehicle_ids, insert_vehicle_data
 from common.config import (
     POSTGRES_CONNECTION_STRING,
     STOP_NEAR_LIMIT_M,
@@ -31,16 +32,22 @@ async def run_vehicle_analysis():
     today = date.today()
     yesterday = today - timedelta(days=1)
     logger.info(f"Starting vehicle analysis for day {yesterday}.")
-    vehicle_numbers = await get_vehicle_ids(yesterday)
-    count = 0
-    for vehicle_number in vehicle_numbers:
-        formatted_data = await get_vehicle_data(yesterday, None, vehicle_number)
-        analyzed_data = analyze_vehicle_data(formatted_data)
-        await insert_vehicle_data(analyzed_data)
-        count = count + 1
-        print(f'Vehicle number: {vehicle_number} analyzed. {count}/{len(vehicle_numbers)}')
+    vehicles = await get_vehicle_ids(yesterday)
+    analyzeCount = 0
+    for vehicle in vehicles:
+        vehicle_number = vehicle['vehicle_number']
+        vehicle_operator_id = vehicle['operator_id']
+        formatted_data = await get_vehicle_data(yesterday, vehicle_operator_id, vehicle_number, None)
+        analyzed_door_data = analyze_vehicle_door_data(formatted_data)
+        analyzed_odo_data = analyze_odo_data(formatted_data)
+        combined_obj = {}
+        for obj in chain(analyzed_door_data, analyzed_odo_data):
+            combined_obj.update(obj)
+        await insert_vehicle_data([combined_obj])
+        analyzeCount = analyzeCount + 1
+        print(f'Vehicle number: {vehicle_operator_id}/{vehicle_number} analyzed. {analyzeCount}/{len(vehicles)}')
     logger.info("Vehicle analysis done.")
-    return count
+    return analyzeCount
 
 def get_time():
     return f'[{round(time.time() - start_time)}s]'

@@ -78,16 +78,24 @@ be invalid (e.g. driver accidentally logged into a wrong departure)';
 CREATE INDEX assumed_monitored_vehicle_journey_oday_idx ON hfp.assumed_monitored_vehicle_journey USING btree(oday);
 
 CREATE TABLE hfp.vehicle_analysis (
-  date date NOT NULL,
   vehicle_number INTEGER NOT NULL,
-  events JSONB,
   vehicle_operator_id INTEGER NOT NULL,
+  date date NOT NULL,
   drst_null_ratio FLOAT,
   drst_true_ratio FLOAT,
   drst_false_ratio FLOAT,
+  door_error_types TEXT[],
+  door_error_events JSONB,
+  odo_exists_ratio FLOAT,
+  odo_null_ratio FLOAT,
+  odo_error_types TEXT[],
+  odo_error_events JSONB,
   events_amount INTEGER
 );
 
-CREATE INDEX vehicle_analysis_date_vehicle_number_idx ON hfp.vehicle_analysis (date, vehicle_number);
+CREATE INDEX vehicle_analysis_date_vehicle_number_op_id_idx 
+  ON hfp.vehicle_analysis (date, vehicle_number, vehicle_operator_id);
 
-ALTER TABLE hfp.vehicle_analysis ADD CONSTRAINT date_vehicle_number_unique UNIQUE (date, vehicle_number);
+ALTER TABLE hfp.vehicle_analysis 
+  ADD CONSTRAINT date_vehicle_number_op_id_unique 
+  UNIQUE (date, vehicle_number, vehicle_operator_id);
