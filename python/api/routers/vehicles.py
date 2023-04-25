@@ -41,7 +41,7 @@ error_types_translations = {
 @router.get("/doors")
 async def get_vehicles(
     date: date = Query(..., description="Format YYYY-MM-DD"),
-    operator_id: Optional[int] = Query(None, description="HFP topic's vehicle id. Use without prefix zeros."),
+    operator_id: Optional[int] = Query(None, description="HFP topic's operator id. Use without prefix zeros."),
     errors_only: Optional[bool] = Query(None, description="Only return vehicles that triggered an error")
 ):
     """
@@ -49,11 +49,16 @@ async def get_vehicles(
     """
     is_current_date = date == date.today()
     analyzed_data = []
+    timerange_metadata = {
+        "start": "00:00:00.000+00",
+        "end": "23:59:00.000+00"
+    }
     if is_current_date:
         customTimeInterval = {
-            "start": " 14:00:00.000+00",
-            "end": " 15:00:00.000+00"
+            "start": " 04:00:00.000+00",
+            "end": " 05:00:00.000+00"
         }
+        timerange_metadata = customTimeInterval
         vehicle_ids = await get_vehicle_ids(date, customTimeInterval, operator_id)
         results = []
         for vehicle in vehicle_ids:
@@ -73,6 +78,11 @@ async def get_vehicles(
     analyzed_data = sorted(analyzed_data, key=lambda x: x['vehicle_number'])
     return {
         "data": {
+            "analysis_time_range": {
+                "start": timerange_metadata["start"],
+                "end": timerange_metadata["end"],
+                "date": date
+            },
             "vehicles": analyzed_data
         }
     }
@@ -80,20 +90,24 @@ async def get_vehicles(
 @router.get("/odo")
 async def get_vehicles(
     date: date = Query(..., description="Format YYYY-MM-DD"),
-    operator_id: Optional[int] = Query(None, description="HFP topic's vehicle id. Use without prefix zeros."),
+    operator_id: Optional[int] = Query(None, description="HFP topic's operator id. Use without prefix zeros."),
     errors_only: Optional[bool] = Query(None, description="Only return vehicles that triggered an error")
 ):
     """
     Odo analysis endpoint
     """
-
+    timerange_metadata = {
+        "start": "00:00:00.000+00",
+        "end": "23:59:00.000+00"
+    }
     is_current_date = date == date.today()
     analyzed_data = []
     if is_current_date:
         customTimeInterval = {
-            "start": " 14:00:00.000+00",
-            "end": " 15:00:00.000+00"
+            "start": " 04:00:00.000+00",
+            "end": " 05:00:00.000+00"
         }
+        timerange_metadata = customTimeInterval
         vehicle_ids = await get_vehicle_ids(date, customTimeInterval, operator_id)
         results = []
         for vehicle in vehicle_ids:
@@ -114,6 +128,11 @@ async def get_vehicles(
     analyzed_data = sorted(analyzed_data, key=lambda x: x['vehicle_number'])
     return {
         "data": {
+            "analysis_time_range": {
+                "start": timerange_metadata["start"],
+                "end": timerange_metadata["end"],
+                "date": date
+            },
             "vehicles": analyzed_data
         }
     }
@@ -121,7 +140,7 @@ async def get_vehicles(
 @router.get("/csv")
 async def get_vehicles(
     date: date = Query(..., description="Format YYYY-MM-DD"),
-    operator_id: Optional[int] = Query(None, description="HFP topic's vehicle id. Use without prefix zeros."),
+    operator_id: Optional[int] = Query(None, description="HFP topic's operator id. Use without prefix zeros."),
     errors_only: Optional[bool] = Query(None, description="Only return vehicles that triggered an error")
 ):
     """
@@ -131,8 +150,8 @@ async def get_vehicles(
     analyzed_data = []
     if is_current_date:
         customTimeInterval = {
-            "start": " 14:00:00.000+00",
-            "end": " 15:00:00.000+00"
+            "start": " 04:00:00.000+00",
+            "end": " 05:00:00.000+00"
         }
         vehicle_ids = await get_vehicle_ids(date, customTimeInterval, operator_id)
         results = []
