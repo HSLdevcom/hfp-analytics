@@ -18,19 +18,21 @@ router = APIRouter(prefix="/journeys", tags=["Journey analytics data"])
 @router.get(
     "/monitored_vehicle_journeys",
     summary="Get monitored vehicle journeys of an operating day.",
-    description="Returns assumed monitored vehicle journeys from given operating day. "
-    "Assumed here means that the journeys might be valid or not, API doesn't know it. "
-    "Invalid journey is example a journey where bus driver signed in to a wrong departure.",
+    description="Returns assumed monitored vehicle journeys from the given operating day. "
+    "'Assumed' here means that the returned journeys might be valid or not, but the API doesn't know it. "
+    "Invalid journey is, for example, a journey where a bus driver signed in to a wrong departure.",
     response_class=JSONResponse,
     response_model=JourneyResponse,
 )
 async def get_monitored_vehicle_journeys(
-    operating_day: date = Query(..., description="Format YYYY-MM-DD")
+    oday: date = Query(
+        title="Operating day", description="Operating day from which the journeys will be queried. Format YYYY-MM-DD"
+    )
 ) -> JSONResponse:
-    logger.debug(f"Monitored vehicle journeys. Operating_day: {operating_day}")
+    logger.debug(f"Monitored vehicle journeys. Operating_day: {oday}")
 
-    vehicle_journeys = await get_journeys_by_oday(operating_day)
-    last_updated = await get_last_modified_of_oday(operating_day)
+    vehicle_journeys = await get_journeys_by_oday(oday)
+    last_updated = await get_last_modified_of_oday(oday)
 
     data = {
         "data": {"monitoredVehicleJourneys": vehicle_journeys},
