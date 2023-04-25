@@ -35,13 +35,13 @@ async def get_journeys_by_oday(oday: date) -> list:
                     "route_id": r[0],
                     "direction_id": r[1],
                     "oday": r[2],
-                    "start_24h": r[3],
-                    "operator_id": r[4],
-                    "vehicle_operator_id": r[5],
+                    "start": r[3],
+                    "oper": r[4],
+                    "operator_id": r[5],
                     "vehicle_number": r[6],
                     "transport_mode": r[7],
-                    "min_timestamp": r[8],
-                    "max_timestamp": r[9],
+                    "min_tst": r[8],
+                    "max_tst": r[9],
                     "modified_at": r[10].isoformat(timespec="seconds")
                 }
                 for r in rows

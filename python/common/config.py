@@ -69,6 +69,9 @@ IMPORT_COVERAGE_DAYS: int = get_env("IMPORT_COVERAGE_DAYS", "14", modifier=env_a
 # Authentication str for docs.
 DEFAULT_AUTH_CODE: str = get_env("DEFAULT_AUTH_CODE", "")
 
+# Digitransit apikey for stop import
+DIGITRANSIT_APIKEY: str = get_env("DIGITRANSIT_APIKEY", "")
+
 # Envs for stop analysis
 STOP_NEAR_LIMIT_M: float = get_env("STOP_NEAR_LIMIT_M", "50.0", modifier=env_as_float)
 MIN_OBSERVATIONS_PER_STOP: int = get_env("MIN_OBSERVATIONS_PER_STOP", "10", modifier=env_as_int)
