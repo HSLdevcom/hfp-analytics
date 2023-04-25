@@ -79,8 +79,8 @@ async def get_vehicles(
     return {
         "data": {
             "analysis_time_range": {
-                "start": timerange_metadata["start"],
-                "end": timerange_metadata["end"],
+                "start": timerange_metadata["start"].strip(),
+                "end": timerange_metadata["end"].strip(),
                 "date": date
             },
             "vehicles": analyzed_data
@@ -129,8 +129,8 @@ async def get_vehicles(
     return {
         "data": {
             "analysis_time_range": {
-                "start": timerange_metadata["start"],
-                "end": timerange_metadata["end"],
+                "start": timerange_metadata["start"].strip(),
+                "end": timerange_metadata["end"].strip(),
                 "date": date
             },
             "vehicles": analyzed_data
