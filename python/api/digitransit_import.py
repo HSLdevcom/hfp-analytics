@@ -5,7 +5,7 @@ import requests
 import csv
 from datetime import date
 from psycopg2 import sql
-from common.config import POSTGRES_CONNECTION_STRING
+from common.config import POSTGRES_CONNECTION_STRING, DIGITRANSIT_APIKEY
 
 GRAPHQL_URL = 'https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql'
 
@@ -30,11 +30,15 @@ def create_query(query_type):
     '''
     return query.replace('<PLACEHOLDER>', query_type)
 
+
 def get_query(query):
     req = requests.post(
         url=GRAPHQL_URL,
         data=query,
-        headers={'Content-Type': 'application/graphql'}
+        headers={
+            "Content-Type": "application/graphql",
+            "digitransit-subscription-key": DIGITRANSIT_APIKEY,
+        }
     )
     if req.status_code == 200:
         return req.json()
@@ -88,10 +92,10 @@ def copy_from_file_to_db(conn, to_table, from_file='/tmp/tmp.csv'):
     with open(from_file, mode='r') as fobj:
         with conn.cursor() as cur:
             cur.execute(sql.SQL('WITH deleted AS (DELETE FROM {} RETURNING 1)\
-                                SELECT count(*) FROM deleted').format(sql.Identifier(to_table)))
+                                SELECT count(*) FROM deleted').format(sql.Identifier(*to_table.split("."))))
             print(f'{cur.fetchone()[0]} rows deleted from "{to_table}"')
-            cur.copy_from(file=fobj, table=to_table, sep='\t', null='')
-            cur.execute(sql.SQL('SELECT count(*) FROM {}').format(sql.Identifier(to_table)))
+            cur.copy_expert(sql=sql.SQL("COPY {} FROM STDIN WITH (FORMAT CSV, DELIMITER '\t')").format(sql.Identifier(*to_table.split("."))), file=fobj)
+            cur.execute(sql.SQL('SELECT count(*) FROM {}').format(sql.Identifier(*to_table.split("."))))
             print(f'{cur.fetchone()[0]} rows inserted into "{to_table}"')
 
 def import_dataset(query_type, to_table, conn):
