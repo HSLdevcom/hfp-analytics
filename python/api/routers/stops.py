@@ -18,6 +18,7 @@ from api.schemas.stops import (
     HFPStopPointFeatureCollection,
     StopMedianPercentileFeatureCollection,
 )
+from api.services.stops import get_stops, is_stops_table_empty, get_percentiles
 
 router = APIRouter(
     prefix="/stops",
@@ -55,24 +56,16 @@ async def get_jore_stops(
         example=1140439,
     )
 ) -> JSONResponse:
-    with psycopg.connect(POSTGRES_CONNECTION_STRING) as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT * FROM api.view_jore_stop_4326")
-            stops = cur.fetchall()
+    stops = await get_stops(stop_id)
 
-            print(f"Found {len(stops)} Jore stops.")
+    if len(stops) == 0:
+        if await is_stops_table_empty():
+            raise HTTPException(status_code=404, detail="Have you ran Jore & HFP data imports and then analysis?")
+        else:
+            raise HTTPException(status_code=404, detail=f"Did not find stop with given stop_id: {stop_id}")
 
-            if len(stops) == 0:
-                raise HTTPException(status_code=404, detail="Have you ran Jore & HFP data imports and then analysis?")
-
-            if stop_id:
-                stops = list(filter(lambda item: item[0]["properties"]["stop_id"] == stop_id, stops))
-
-                if len(stops) == 0:
-                    raise HTTPException(status_code=404, detail=f"Did not find stop with given stop_id: {stop_id}")
-
-            data = tuples_to_feature_collection(geom_tuples=stops)
-            return JSONResponse(content=jsonable_encoder(data))
+    data = tuples_to_feature_collection(geom_tuples=stops)
+    return JSONResponse(content=jsonable_encoder(data))
 
 
 @router.get(
@@ -166,11 +159,6 @@ async def get_hfp_points(
 async def get_percentile_circles(
     stop_id: int = Path(title="Stop ID", description="JORE ID of the stop.", example=1140439)
 ) -> JSONResponse:
-    with psycopg.connect(POSTGRES_CONNECTION_STRING) as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT api.get_percentile_circles_with_stop_id(%(stop_id)s)", {"stop_id": stop_id})
-            percentile_circles = cur.fetchall()
-
-        data = tuples_to_feature_collection(geom_tuples=percentile_circles)
-
-        return JSONResponse(content=jsonable_encoder(data))
+    percentile_circles = await get_percentiles(stop_id)
+    data = tuples_to_feature_collection(geom_tuples=percentile_circles)
+    return JSONResponse(content=jsonable_encoder(data))
