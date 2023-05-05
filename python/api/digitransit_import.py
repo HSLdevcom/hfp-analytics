@@ -76,7 +76,8 @@ def make_flat_row(gql_row):
 def flatten_result(res):
     assert len(res['data'].keys()) == 1
     rows = list(res['data'].values())[0]
-    return list(map(make_flat_row, rows))
+    filtered_rows = [row for row in rows if row['vehicleMode'] != 'FERRY']
+    return list(map(make_flat_row, filtered_rows))
 
 def write_to_file(flat_res, to_file='/tmp/tmp.csv'):
     assert len(flat_res) > 0
