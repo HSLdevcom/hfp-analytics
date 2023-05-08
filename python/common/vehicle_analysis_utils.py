@@ -28,7 +28,7 @@ async def get_vehicle_ids(date: date, customTimeInterval=None, operator_id=None)
     date_str = str(date)
     query_params = {
         "start": datetime.strptime(date_str + " 00:00:00.000+00", '%Y-%m-%d %H:%M:%S.%f+00'),
-        "end": datetime.strptime(date_str + " 23:59:00.000+00", '%Y-%m-%d %H:%M:%S.%f+00')
+        "end": datetime.strptime(date_str + " 11:59:00.000+00", '%Y-%m-%d %H:%M:%S.%f+00')
     }
 
     if customTimeInterval:
@@ -479,7 +479,7 @@ async def get_vehicles_by_timestamp(date: date, vehicle_operator_id: int, vehicl
 
     query_params = {
         "start": datetime.strptime(date_str + " 00:00:00.000+00", '%Y-%m-%d %H:%M:%S.%f+00'),
-        "end": datetime.strptime(date_str + " 23:59:00.000+00", '%Y-%m-%d %H:%M:%S.%f+00')
+        "end": datetime.strptime(date_str + " 11:59:00.000+00", '%Y-%m-%d %H:%M:%S.%f+00')
     }
 
     if customTimeInterval:

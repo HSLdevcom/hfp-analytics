@@ -51,7 +51,7 @@ async def get_vehicles(
     analyzed_data = []
     timerange_metadata = {
         "start": "00:00:00.000+00",
-        "end": "23:59:00.000+00"
+        "end": "11:59:00.000+00"
     }
     if is_current_date:
         customTimeInterval = {
@@ -98,7 +98,7 @@ async def get_vehicles(
     """
     timerange_metadata = {
         "start": "00:00:00.000+00",
-        "end": "23:59:00.000+00"
+        "end": "11:59:00.000+00"
     }
     is_current_date = date == date.today()
     analyzed_data = []
