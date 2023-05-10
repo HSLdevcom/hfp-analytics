@@ -21,6 +21,10 @@ from common.config import (
     IMPORT_COVERAGE_DAYS,
 )
 
+from services import (
+    create_db_lock,
+    release_db_lock
+)
 
 logger = logging.getLogger("importer")
 
@@ -31,43 +35,6 @@ def get_azure_container_client() -> ContainerClient:
     return ContainerClient.from_connection_string(
         conn_str=HFP_STORAGE_CONNECTION_STRING, container_name=HFP_STORAGE_CONTAINER_NAME
     )
-
-
-def start_import():
-    # Create a lock for import
-    try:
-        with pool.connection() as conn:
-            with conn.cursor() as cur:
-                # Check if importer is locked or not. We use lock strategy to prevent executing importer
-                # and analysis more than once at a time
-                cur.execute("SELECT is_lock_enabled(%s)", (constants.IMPORTER_LOCK_ID,))
-                is_importer_locked = cur.fetchone()[0]
-
-                if is_importer_locked:
-                    logger.error(
-                        "Importer is LOCKED which means that importer should be already running. "
-                        "You can get rid of the lock by restarting the database if needed."
-                    )
-                    return
-
-                logger.info("Going to run importer.")
-                cur.execute("SELECT pg_advisory_lock(%s)", (constants.IMPORTER_LOCK_ID,))
-
-    except Exception as e:
-        logger.error(f"Error when creating locks for importer: {e}")
-
-    try:
-        import_day_data_from_past(IMPORT_COVERAGE_DAYS)
-
-    except Exception as e:
-        logger.error(f"Error when running importer: {e}")
-    finally:
-        # Remove lock at this point
-        with pool.connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
-
-    logger.info("Importer done.")
 
 
 def import_day_data_from_past(day_since_today):
@@ -277,4 +244,18 @@ def read_imported_data_to_db(cur, downloader, blob_invalid: bool):
 def main(importer: func.TimerRequest, context: func.Context) -> None:
     """Main function to be called by Azure Function"""
     with CustomDbLogHandler("importer"):
-        start_import()
+        # Create a lock for import
+        success = create_db_lock()
+
+        if not success:
+            return
+
+        try:
+            import_day_data_from_past(IMPORT_COVERAGE_DAYS)
+        except Exception as e:
+            logger.error(f"Error when running importer: {e}")
+        finally:
+            # Remove lock at this point
+            release_db_lock()
+
+        logger.info("Importer done.")
