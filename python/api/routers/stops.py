@@ -1,5 +1,4 @@
 """ Routes for /stops endpoint """
-# TODO: Move data queries to services/stops
 
 from typing import Optional
 
@@ -7,10 +6,7 @@ from fastapi import APIRouter, HTTPException, Query, Path
 from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.encoders import jsonable_encoder
 
-import psycopg2 as psycopg
-
 from common.utils import tuples_to_feature_collection
-from common.config import POSTGRES_CONNECTION_STRING
 from api.digitransit_import import main as run_digitransit_import
 from api.schemas.stops import (
     JoreStopFeatureCollection,
@@ -18,7 +14,15 @@ from api.schemas.stops import (
     HFPStopPointFeatureCollection,
     StopMedianPercentileFeatureCollection,
 )
-from api.services.stops import get_stops, is_stops_table_empty, get_percentiles
+from api.services.stops import (
+    get_stops,
+    is_stops_table_empty,
+    get_medians,
+    is_stop_medians_table_empty,
+    get_stop_observations,
+    get_null_observations_for_stop,
+    get_percentiles,
+)
 
 router = APIRouter(
     prefix="/stops",
@@ -84,26 +88,16 @@ async def get_stop_medians(
         example=1140439,
     )
 ) -> JSONResponse:
-    with psycopg.connect(POSTGRES_CONNECTION_STRING) as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT * FROM api.view_stop_median_4326")
-            stop_medians = cur.fetchall()
+    stop_medians = await get_medians(stop_id)
 
-            print(f"Found {len(stop_medians)} Jore stop medians.")
+    if len(stop_medians) == 0:
+        if await is_stop_medians_table_empty():
+            raise HTTPException(status_code=404, detail="Have you ran Jore & HFP data imports and then analysis?")
+        else:
+            raise HTTPException(status_code=404, detail=f"Did not find stop median with given stop_id: {stop_id}")
 
-            if len(stop_medians) == 0:
-                raise HTTPException(status_code=404, detail="Have you ran Jore & HFP data imports and then analysis?")
-
-            if stop_id:
-                stop_medians = list(filter(lambda item: item[0]["properties"]["stop_id"] == stop_id, stop_medians))
-                if len(stop_medians) == 0:
-                    raise HTTPException(
-                        status_code=404, detail=f"Did not find stop median with given stop_id: {stop_id}"
-                    )
-
-            data = tuples_to_feature_collection(geom_tuples=stop_medians)
-
-            return JSONResponse(content=jsonable_encoder(data))
+    data = tuples_to_feature_collection(geom_tuples=stop_medians)
+    return JSONResponse(content=jsonable_encoder(data))
 
 
 @router.get(
@@ -118,34 +112,15 @@ async def get_stop_medians(
 async def get_hfp_points(
     stop_id: int = Path(title="Stop ID", description="JORE ID of the stop.", example=1140439)
 ) -> JSONResponse:
-    with psycopg.connect(POSTGRES_CONNECTION_STRING) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT * FROM api.view_observation_4326 \
-                WHERE st_asgeojson -> 'properties' ->> 'stop_id' = %(stop_id)s::text",
-                {"stop_id": stop_id},
-            )
-            stop_id_observations = cur.fetchall()
+    stop_id_observations = await get_stop_observations(stop_id)
+    null_observations = await get_null_observations_for_stop(stop_id)  # possibility to parametrize radius for search
+    total_observations = stop_id_observations + null_observations
 
-            print(f"Found {len(stop_id_observations)} observations with given stop_id: {stop_id}.")
+    if len(total_observations) == 0:
+        raise HTTPException(status_code=404, detail=f"Did not find hfp data for given stop: {stop_id}")
 
-            search_distance_m = 100
-            cur.execute(
-                "SELECT api.get_observations_with_null_stop_id_4326(%(stop_id)s, %(search_distance_m)s)",
-                {"stop_id": stop_id, "search_distance_m": search_distance_m},
-            )
-            observations_with_null_stop_ids = cur.fetchall()
-
-            print(f"Found {len(observations_with_null_stop_ids)} observations with NULL stop_id")
-
-            total_observations = stop_id_observations + observations_with_null_stop_ids
-
-            if len(total_observations) == 0:
-                raise HTTPException(status_code=404, detail=f"Did not find hfp data for given stop: {stop_id}")
-
-            data = tuples_to_feature_collection(geom_tuples=total_observations)
-
-            return JSONResponse(content=jsonable_encoder(data))
+    data = tuples_to_feature_collection(geom_tuples=total_observations)
+    return JSONResponse(content=jsonable_encoder(data))
 
 
 @router.get(
