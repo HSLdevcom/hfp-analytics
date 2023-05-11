@@ -13,7 +13,7 @@ from common.config import (
     IMPORT_COVERAGE_DAYS,
 )
 
-from services import (
+from .services import (
     create_db_lock,
     release_db_lock,
     add_new_blob,
@@ -34,8 +34,6 @@ def get_azure_container_client() -> ContainerClient:
 
 
 def update_blob_list_for_import(day_since_today):
-    logger.info(f"Importing HFP data {day_since_today} days from past.")
-
     container_client = get_azure_container_client()
     storage_blob_names = []
 
@@ -58,6 +56,7 @@ def update_blob_list_for_import(day_since_today):
 
         blob_data = {}
 
+        blob_data["blob_name"] = blob_name
         blob_data["event_type"] = tags.get("eventType")
         blob_data["min_oday"] = tags.get("min_oday")
         blob_data["max_oday"] = tags.get("max_oday")
@@ -103,11 +102,13 @@ def import_blob(blob_name):
 
 def run_import() -> None:
     """Function to init and run importer procedures"""
+    logger.info(f"Update blob list to cover last {IMPORT_COVERAGE_DAYS} days.")
     update_blob_list_for_import(IMPORT_COVERAGE_DAYS)
+
+    logger.info("Selecting blobs for import.")
     blob_names = pickup_blobs_for_import()
 
     logger.debug(f"Running import for {blob_names}")
-
     for blob in blob_names:
         import_blob(blob)
 

@@ -62,7 +62,7 @@ def add_new_blob(blob_data: dict):
                 INSERT INTO importer.blob
                 (name, type, min_oday, max_oday, min_tst, max_tst, row_count, invalid, covered_by_import)
                 VALUES (
-                    %(name)s,
+                    %(blob_name)s,
                     %(event_type)s,
                     %(min_oday)s,
                     %(max_oday)s,
@@ -116,7 +116,7 @@ def mark_blob_status_started(blob_name: str) -> dict:
     return data
 
 
-def mark_blob_status_finished(blob_name: str, failed: bool = False) -> int:
+def mark_blob_status_finished(blob_name: str, failed: bool = False) -> float:
     """Update the blob status finished (failed or imported) and return the processing time as seconds."""
     with pool.connection() as conn:
         with conn.cursor() as cur:
@@ -125,7 +125,7 @@ def mark_blob_status_finished(blob_name: str, failed: bool = False) -> int:
                 UPDATE importer."blob"
                 SET import_finished = %s, import_status = %s
                 WHERE name = %s
-                RETURNING FLOOR(EXTRACT(EPOCH FROM (import_finished - import_started)))
+                RETURNING EXTRACT(EPOCH FROM (import_finished - import_started))
                 """,
                 (
                     datetime.utcnow(),
