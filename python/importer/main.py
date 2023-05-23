@@ -12,6 +12,7 @@ from common.config import (
     IMPORT_COVERAGE_DAYS,
 )
 from .importer import Importer, parquet_to_dict_decoder, zst_csv_to_dict_decoder
+from .schemas import APC as APCSchema, HFP as HFPSchema
 from .services import (
     create_db_lock,
     release_db_lock,
@@ -26,8 +27,10 @@ from .services import (
 logger = logging.getLogger("importer")
 
 importers = {
-    "APC": Importer(APC_STORAGE_CONTAINER_NAME, data_converter=parquet_to_dict_decoder, blob_name_prefix="apc_"),
-    "HFP": Importer(HFP_STORAGE_CONTAINER_NAME, data_converter=zst_csv_to_dict_decoder),
+    "APC": Importer(
+        APC_STORAGE_CONTAINER_NAME, data_converter=parquet_to_dict_decoder, db_schema=APCSchema, blob_name_prefix="apc_"
+    ),
+    "HFP": Importer(HFP_STORAGE_CONTAINER_NAME, data_converter=zst_csv_to_dict_decoder, db_schema=HFPSchema),
 }
 
 
@@ -70,7 +73,7 @@ def import_blob(blob_name):
         importer = importers["APC"] if blob_metadata.get("type") == "APC" else importers["HFP"]
         data_rows = importer.get_data_from_blob(blob_name)
 
-        copy_data_to_db(data_rows=data_rows, invalid_blob=blob_is_invalid)
+        copy_data_to_db(db_schema=importer.db_schema, data_rows=data_rows, invalid_blob=blob_is_invalid)
 
         processing_time = mark_blob_status_finished(blob_name)
 

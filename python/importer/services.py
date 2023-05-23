@@ -9,6 +9,7 @@ from psycopg_pool import ConnectionPool  # todo: refactor to use common.database
 from common.config import POSTGRES_CONNECTION_STRING
 import common.constants as constants
 
+from .schemas import DBSchema
 
 logger = logging.getLogger("importer")
 
@@ -42,7 +43,7 @@ def create_db_lock() -> bool:
     return True
 
 
-def release_db_lock():
+def release_db_lock() -> None:
     """Release a previously created lock."""
     with pool.connection() as conn:
         with conn.cursor() as cur:
@@ -73,7 +74,7 @@ def add_new_blob(blob_data: dict):
             )
 
 
-def is_blob_listed(blob_name: str):
+def is_blob_listed(blob_name: str) -> bool:
     """Returns true if the blob is found in the table."""
     with pool.connection() as conn:
         with conn.cursor() as cur:
@@ -161,46 +162,32 @@ def pickup_blobs_for_import() -> list:
     return blob_names
 
 
-def copy_data_to_db(data_rows: Iterable[dict], invalid_blob: bool = False) -> None:
+def copy_data_to_db(db_schema: DBSchema, data_rows: Iterable[dict], invalid_blob: bool = False) -> None:
     """Copy data from storage downloader to db staging table,
     and call procedures to move data from staging to the master storage."""
     with pool.connection() as conn:
         with conn.cursor() as cur:
-            # These fields will be imported. Keys are from csv, values are db columns.
-            # Order is guaranteed, so they are used with .keys() and .values() -methods
-            selected_fields = {
-                "tst": "tst",
-                "eventType": "event_type",
-                "receivedAt": "received_at",
-                "ownerOperatorId": "vehicle_operator_id",
-                "vehicleNumber": "vehicle_number",
-                "mode": "transport_mode",
-                "routeId": "route_id",
-                "dir": "direction_id",
-                "oday": "oday",
-                "start": "start",
-                "oper": "observed_operator_id",
-                "odo": "odo",
-                "spd": "spd",
-                "drst": "drst",
-                "locationQualityMethod": "loc",
-                "stop": "stop",
-                "longitude": "longitude",
-                "latitude": "latitude",
-            }
+            raw_field_names = db_schema["fields"]["mapping"].keys()
+            db_field_names = db_schema["fields"]["mapping"].values()
+            required_fields = db_schema["fields"]["required"]
 
-            required_fields = ["tst", "oper", "vehicleNumber"]  # These are used for unique index
+            truncate_query = sql.SQL("DELETE FROM {schema}.{table}").format(
+                schema=sql.Identifier(db_schema["copy_target"]["schema"]),
+                table=sql.Identifier(db_schema["copy_target"]["table"]),
+            )
 
             # Create a copy statement from selected field list
-            copy_sql = sql.SQL("COPY staging.hfp_raw ({fields}) FROM STDIN").format(
-                fields=sql.SQL(",").join([sql.Identifier(f) for f in selected_fields.values()])
+            copy_query = sql.SQL("COPY {schema}.{table} ({fields}) FROM STDIN").format(
+                schema=sql.Identifier(db_schema["copy_target"]["schema"]),
+                table=sql.Identifier(db_schema["copy_target"]["table"]),
+                fields=sql.SQL(",").join([sql.Identifier(f) for f in db_field_names]),
             )
 
             invalid_row_count = 0
 
-            cur.execute("DELETE FROM staging.hfp_raw")
+            cur.execute(truncate_query)
 
-            with cur.copy(copy_sql) as copy:
+            with cur.copy(copy_query) as copy:
                 for row in data_rows:
                     if any(row[key] is None for key in required_fields):
                         logger.error(f"Found a row with an unique key error: {row}")
@@ -209,15 +196,15 @@ def copy_data_to_db(data_rows: Iterable[dict], invalid_blob: bool = False) -> No
 
                     # Construct a tuple from a row based on selected rows
                     # Convert empty string to None to avoid db type errors
-                    row_obj = tuple(row[f] if row[f] != "" else None for f in selected_fields.keys())
+                    row_obj = tuple(row[f] if row[f] != "" else None for f in raw_field_names)
                     copy.write_row(row_obj)
 
             if invalid_row_count > 0:
                 logger.error(f"Unique key error count for the blob: {invalid_row_count}")
 
             if not invalid_blob:
-                cur.execute("CALL staging.import_and_normalize_hfp()")
-            else:
-                cur.execute("CALL stating.import_invalid_hfp()")
+                cur.execute(db_schema["scripts"]["process"])
+            elif db_schema["scripts"]["process_invalid"]:
+                cur.execute(db_schema["scripts"]["process_invalid"])
 
-            cur.execute("DELETE FROM staging.hfp_raw")
+            cur.execute(truncate_query)

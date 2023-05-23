@@ -160,7 +160,7 @@ $procedure$;
 COMMENT ON PROCEDURE staging.import_invalid_hfp IS 'Procedure to copy data marked as invalid from staging schema to hfp schema.';
 
 
-CREATE TABLE staging.apc (
+CREATE TABLE staging.apc_raw (
   point_timestamp       timestamptz   NOT NULL,
   received_at           timestamptz,
   vehicle_operator_id   smallint      NOT NULL,
@@ -218,7 +218,7 @@ AS $procedure$
     doors_data,
     count_quality,
     ST_Transform( ST_SetSRID( ST_MakePoint(longitude, latitude), 4326), 3067)
-  FROM staging.apc
+  FROM staging.apc_raw
   -- Ordering is here for a reason. It makes data clustered inside a blob so querying by route / vehicle is more efficient.
   ORDER BY route_id, vehicle_number
   ON CONFLICT DO NOTHING;
