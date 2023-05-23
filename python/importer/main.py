@@ -1,18 +1,17 @@
 """HFP Analytics data importer"""
 import azure.functions as func
-from azure.storage.blob import ContainerClient
 
 import logging
 from datetime import datetime, timedelta
 
 from common.logger_util import CustomDbLogHandler
 from common.config import (
+    APC_STORAGE_CONTAINER_NAME,
     HFP_STORAGE_CONTAINER_NAME,
-    HFP_STORAGE_CONNECTION_STRING,
     HFP_EVENTS_TO_IMPORT,
     IMPORT_COVERAGE_DAYS,
 )
-
+from .importer import Importer, parquet_to_dict_decoder, zst_csv_to_dict_decoder
 from .services import (
     create_db_lock,
     release_db_lock,
@@ -21,52 +20,43 @@ from .services import (
     mark_blob_status_started,
     mark_blob_status_finished,
     pickup_blobs_for_import,
-    copy_data_from_downloader_to_db,
+    copy_data_to_db,
 )
 
 logger = logging.getLogger("importer")
 
-
-def get_azure_container_client() -> ContainerClient:
-    return ContainerClient.from_connection_string(
-        conn_str=HFP_STORAGE_CONNECTION_STRING, container_name=HFP_STORAGE_CONTAINER_NAME
-    )
+importers = {
+    "APC": Importer(APC_STORAGE_CONTAINER_NAME, data_converter=parquet_to_dict_decoder, blob_name_prefix="apc_"),
+    "HFP": Importer(HFP_STORAGE_CONTAINER_NAME, data_converter=zst_csv_to_dict_decoder),
+}
 
 
 def update_blob_list_for_import(day_since_today):
-    container_client = get_azure_container_client()
-    storage_blob_names = []
+    for importer_type, importer in importers.items():
+        import_date = datetime.now() - timedelta(day_since_today)
 
-    import_date = datetime.now() - timedelta(day_since_today)
+        while import_date <= datetime.now():
+            for blob_name in importer.list_blobs_for_date(import_date):
+                if is_blob_listed(blob_name):
+                    # Already imported, no need to fetch tags or try to insert
+                    continue
 
-    while import_date <= datetime.now():
-        current_date_str = import_date.strftime("%Y-%m-%d")
-        blobs = container_client.list_blobs(name_starts_with=current_date_str)
-        for blob in blobs:
-            storage_blob_names.append(blob.name)
-        import_date += timedelta(days=1)
+                tags = importer.get_tags_for_blob(blob_name)
+                blob_data = {}
 
-    for blob_name in storage_blob_names:
-        if is_blob_listed(blob_name):
-            # Already imported, no need to fetch tags or try to insert
-            continue
+                blob_data["blob_name"] = blob_name
+                blob_data["event_type"] = tags.get("eventType") if importer_type == "HFP" else "APC"
+                blob_data["min_oday"] = tags.get("min_oday")
+                blob_data["max_oday"] = tags.get("max_oday")
+                blob_data["min_tst"] = tags.get("min_tst")
+                blob_data["max_tst"] = tags.get("max_tst")
+                blob_data["row_count"] = tags.get("row_count")
+                blob_data["invalid"] = tags.get("invalid", False)
+                blob_data["covered_by_import"] = blob_data["event_type"] in HFP_EVENTS_TO_IMPORT
 
-        blob_client = container_client.get_blob_client(blob_name)
-        tags = blob_client.get_blob_tags()
+                add_new_blob(blob_data)
 
-        blob_data = {}
-
-        blob_data["blob_name"] = blob_name
-        blob_data["event_type"] = tags.get("eventType")
-        blob_data["min_oday"] = tags.get("min_oday")
-        blob_data["max_oday"] = tags.get("max_oday")
-        blob_data["min_tst"] = tags.get("min_tst")
-        blob_data["max_tst"] = tags.get("max_tst")
-        blob_data["row_count"] = tags.get("row_count")
-        blob_data["invalid"] = tags.get("invalid")
-        blob_data["covered_by_import"] = blob_data["event_type"] in HFP_EVENTS_TO_IMPORT
-
-        add_new_blob(blob_data)
+            import_date += timedelta(days=1)
 
 
 def import_blob(blob_name):
@@ -77,11 +67,10 @@ def import_blob(blob_name):
     blob_is_invalid = bool(blob_metadata.get("invalid"))
 
     try:
-        container_client = get_azure_container_client()
-        blob_client = container_client.get_blob_client(blob=blob_name)
-        storage_stream_downloader = blob_client.download_blob()
+        importer = importers["APC"] if blob_metadata.get("type") == "APC" else importers["HFP"]
+        data_rows = importer.get_data_from_blob(blob_name)
 
-        copy_data_from_downloader_to_db(downloader=storage_stream_downloader, invalid_blob=blob_is_invalid)
+        copy_data_to_db(data_rows=data_rows, invalid_blob=blob_is_invalid)
 
         processing_time = mark_blob_status_finished(blob_name)
 

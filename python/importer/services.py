@@ -1,14 +1,10 @@
 """ Module contains db queries for importer """
-import csv
+from collections.abc import Iterable
 from datetime import datetime
-from io import TextIOWrapper
 import logging
-import zstandard
 
 from psycopg import sql
 from psycopg_pool import ConnectionPool  # todo: refactor to use common.database pool
-
-from azure.storage.blob import StorageStreamDownloader
 
 from common.config import POSTGRES_CONNECTION_STRING
 import common.constants as constants
@@ -97,7 +93,7 @@ def mark_blob_status_started(blob_name: str) -> dict:
                 UPDATE importer."blob"
                 SET import_started = %s, import_status = 'importing'
                 WHERE name = %s
-                RETURNING row_count, invalid
+                RETURNING type, row_count, invalid
                 """,
                 (
                     datetime.utcnow(),
@@ -108,9 +104,10 @@ def mark_blob_status_started(blob_name: str) -> dict:
 
     data = {}
 
-    if res and len(res) == 2:
-        data["row_count"] = res[0]
-        data["invalid"] = res[1]
+    if res and len(res) == 3:
+        data["type"] = res[0]
+        data["row_count"] = res[1]
+        data["invalid"] = res[2]
     else:
         raise Exception("Invalid db query or data for import")
     return data
@@ -164,15 +161,11 @@ def pickup_blobs_for_import() -> list:
     return blob_names
 
 
-def copy_data_from_downloader_to_db(downloader: StorageStreamDownloader, invalid_blob: bool = False) -> None:
+def copy_data_to_db(data_rows: Iterable[dict], invalid_blob: bool = False) -> None:
     """Copy data from storage downloader to db staging table,
     and call procedures to move data from staging to the master storage."""
     with pool.connection() as conn:
         with conn.cursor() as cur:
-            compressed_content = downloader.content_as_bytes()
-            reader = zstandard.ZstdDecompressor().stream_reader(compressed_content)
-            hfp_dict_reader = csv.DictReader(TextIOWrapper(reader, encoding="utf-8"))
-
             # These fields will be imported. Keys are from csv, values are db columns.
             # Order is guaranteed, so they are used with .keys() and .values() -methods
             selected_fields = {
@@ -208,7 +201,7 @@ def copy_data_from_downloader_to_db(downloader: StorageStreamDownloader, invalid
             cur.execute("DELETE FROM staging.hfp_raw")
 
             with cur.copy(copy_sql) as copy:
-                for row in hfp_dict_reader:
+                for row in data_rows:
                     if any(row[key] is None for key in required_fields):
                         logger.error(f"Found a row with an unique key error: {row}")
                         invalid_row_count += 1
@@ -216,7 +209,7 @@ def copy_data_from_downloader_to_db(downloader: StorageStreamDownloader, invalid
 
                     # Construct a tuple from a row based on selected rows
                     # Convert empty string to None to avoid db type errors
-                    row_obj = (row[f] if row[f] != "" else None for f in selected_fields.keys())
+                    row_obj = tuple(row[f] if row[f] != "" else None for f in selected_fields.keys())
                     copy.write_row(row_obj)
 
             if invalid_row_count > 0:
