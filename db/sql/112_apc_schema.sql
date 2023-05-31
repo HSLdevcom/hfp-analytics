@@ -15,7 +15,7 @@ CREATE TABLE apc.apc (
   "start"               interval,
   observed_operator_id  smallint,
   stop                  integer,
-  vehicle_load          smallint,
+  vehicle_load          integer,
   vehicle_load_ratio    real,
   doors_data            jsonb,
   count_quality         text,
