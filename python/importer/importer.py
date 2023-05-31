@@ -52,10 +52,12 @@ class Importer:
         blob_names = [blob.name for blob in blobs]
         return blob_names
 
-    def get_tags_for_blob(self, blob_name: str) -> dict:
+    def get_metadata_for_blob(self, blob_name: str) -> dict:
         """Get blob tag metadata from container."""
         blob_client = self.container_client.get_blob_client(blob=blob_name)
-        return blob_client.get_blob_tags()
+        # merge metadata and tags, tags preferred
+        metadata = {**blob_client.get_blob_properties().metadata, **blob_client.get_blob_tags()}
+        return metadata
 
     def get_data_from_blob(self, blob_name: str) -> Iterable[dict]:
         """Download data from container to csv reader"""

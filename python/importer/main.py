@@ -44,17 +44,18 @@ def update_blob_list_for_import(day_since_today):
                     # Already imported, no need to fetch tags or try to insert
                     continue
 
-                tags = importer.get_tags_for_blob(blob_name)
+                metadata = importer.get_metadata_for_blob(blob_name)
+
                 blob_data = {}
 
                 blob_data["blob_name"] = blob_name
-                blob_data["event_type"] = tags.get("eventType") if importer_type == "HFP" else "APC"
-                blob_data["min_oday"] = tags.get("min_oday")
-                blob_data["max_oday"] = tags.get("max_oday")
-                blob_data["min_tst"] = tags.get("min_tst")
-                blob_data["max_tst"] = tags.get("max_tst")
-                blob_data["row_count"] = tags.get("row_count")
-                blob_data["invalid"] = tags.get("invalid", False)
+                blob_data["event_type"] = metadata.get("eventType") if importer_type == "HFP" else "APC"
+                blob_data["min_oday"] = metadata.get("min_oday")
+                blob_data["max_oday"] = metadata.get("max_oday")
+                blob_data["min_tst"] = metadata.get("min_tst")
+                blob_data["max_tst"] = metadata.get("max_tst")
+                blob_data["row_count"] = metadata.get("row_count")
+                blob_data["invalid"] = metadata.get("invalid", False)
                 blob_data["covered_by_import"] = blob_data["event_type"] in HFP_EVENTS_TO_IMPORT
 
                 add_new_blob(blob_data)
