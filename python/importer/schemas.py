@@ -1,4 +1,5 @@
-from typing import Optional, TypedDict
+import json
+from typing import Callable, Optional, TypedDict  # TODO change optional to NotRequired after Python 3.11
 from psycopg.sql import SQL
 
 
@@ -7,6 +8,7 @@ class SchemaFields(TypedDict):
     # Order is guaranteed, so they are used with .keys() and .values() -methods
     mapping: dict[str, str]
     required: list[str]  # These are used for unique index
+    modifier_function: Optional[Callable[[dict], dict]]  # Function to map new fields based on others
 
 
 class StagingScripts(TypedDict):
@@ -25,6 +27,28 @@ class DBSchema(TypedDict):
     scripts: StagingScripts
 
 
+def apc_row_modifier(row: dict) -> dict:
+    topic = row.get("topic")
+    if topic:
+        parts = topic.split("/")  # format /hfp/v2/journey/ongoing/apc/bus/0012/02210'
+        row["mode"] = parts[6]
+        row["operator_id"] = parts[7]
+
+    door_counts = row.get("door_counts")
+    if door_counts:
+        row["door_counts"] = json.dumps(door_counts)  # Door counts is json, that should be inserted as text
+
+    # Convert dir and countquality which are read as byte format
+    dir = row.get("dir")
+    if dir:
+        row["dir"] = int(dir)
+    count_quality = row.get("count_quality")
+    if count_quality:
+        row["count_quality"] = count_quality.decode()
+
+    return row
+
+
 APC: DBSchema = {
     "copy_target": {
         "schema": "staging",
@@ -32,12 +56,12 @@ APC: DBSchema = {
     },
     "fields": {
         "mapping": {
-            "point_timestamp": "point_timestamp",
-            "receivedAt": "received_at",
-            "ownerOperatorId": "vehicle_operator_id",
-            "vehicleNumber": "vehicle_number",
+            "tst": "point_timestamp",
+            "received_at": "received_at",
+            "operator_id": "vehicle_operator_id",
+            "veh": "vehicle_number",
             "mode": "transport_mode",
-            "routeId": "route_id",
+            "route": "route_id",
             "dir": "direction_id",
             "oday": "oday",
             "start": "start",
@@ -45,12 +69,13 @@ APC: DBSchema = {
             "stop": "stop",
             "vehicle_load": "vehicle_load",
             "vehicle_load_ratio": "vehicle_load_ratio",
-            "doors_data": "doors_data",
+            "door_counts": "doors_data",
             "count_quality": "count_quality",
-            "longitude": "longitude",
-            "latitude": "latitude",
+            "long": "longitude",
+            "lat": "latitude",
         },
-        "required": ["point_timestamp", "oper", "vehicleNumber"],
+        "required": ["tst", "oper", "veh"],
+        "modifier_function": apc_row_modifier,
     },
     "scripts": {
         "process": SQL("CALL staging.import_and_normalize_apc()"),
@@ -85,6 +110,7 @@ HFP: DBSchema = {
             "latitude": "latitude",
         },
         "required": ["tst", "oper", "vehicleNumber"],
+        "modifier_function": None,
     },
     "scripts": {
         "process": SQL("CALL staging.import_and_normalize_hfp()"),

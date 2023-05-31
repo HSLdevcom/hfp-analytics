@@ -170,6 +170,7 @@ def copy_data_to_db(db_schema: DBSchema, data_rows: Iterable[dict], invalid_blob
             raw_field_names = db_schema["fields"]["mapping"].keys()
             db_field_names = db_schema["fields"]["mapping"].values()
             required_fields = db_schema["fields"]["required"]
+            modifier_function = db_schema["fields"]["modifier_function"]
 
             truncate_query = sql.SQL("DELETE FROM {schema}.{table}").format(
                 schema=sql.Identifier(db_schema["copy_target"]["schema"]),
@@ -189,6 +190,11 @@ def copy_data_to_db(db_schema: DBSchema, data_rows: Iterable[dict], invalid_blob
 
             with cur.copy(copy_query) as copy:
                 for row in data_rows:
+                    # Map new fields if modifier function is defined
+                    if modifier_function:
+                        row = modifier_function(row)
+
+                    # Check the required fields
                     if any(row[key] is None for key in required_fields):
                         logger.error(f"Found a row with an unique key error: {row}")
                         invalid_row_count += 1
