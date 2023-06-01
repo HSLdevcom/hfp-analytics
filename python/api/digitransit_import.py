@@ -5,7 +5,7 @@ import requests
 import csv
 from datetime import date
 from psycopg2 import sql
-from common.config import POSTGRES_CONNECTION_STRING
+from common.config import POSTGRES_CONNECTION_STRING, DIGITRANSIT_APIKEY
 
 GRAPHQL_URL = 'https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql'
 
@@ -30,11 +30,15 @@ def create_query(query_type):
     '''
     return query.replace('<PLACEHOLDER>', query_type)
 
+
 def get_query(query):
     req = requests.post(
         url=GRAPHQL_URL,
         data=query,
-        headers={'Content-Type': 'application/graphql'}
+        headers={
+            "Content-Type": "application/graphql",
+            "digitransit-subscription-key": DIGITRANSIT_APIKEY,
+        }
     )
     if req.status_code == 200:
         return req.json()
@@ -72,7 +76,8 @@ def make_flat_row(gql_row):
 def flatten_result(res):
     assert len(res['data'].keys()) == 1
     rows = list(res['data'].values())[0]
-    return list(map(make_flat_row, rows))
+    filtered_rows = [row for row in rows if row['vehicleMode'] != 'FERRY']
+    return list(map(make_flat_row, filtered_rows))
 
 def write_to_file(flat_res, to_file='/tmp/tmp.csv'):
     assert len(flat_res) > 0

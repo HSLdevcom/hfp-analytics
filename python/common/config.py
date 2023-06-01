@@ -69,6 +69,9 @@ IMPORT_COVERAGE_DAYS: int = get_env("IMPORT_COVERAGE_DAYS", "14", modifier=env_a
 # Authentication str for docs.
 DEFAULT_AUTH_CODE: str = get_env("DEFAULT_AUTH_CODE", "")
 
+# Digitransit apikey for stop import
+DIGITRANSIT_APIKEY: str = get_env("DIGITRANSIT_APIKEY", "")
+
 # Envs for slack alerts
 SLACK_WEBHOOK_URL: str = get_env("SLACK_WEBHOOK_URL", "")
 SLACK_USERS_TO_ALERT: str = get_env("SLACK_USERS_TO_ALERT", "", modifier=env_as_upper_str_list)
