@@ -1,6 +1,6 @@
 # HFP-Analytics
 
-A REST API that 
+A REST API that
 
 - provides [HFP data](https://digitransit.fi/en/developers/apis/4-realtime-api/vehicle-positions/) from the past in a compact format for further use;
 - analyzes the expected vs. actual quality of HFP data with various metrics.
@@ -118,20 +118,33 @@ Open the generated .sql file and inspect the changes to be applied. If everythin
 ```
 python3 migra_local_vs_dev apply
 ```
-Note: you may want to comment out SQL related to timescaledb / postgis updates. 
+Note: you may want to comment out SQL related to timescaledb / postgis updates.
 
-### Manually trigger importer
+### Manually trigger importer or analyzer
 
-Locally:
+Fucntion can be started with python script `scripts/trigger_function.py `
+
+You can specify the environment and / or the function to be triggered. The function is required, the env is local by default.
+
+Examples:
+
+Trigger analyzer locally
 ```
-./trigger_importer_local.sh
+python3 scripts/trigger_function.py analyzer
 ```
 
-In dev environment:
+Trigger importer on dev
 ```
-./trigger_importer_dev.sh
+python3 scripts/trigger_function.py --env dev importer
 ```
-In order for this to work, you'll have to get a master API key from Azure Portal -> hfp-importer -> App keys -> _master
+
+Show help
+```
+python3 scripts/trigger_function.py -h
+```
+
+In order to trigger functions on Azure, you'll have to get a master API key from Azure Portal -> hfp-importer -> App keys -> _master
+
 
 ### View logs
 
