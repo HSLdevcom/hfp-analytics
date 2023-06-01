@@ -4,6 +4,10 @@ import psycopg2
 import logging
 import time
 import common.constants as constants
+from datetime import date, timedelta, datetime
+from itertools import chain
+from common.database import pool
+from common.vehicle_analysis_utils import analyze_vehicle_door_data, analyze_odo_data, get_vehicle_data, get_vehicle_ids, insert_vehicle_data
 from common.config import (
     POSTGRES_CONNECTION_STRING,
     STOP_NEAR_LIMIT_M,
@@ -24,6 +28,29 @@ from common.config import (
 start_time = 0
 logger = logging.getLogger('importer')
 
+async def run_vehicle_analysis():
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+    logger.info(f"Starting vehicle analysis for day {yesterday}.")
+    vehicles = await get_vehicle_ids(yesterday)
+    logger.info(f"Vehicle ids fetched: {vehicles}")
+    analyzeCount = 0
+    for vehicle in vehicles:
+        vehicle_number = vehicle['vehicle_number']
+        vehicle_operator_id = vehicle['operator_id']
+        logger.info(f"Fetching data for vehicle: {vehicle_operator_id}/{vehicle_number}")
+        formatted_data = await get_vehicle_data(yesterday, vehicle_operator_id, vehicle_number, None)
+        analyzed_door_data = analyze_vehicle_door_data(formatted_data)
+        analyzed_odo_data = analyze_odo_data(formatted_data)
+        combined_obj = {}
+        for obj in chain(analyzed_door_data, analyzed_odo_data):
+            combined_obj.update(obj)
+        logger.info(f"Inserting vehicle data {vehicle_operator_id}/{vehicle_number} to db.")
+        await insert_vehicle_data([combined_obj])
+        analyzeCount = analyzeCount + 1
+        print(f'Vehicle number: {vehicle_operator_id}/{vehicle_number} analyzed. {analyzeCount}/{len(vehicles)}')
+    logger.info("Vehicle analysis done.")
+    return analyzeCount
 
 def get_time():
     return f'[{round(time.time() - start_time)}s]'
@@ -124,4 +151,3 @@ def run_analysis():
     finally:
         conn.cursor().execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
         conn.close()
-
