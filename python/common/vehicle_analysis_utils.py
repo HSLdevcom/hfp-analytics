@@ -20,7 +20,8 @@ def get_conn_params() -> str:
     return os.getenv("POSTGRES_CONNECTION_STRING", "")
 
 pool = AsyncConnectionPool(get_conn_params(), max_size=20)
-spd_threshold = 1
+spd_threshold = 2
+stationary_odo_events_threshold = 5
 
 
 async def get_vehicle_ids(date: date, customTimeInterval=None, operator_id=None) -> list:
@@ -254,8 +255,8 @@ def analyze_odo_data(vehicle_data):
         # Check if odo changes during the event chunks where spd is 0
         for stationaryChunk in stationaryEventChunks:
             stationaryChunkLength = len(stationaryChunk) 
-            if stationaryChunkLength > 2:
-                firstOdo = stationaryChunk[0].get('odo')
+            if stationaryChunkLength >= stationary_odo_events_threshold:
+                firstOdo = stationaryChunk[stationary_odo_events_threshold - 1].get('odo')
                 lastOdo = stationaryChunk[stationaryChunkLength - 1].get('odo')
                 if firstOdo is not None and lastOdo is not None and firstOdo != lastOdo:
                     analysis[data['vehicle_number']]['odo_error_events']['events'].append(error_obj(stationaryChunk[0], "Odo changed when stationary"))

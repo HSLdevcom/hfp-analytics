@@ -22,7 +22,7 @@ router = APIRouter(
     tags=["Vehicle analytics data"]
 )
 
-spd_threshold = 1
+spd_threshold = 2
 error_types_translations = {
     'Drst inverted': 'Käänteinen ovitieto',
     f'Speed over {spd_threshold} m/s when doors open': 'Useita ovitapahtumia vauhdissa',
@@ -137,7 +137,7 @@ async def get_vehicles(
         }
     }
 
-@router.get("/csv")
+@router.get("/PTO")
 async def get_vehicles(
     date: date = Query(..., description="Format YYYY-MM-DD"),
     operator_id: Optional[int] = Query(None, description="HFP topic's operator id. Use without prefix zeros."),
