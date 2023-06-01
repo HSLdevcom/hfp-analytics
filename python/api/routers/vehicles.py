@@ -11,8 +11,9 @@ from starlette.responses import FileResponse
 from common.logger_util import CustomDbLogHandler
 from datetime import date, datetime, timedelta, time
 from fastapi import APIRouter, Query
+from itertools import chain
 
-from common.vehicle_analysis_utils import analyze_vehicle_data, get_vehicle_data, get_vehicles_by_date
+from common.vehicle_analysis_utils import analyze_vehicle_door_data, get_vehicle_data, get_vehicle_ids, get_all_analysis_by_date, get_door_analysis_by_date, get_odo_analysis_by_date, analyze_odo_data
 
 logger = logging.getLogger('api')
 
@@ -31,7 +32,7 @@ error_types_translations = {
     'Drst always false': 'Ovitieto aina kiinni',
     'Identical first and last odo values': 'ODO-metrin arvo ei muutu',
     'Odo value over 100000': 'ODO-metri tuottaa liian suuria arvoja',
-    'Odo value decreased between events': 'ODO-metri tuottaa negatiivisia arvoja',
+    'Odo value decreased': 'ODO-metri tuottaa negatiivisia arvoja',
     'Odo values missing': 'ODO-metrin arvo puuttuu',
     'Some odo values missing': 'ODO-metrin arvo puuttuu osasta tapahtumia',
     'Odo changed when stationary': 'ODO-metrin arvo muuttuu kun ajoneuvo on paikallaan'
@@ -40,45 +41,139 @@ error_types_translations = {
 @router.get("/doors")
 async def get_vehicles(
     date: date = Query(..., description="Format YYYY-MM-DD"),
-    operator_id: Optional[int] = Query(None, description="HFP topic's vehicle id. Use without prefix zeros."),
-    errorsOnly: Optional[bool] = Query(None, description="Only return vehicles that triggered an error")
+    operator_id: Optional[int] = Query(None, description="HFP topic's operator id. Use without prefix zeros."),
+    errors_only: Optional[bool] = Query(None, description="Only return vehicles that triggered an error")
 ):
     """
     Endpoint for drst analysis.
     """
-
     is_current_date = date == date.today()
     analyzed_data = []
+    timerange_metadata = {
+        "start": "00:00:00.000+00",
+        "end": "11:59:00.000+00"
+    }
     if is_current_date:
-        formatted_data = await get_vehicle_data(date, operator_id, None)
-        analyzed_data = analyze_vehicle_data(formatted_data)
+        customTimeInterval = {
+            "start": " 04:00:00.000+00",
+            "end": " 05:00:00.000+00"
+        }
+        timerange_metadata = customTimeInterval
+        vehicle_ids = await get_vehicle_ids(date, customTimeInterval, operator_id)
+        results = []
+        for vehicle in vehicle_ids:
+            vehicle_number = vehicle['vehicle_number']
+            vehicle_operator_id = vehicle['operator_id']
+            formatted_data = await get_vehicle_data(date, vehicle_operator_id, vehicle_number, customTimeInterval)
+            analyzed_door_data = analyze_vehicle_door_data(formatted_data)
+            for d in analyzed_door_data:
+                results.append(d)
+        analyzed_data = results
     else:
-        analyzed_data = await get_vehicles_by_date(date)
+        analyzed_data = await get_door_analysis_by_date(date, operator_id)
         
-    if errorsOnly:
-        analyzed_data = [vehicle for vehicle in analyzed_data if vehicle['error_events']['amount'] > 0]
+    if errors_only:
+        analyzed_data = [vehicle for vehicle in analyzed_data if len(vehicle['door_error_events']["types"]) > 0]
     
-    analyzed_data =  sorted(analyzed_data, key=lambda x: x['vehicle_number'])
+    analyzed_data = sorted(analyzed_data, key=lambda x: x['vehicle_number'])
     return {
         "data": {
+            "analysis_time_range": {
+                "start": timerange_metadata["start"].strip(),
+                "end": timerange_metadata["end"].strip(),
+                "date": date
+            },
             "vehicles": analyzed_data
         }
     }
 
-@router.get("/doors/csv")
+@router.get("/odo")
 async def get_vehicles(
     date: date = Query(..., description="Format YYYY-MM-DD"),
-    operator_id: Optional[int] = Query(None, description="HFP topic's vehicle id. Use without prefix zeros."),
-    errorsOnly: Optional[bool] = Query(None, description="Only return vehicles that triggered an error")
+    operator_id: Optional[int] = Query(None, description="HFP topic's operator id. Use without prefix zeros."),
+    errors_only: Optional[bool] = Query(None, description="Only return vehicles that triggered an error")
+):
+    """
+    Odo analysis endpoint
+    """
+    timerange_metadata = {
+        "start": "00:00:00.000+00",
+        "end": "11:59:00.000+00"
+    }
+    is_current_date = date == date.today()
+    analyzed_data = []
+    if is_current_date:
+        customTimeInterval = {
+            "start": " 04:00:00.000+00",
+            "end": " 05:00:00.000+00"
+        }
+        timerange_metadata = customTimeInterval
+        vehicle_ids = await get_vehicle_ids(date, customTimeInterval, operator_id)
+        results = []
+        for vehicle in vehicle_ids:
+            vehicle_number = vehicle['vehicle_number']
+            vehicle_operator_id = vehicle['operator_id']
+            formatted_data = await get_vehicle_data(date, vehicle_operator_id, vehicle_number, customTimeInterval)
+            analyzed_odo_data = analyze_odo_data(formatted_data)
+            for d in analyzed_odo_data:
+                results.append(d)
+        analyzed_data = results
+    else:
+        analyzed_data = await get_odo_analysis_by_date(date, operator_id)
+
+    if errors_only:
+        return analyzed_data
+        analyzed_data = [vehicle for vehicle in analyzed_data if len(vehicle['door_error_events']["types"]) > 0]
+
+    analyzed_data = sorted(analyzed_data, key=lambda x: x['vehicle_number'])
+    return {
+        "data": {
+            "analysis_time_range": {
+                "start": timerange_metadata["start"].strip(),
+                "end": timerange_metadata["end"].strip(),
+                "date": date
+            },
+            "vehicles": analyzed_data
+        }
+    }
+
+@router.get("/csv")
+async def get_vehicles(
+    date: date = Query(..., description="Format YYYY-MM-DD"),
+    operator_id: Optional[int] = Query(None, description="HFP topic's operator id. Use without prefix zeros."),
+    errors_only: Optional[bool] = Query(None, description="Only return vehicles that triggered an error")
 ):
     """
     Vehicle doors analysis as csv.
     """
-    formatted_data = await get_vehicle_data(date, operator_id, None)
-    analyzed_data = analyze_vehicle_data(formatted_data, True)
-    if errorsOnly:
-        analyzed_data = [vehicle for vehicle in analyzed_data if vehicle['error_events']['amount'] > 0]
-    csv_filename = "doors.csv"
+    is_current_date = date == date.today()
+    analyzed_data = []
+    if is_current_date:
+        customTimeInterval = {
+            "start": " 04:00:00.000+00",
+            "end": " 05:00:00.000+00"
+        }
+        vehicle_ids = await get_vehicle_ids(date, customTimeInterval, operator_id)
+        results = []
+        for vehicle in vehicle_ids:
+            vehicle_number = vehicle['vehicle_number']
+            vehicle_operator_id = vehicle['operator_id']
+            formatted_data = await get_vehicle_data(date, vehicle_operator_id, vehicle_number, customTimeInterval)
+            analyzed_odo_data = analyze_odo_data(formatted_data)
+            analyzed_door_data = analyze_vehicle_door_data(formatted_data)
+            combined_obj = {}
+            for obj in chain(analyzed_door_data, analyzed_odo_data):
+                combined_obj.update(obj)
+            results.append(combined_obj)
+        analyzed_data = results
+    else:
+        analyzed_data = await get_all_analysis_by_date(date, operator_id)
+
+    if errors_only:
+        analyzed_data = [vehicle for vehicle in analyzed_data if len(vehicle['door_error_events']["types"]) > 0 or len(vehicle['odo_error_events']["types"]) > 0]
+
+
+    csv_filename = f'hfp-analysis-{date}.csv'
 
     with open(csv_filename, "w", newline="", encoding='utf-8') as csvfile:
         fieldnames = ["Päivämäärä", "Operaattori", "Kylkinumero", "Havaittu ongelma", "Syyt"]
@@ -86,12 +181,19 @@ async def get_vehicles(
         writer.writeheader()
 
         for item in analyzed_data:
+            door_error_types = []
+            odo_error_types = []
+            if 'door_error_events' in item:
+                door_error_types = item['door_error_events']['types']
+            if 'odo_error_events' in item:
+                odo_error_types = item['odo_error_events']['types']
+
             common_data = {                    
                 "Päivämäärä": date, 
                 "Operaattori": item['operator_id'], 
                 "Kylkinumero": item['vehicle_number']
             }
-            if len(item['error_events']['types']) == 0:
+            if len(door_error_types) == 0 and len(odo_error_types) == 0:
                 row_data = {
                     **common_data,
                     "Havaittu ongelma": "Ei havaittu ongelmia", 
@@ -100,66 +202,25 @@ async def get_vehicles(
                 writer.writerow(row_data)
             else:
                 translated_error_types = []
-                error_types = item['error_events']['types']
-                for error_type in error_types:
+                for error_type in chain(door_error_types, odo_error_types):
                     translated_error_types.append(error_types_translations[error_type])
                 error_types_str = ', '.join(translated_error_types)
+                detected_problem = ""
+                if len(door_error_types) > 0:
+                    detected_problem = "Epäluotettava ovitieto"
+                if len(odo_error_types) > 0:
+                    detected_problem = "Epäluotettava odometritieto"
+                if len(door_error_types) > 0 and len(odo_error_types) > 0:
+                    detected_problem = "Epäluotettava odometri- ja ovitieto"
+
                 row_data = {
                     **common_data,
-                    "Havaittu ongelma": "Epäluotettava ovitieto", 
+                    "Havaittu ongelma": detected_problem, 
                     "Syyt": error_types_str
                 }
                 writer.writerow(row_data)
 
-    return FileResponse(csv_filename, media_type="text/csv", filename="doors.csv")
-
-@router.get("/odo/csv")
-async def get_vehicles(
-    date: date = Query(..., description="Format YYYY-MM-DD"),
-    operator_id: Optional[int] = Query(None, description="HFP topic's vehicle id. Use without prefix zeros."),
-    errorsOnly: Optional[bool] = Query(None, description="Only return vehicles that triggered an error")
-):
-    """
-    Vehicle odo analysis as csv.
-    """
-    formatted_data = await get_vehicle_data(date, operator_id, None)
-    analyzed_data = analyze_odo(formatted_data)
-    if errorsOnly:
-        analyzed_data = [vehicle for vehicle in analyzed_data if vehicle['errors']['amount'] > 0]
-    csv_filename = "odo.csv"
-    with open(csv_filename, "w", newline="", encoding='utf-8') as csvfile:
-        fieldnames = ["Päivämäärä", "Operaattori", "Kylkinumero", "Havaittu ongelma", "Syyt"]
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
-
-        for item in analyzed_data:
-            common_data = {                    
-                "Päivämäärä": date, 
-                "Operaattori": item['operator_id'], 
-                "Kylkinumero": item['vehicle_number']
-            }
-            if item['errors']['amount'] == 0:
-                row_data = {
-                    **common_data,
-                    "Havaittu ongelma": "Ei havaittu ongelmia", 
-                    "Syyt": ""
-                }
-                writer.writerow(row_data)
-            else:
-                error_types = set()
-                for event in item['errors']['events']:
-                    event_type = event['type']
-                    error_types.add(error_types_translations[event_type])
-                error_types = list(error_types)
-                error_types_str = ', '.join(error_types)
-                row_data = {
-                    **common_data,
-                    "Havaittu ongelma": "Epäluotettava odo-tieto", 
-                    "Syyt": error_types_str
-                }
-                writer.writerow(row_data)
-
-    return FileResponse(csv_filename, media_type="text/csv", filename="odo.csv")
+    return FileResponse(csv_filename, media_type="text/csv", filename=csv_filename)
 
 def error_obj(d, event):
     start_str = str(d.get('start'))
@@ -177,100 +238,4 @@ def error_obj(d, event):
         'longitude': d.get('longitude'),
         'latitude': d.get('latitude'),
         'direction_id': d.get('direction_id')
-    }
-
-
-def analyze_odo(vehicle_data):
-    analysis = defaultdict(lambda: {'odo': 0, 'null': 0, 'errors': {'amount': 0, 'events': []}})
-    for data in vehicle_data:
-        data_list = data.get('data', [])
-        operator_id = data.get('operator_id')
-        analysis[data['vehicle_number']]['operator_id'] = operator_id
-        firstEvent = data_list[0]
-        lastEvent = data_list[len(data_list) - 1]
-        if firstEvent is not None and lastEvent is not None:
-            firstOdo = firstEvent.get('odo')
-            lastOdo = lastEvent.get('odo')
-            if firstOdo == lastOdo:
-                analysis[data['vehicle_number']]['errors']['amount'] += 1
-                analysis[data['vehicle_number']]['errors']['events'].append(error_obj(d, "Identical first and last odo values"))
-            if lastOdo is not None and lastOdo > 100000:
-                analysis[data['vehicle_number']]['errors']['amount'] += 1
-                analysis[data['vehicle_number']]['errors']['events'].append(error_obj(d, "Odo value over 100000"))
-
-        prevOdo = None
-        stationaryEventChunks = []
-        chunk = []
-        for d in data_list:
-            odo = d.get('odo')
-            loc = d.get('loc')
-            tst = d.get('tst')
-            drst = d.get('drst')
-            spd = d.get('spd')
-            if prevOdo is not None and odo is not None and prevOdo > odo:
-                analysis[data['vehicle_number']]['errors']['amount'] += 1
-                analysis[data['vehicle_number']]['errors']['events'].append(error_obj(d, "Odo value decreased between events"))
-
-            if odo is None:
-                analysis[data['vehicle_number']]['errors']['amount'] += 1
-                analysis[data['vehicle_number']]['null'] += 1
-                analysis[data['vehicle_number']]['errors']['events'].append(error_obj(d, "Odo values missing"))
-            else:
-                analysis[data['vehicle_number']]['odo'] += 1
-            prevOdo = odo
-            if spd == 0:
-                chunk.append(d)
-            else:
-                if chunk:
-                    stationaryEventChunks.append(chunk)
-                    chunk = []
-        if chunk:
-            stationaryEventChunks.append(chunk)
-
-        for stationaryChunk in stationaryEventChunks:
-            if len(stationaryChunk) > 2:
-                firstOdo = stationaryChunk[1].get('odo')
-                lastOdo = stationaryChunk[len(stationaryChunk) - 1].get('odo')
-                if firstOdo is not None and lastOdo is not None and firstOdo != lastOdo:
-                    analysis[data['vehicle_number']]['errors']['amount'] += 1
-                    analysis[data['vehicle_number']]['errors']['events'].append(error_obj(stationaryChunk[len(stationaryChunk) - 1], "Odo changed when stationary"))
-
-    result = []
-    for vehicle_number, analysis_data in analysis.items():
-        total = sum([analysis_data[key] for key in analysis_data if key in ['odo', 'null']])
-        odo_ratio = round(analysis_data['odo']/total, 3)
-        null_ratio = round(analysis_data['null']/total, 3)
-        if odo_ratio > 0 and odo_ratio < 1:
-            analysis_data['errors']['amount'] += 1
-            analysis_data['errors']['events'].append({'type': "Some odo values missing"})
-
-        analysis_data = {
-            'odo_ratio': odo_ratio,
-            'null_ratio': null_ratio,
-            'vehicle_number': vehicle_number,
-            'errors': analysis_data['errors'],
-            'operator_id': analysis_data['operator_id'],
-        }
-        result.append(analysis_data)
-    
-    return result
-
-@router.get("/odo")
-async def get_vehicles(
-    date: date = Query(..., description="Format YYYY-MM-DD"),
-    operator_id: Optional[int] = Query(None, description="HFP topic's vehicle id. Use without prefix zeros."),
-    errorsOnly: Optional[bool] = Query(None, description="Only return vehicles that triggered an error")
-):
-    """
-    Comment
-    """
-    formatted_data = await get_vehicle_data(date, operator_id, None)
-    analyzed_data = analyze_odo(formatted_data)
-    if errorsOnly:
-        analyzed_data = [vehicle for vehicle in analyzed_data if vehicle['errors']['amount'] > 0]
-
-    return {
-        "data": {
-            "vehicles": analyzed_data
-        }
     }

@@ -227,7 +227,7 @@ def read_imported_data_to_db(cur, downloader, blob_invalid: bool):
         "vehicleNumber": "vehicle_number",
         "mode": "transport_mode",
         "routeId": "route_id",
-        "dir": "direction_id",
+        "directionId": "direction_id",
         "oday": "oday",
         "start": "start",
         "oper": "observed_operator_id",
@@ -248,8 +248,6 @@ def read_imported_data_to_db(cur, downloader, blob_invalid: bool):
     )
 
     invalid_row_count = 0
-
-    cur.execute("DELETE FROM staging.hfp_raw")
 
     with cur.copy(copy_sql) as copy:
         for row in hfp_dict_reader:
