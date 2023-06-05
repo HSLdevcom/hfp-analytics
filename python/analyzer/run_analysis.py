@@ -30,10 +30,7 @@ logger = logging.getLogger('importer')
 
 async def run_vehicle_analysis():
     today = date.today()
-    # Situations where the analysis is run before midnight causes the date for "yesterday" to be the day before yesterday
-    # We're adding 6 hours to current datetime to make sure the date for "yesterday" is yesterday from next morning's perspective
-    today_plus_6_hours = today + timedelta(hours=6)
-    yesterday = today_plus_6_hours - timedelta(days=1)
+    yesterday = today - timedelta(days=1)
     logger.info(f"Starting vehicle analysis for day {yesterday}.")
     vehicles = await get_vehicle_ids(yesterday)
     logger.info(f"Vehicle ids fetched: {vehicles}")
