@@ -13,6 +13,7 @@ from psycopg import sql
 
 from common.logger_util import CustomDbLogHandler
 import common.constants as constants
+import common.slack as slack
 from common.config import (
     HFP_STORAGE_CONTAINER_NAME,
     HFP_STORAGE_CONNECTION_STRING,
@@ -55,12 +56,14 @@ def start_import():
 
     except Exception as e:
         logger.error(f"Error when creating locks for importer: {e}")
+        slack.send_to_channel(f"Error when creating locks for importer: {e}", alert=True)
 
     try:
         import_day_data_from_past(IMPORT_COVERAGE_DAYS)
 
     except Exception as e:
         logger.error(f"Error when running importer: {e}")
+        slack.send_to_channel(f"Error when running importer: {e}", alert=True)
     finally:
         # Remove lock at this point
         with pool.connection() as conn:
@@ -102,6 +105,14 @@ def import_day_data_from_past(day_since_today):
                 tags = blob_client.get_blob_tags()
 
                 event_type = tags.get("eventType")
+                min_oday = datetime.strptime(tags.get("min_oday", ""), "%Y-%m-%d")
+                blob_date = datetime.strptime(name[0:10], "%Y-%m-%d")
+
+                # Warn if min_oday is older than from yesterday
+                if blob_date - min_oday > timedelta(1):
+                    logger.warning(f"Bad oday data found in {name}")
+                    slack.send_to_channel(f"Bad oday data found in {name}", alert=True)
+
                 covered_by_import = event_type in HFP_EVENTS_TO_IMPORT
 
                 cur.execute(
@@ -178,7 +189,9 @@ def import_blob(blob_name):
                 blob_client = container_client.get_blob_client(blob=blob_name)
                 storage_stream_downloader = blob_client.download_blob()
 
-                read_imported_data_to_db(cur=cur, downloader=storage_stream_downloader, blob_invalid=blob_invalid)
+                read_imported_data_to_db(
+                    cur=cur, downloader=storage_stream_downloader, blob_name=blob_name, blob_invalid=blob_invalid
+                )
 
                 duration = time.time() - blob_start_time
 
@@ -197,7 +210,10 @@ def import_blob(blob_name):
                     logger.error(
                         f"Error after {int(time.time() - blob_start_time)} seconds when reading blob chunks: {e}"
                     )
-
+                    slack.send_to_channel(
+                        f"Error after {int(time.time() - blob_start_time)} seconds when reading blob chunks: {e}",
+                        alert=True,
+                    )
                 conn.rollback()
                 success_status = "failed"
 
@@ -212,7 +228,7 @@ def import_blob(blob_name):
             conn.commit()
 
 
-def read_imported_data_to_db(cur, downloader, blob_invalid: bool):
+def read_imported_data_to_db(cur, downloader, blob_invalid: bool, blob_name):
     compressed_content = downloader.content_as_bytes()
     reader = zstandard.ZstdDecompressor().stream_reader(compressed_content)
     hfp_dict_reader = csv.DictReader(TextIOWrapper(reader, encoding="utf-8"))
@@ -262,7 +278,8 @@ def read_imported_data_to_db(cur, downloader, blob_invalid: bool):
             copy.write_row(row_obj)
 
     if invalid_row_count > 0:
-        logger.error(f"Unique key error count for the blob: {invalid_row_count}")
+        logger.error(f"Analytics found {invalid_row_count} invalid rows in blob {blob_name}")
+        slack.send_to_channel(f"Analytics found {invalid_row_count} invalid rows in blob {blob_name}", alert=True)
 
     if not blob_invalid:
         cur.execute("CALL staging.import_and_normalize_hfp()")
