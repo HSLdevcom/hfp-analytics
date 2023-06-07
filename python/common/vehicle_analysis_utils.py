@@ -20,8 +20,8 @@ def get_conn_params() -> str:
     return os.getenv("POSTGRES_CONNECTION_STRING", "")
 
 pool = AsyncConnectionPool(get_conn_params(), max_size=20)
-spd_threshold = 2
 stationary_odo_events_threshold = 5
+spd_threshold = 2
 loc_gps_threshold = 0.95
 
 
@@ -560,18 +560,12 @@ async def get_all_analysis_by_date(date: date, operator_id=None) -> list:
                     vehicle_operator_id,
                     date,
                     events_amount,
-                    drst_null_ratio,
-                    drst_true_ratio,
-                    drst_false_ratio,
                     door_error_events,
                     door_error_types,
-                    odo_exists_ratio,
-                    odo_null_ratio,
                     odo_error_events,
                     odo_error_types,
-                    loc_null_ratio,
-                    loc_gps_ratio,
-                    loc_dr_ratio
+                    loc_error_events,
+                    loc_error_types
                 FROM hfp.vehicle_analysis
                 {where_clause}
                 """.format(where_clause=where_clause),
@@ -585,21 +579,17 @@ async def get_all_analysis_by_date(date: date, operator_id=None) -> list:
                     "operator_id": r[1],
                     "date": r[2],
                     "events_amount": r[3],
-                    "drst_null_ratio": r[4],
-                    "drst_true_ratio": r[5],
-                    "drst_false_ratio": r[6],
-                    "odo_exists_ratio": r[9],
-                    "odo_null_ratio": r[10],
-                    "loc_null_ratio": r[13],
-                    "loc_gps_ratio": r[14],
-                    "loc_dr_ratio": r[15],
                     "door_error_events": {
-                        "events": r[7],
-                        "types": r[8]
+                        "events": r[4],
+                        "types": r[5]
                     },
                     "odo_error_events": {
-                        "events": r[11],
-                        "types": r[12]
+                        "events": r[6],
+                        "types": r[7]
+                    },
+                    "loc_error_events": {
+                        "events": r[8],
+                        "types": r[9]
                     }
                 }
                 for r in rows
