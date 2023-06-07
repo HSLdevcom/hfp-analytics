@@ -13,7 +13,7 @@ from datetime import date, datetime, timedelta, time
 from fastapi import APIRouter, Query
 from itertools import chain
 
-from common.vehicle_analysis_utils import analyze_vehicle_door_data, get_vehicle_data, get_vehicle_ids, get_all_analysis_by_date, get_door_analysis_by_date, get_odo_analysis_by_date, analyze_odo_data
+from common.vehicle_analysis_utils import analyze_vehicle_door_data, get_vehicle_data, get_vehicle_ids, get_positioning_analysis_by_date, get_all_analysis_by_date, get_door_analysis_by_date, get_odo_analysis_by_date, analyze_odo_data
 
 logger = logging.getLogger('api')
 
@@ -38,6 +38,46 @@ error_types_translations = {
     'Odo changed when stationary': 'ODO-metrin arvo muuttuu kun ajoneuvo on paikallaan'
 }
 
+@router.get("/positioning")
+async def get_vehicles(
+    date: date = Query(..., description="Format YYYY-MM-DD"),
+    operator_id: Optional[int] = Query(None, description="HFP topic's operator id. Use without prefix zeros."),
+    errors_only: Optional[bool] = Query(None, description="Only return vehicles that triggered an error")
+):
+    """
+    Endpoint for drst analysis.
+    """
+    is_current_date = date == date.today()
+    analyzed_data = []
+
+    # TODO: Metadata for timerange should be stored in db when analysis is done
+    # and then retrieved from the db with the rest of the data rather than hardcodin here
+    timerange_metadata = {
+        "start": "00:00:00.000+00",
+        "end": "11:59:00.000+00"
+    }
+    if is_current_date:
+        # Analysis for current date disabled for now
+        return {
+            "data": {
+                "message": "Analysis disabled for current date"
+            }
+        }
+    else:
+        analyzed_data = await get_positioning_analysis_by_date(date, operator_id)
+        
+    analyzed_data = sorted(analyzed_data, key=lambda x: x['vehicle_number'])
+    return {
+        "data": {
+            "metadata": {
+                "start": timerange_metadata["start"].strip(),
+                "end": timerange_metadata["end"].strip(),
+                "date": date
+            },
+            "vehicles": analyzed_data
+        }
+    }
+
 @router.get("/doors")
 async def get_vehicles(
     date: date = Query(..., description="Format YYYY-MM-DD"),
@@ -49,6 +89,9 @@ async def get_vehicles(
     """
     is_current_date = date == date.today()
     analyzed_data = []
+
+    # TODO: Metadata for timerange should be stored in db when analysis is done
+    # and then retrieved from the db with the rest of the data rather than hardcodin here
     timerange_metadata = {
         "start": "00:00:00.000+00",
         "end": "11:59:00.000+00"
@@ -87,6 +130,8 @@ async def get_vehicles(
     """
     Odo analysis endpoint
     """
+    # TODO: Metadata for timerange should be stored in db when analysis is done
+    # and then retrieved from the db with the rest of the data rather than hardcodin here
     timerange_metadata = {
         "start": "00:00:00.000+00",
         "end": "11:59:00.000+00"

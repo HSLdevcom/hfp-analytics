@@ -95,6 +95,11 @@ CREATE TABLE hfp.vehicle_analysis (
   odo_null_ratio FLOAT,
   odo_error_types TEXT[],
   odo_error_events JSONB,
+  loc_null_ratio FLOAT,
+  loc_gps_ratio FLOAT,
+  loc_dr_ratio FLOAT,
+  loc_error_types TEXT[],
+  loc_error_events JSONB,
   events_amount INTEGER
 );
 

@@ -8,7 +8,7 @@ import common.slack as slack
 from datetime import date, timedelta, datetime
 from itertools import chain
 from common.database import pool
-from common.vehicle_analysis_utils import analyze_vehicle_door_data, analyze_odo_data, get_vehicle_data, get_vehicle_ids, insert_vehicle_data
+from common.vehicle_analysis_utils import analyze_vehicle_door_data, analyze_positioning_data, analyze_odo_data, get_vehicle_data, get_vehicle_ids, insert_vehicle_data
 from common.config import (
     POSTGRES_CONNECTION_STRING,
     STOP_NEAR_LIMIT_M,
@@ -46,8 +46,9 @@ async def run_vehicle_analysis():
         formatted_data = await get_vehicle_data(yesterday, vehicle_operator_id, vehicle_number, None)
         analyzed_door_data = analyze_vehicle_door_data(formatted_data)
         analyzed_odo_data = analyze_odo_data(formatted_data)
+        analyzed_positioning_data = analyze_positioning_data(formatted_data)
         combined_obj = {}
-        for obj in chain(analyzed_door_data, analyzed_odo_data):
+        for obj in chain(analyzed_door_data, analyzed_odo_data, analyzed_positioning_data):
             combined_obj.update(obj)
         logger.info(f"Inserting vehicle data {vehicle_operator_id}/{vehicle_number} to db.")
         await insert_vehicle_data([combined_obj])
