@@ -5,6 +5,7 @@ import logging
 from datetime import datetime, timedelta
 
 from common.logger_util import CustomDbLogHandler
+import common.slack as slack
 from common.config import (
     APC_STORAGE_CONTAINER_NAME,
     HFP_STORAGE_CONTAINER_NAME,
@@ -91,6 +92,10 @@ def import_blob(blob_name):
             logger.error(f"Blob {blob_name} not found.")
         else:
             logger.error(f"Error after {processing_time} seconds when reading blob chunks: {e}")
+            slack.send_to_channel(
+                f"Error after {processing_time} seconds when reading blob chunks: {e}",
+                alert=True,
+            )
 
 
 def run_import() -> None:
