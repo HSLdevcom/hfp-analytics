@@ -5,13 +5,14 @@ import logging
 from datetime import datetime, timedelta
 
 from common.logger_util import CustomDbLogHandler
-import common.slack as slack
 from common.config import (
     APC_STORAGE_CONTAINER_NAME,
     HFP_STORAGE_CONTAINER_NAME,
     HFP_EVENTS_TO_IMPORT,
     IMPORT_COVERAGE_DAYS,
 )
+import common.slack as slack
+
 from .importer import Importer, parquet_to_dict_decoder, zst_csv_to_dict_decoder
 from .schemas import APC as APCSchema, HFP as HFPSchema
 from .services import (
@@ -124,6 +125,7 @@ def main(importer: func.TimerRequest, context: func.Context) -> None:
             run_import()
         except Exception as e:
             logger.error(f"Error when running importer: {e}")
+            slack.send_to_channel(f"Error when running importer: {e}", alert=True)
         finally:
             # Remove lock at this point
             release_db_lock()

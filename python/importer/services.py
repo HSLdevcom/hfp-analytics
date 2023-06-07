@@ -8,6 +8,7 @@ from psycopg_pool import ConnectionPool  # todo: refactor to use common.database
 
 from common.config import POSTGRES_CONNECTION_STRING
 import common.constants as constants
+import common.slack as slack
 
 from .schemas import DBSchema
 
@@ -197,6 +198,7 @@ def copy_data_to_db(db_schema: DBSchema, data_rows: Iterable[dict], invalid_blob
                     # Check the required fields
                     if any(row[key] is None for key in required_fields):
                         logger.error(f"Found a row with an unique key error: {row}")
+                        slack.send_to_channel(f"Found a row with an unique key error: {row}")
                         invalid_row_count += 1
                         continue
 
@@ -207,6 +209,7 @@ def copy_data_to_db(db_schema: DBSchema, data_rows: Iterable[dict], invalid_blob
 
             if invalid_row_count > 0:
                 logger.error(f"Unique key error count for the blob: {invalid_row_count}")
+                slack.send_to_channel(f"Unique key error count for the blob: {invalid_row_count}")
 
             if not invalid_blob:
                 cur.execute(db_schema["scripts"]["process"])
