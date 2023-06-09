@@ -284,7 +284,7 @@ def read_imported_data_to_db(cur, downloader, blob_invalid: bool, blob_name):
     if not blob_invalid:
         cur.execute("CALL staging.import_and_normalize_hfp()")
     else:
-        cur.execute("CALL stating.import_invalid_hfp()")
+        cur.execute("CALL staging.import_invalid_hfp()")
 
     cur.execute("DELETE FROM staging.hfp_raw")
 
