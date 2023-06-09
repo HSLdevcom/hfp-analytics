@@ -9,13 +9,18 @@ from datetime import datetime
 from common.database import pool
 
 
-async def get_hfp_data(route_id: Optional[str],
-                       operator_id: Optional[int],
-                       vehicle_number: Optional[int],
-                       from_tst: datetime,
-                       to_tst: datetime,
-                       stream: BytesIO) -> None:
-    """Query hfp raw data filtered by parameters to CSV format. Save the result to the input stream."""
+async def get_hfp_data(
+    route_id: Optional[str],
+    operator_id: Optional[int],
+    vehicle_number: Optional[int],
+    from_tst: datetime,
+    to_tst: datetime,
+    stream: BytesIO,
+) -> int:
+    """
+    Query hfp raw data filtered by parameters to CSV format. Save the result to the input stream.
+    Return row count.
+    """
     async with pool.connection() as conn:
         async with conn.cursor().copy(
             """
@@ -32,12 +37,17 @@ async def get_hfp_data(route_id: Optional[str],
                     tst >= %(from_tst)s AND tst <= %(to_tst)s
             ) TO STDOUT WITH CSV HEADER
             """,
-                {
-                    "route_id": route_id,
-                    "operator_id": operator_id,
-                    "vehicle_number": vehicle_number,
-                    "from_tst": from_tst.isoformat(),
-                    "to_tst": to_tst.isoformat()
-                }) as copy:
+            {
+                "route_id": route_id,
+                "operator_id": operator_id,
+                "vehicle_number": vehicle_number,
+                "from_tst": from_tst.isoformat(),
+                "to_tst": to_tst.isoformat(),
+            },
+        ) as copy:
+            row_count = -1  # Header is always the first row
+
             async for row in copy:
+                row_count += 1
                 stream.write(row)
+        return row_count

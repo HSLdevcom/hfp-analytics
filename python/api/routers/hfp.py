@@ -46,7 +46,8 @@ class GzippedFileResponse(Response):
                     "schema": {"example": 'attachment; filename="hfp-export_20230316_550_18_662.csv.gz"'}
                 }
             },
-        }
+        },
+        204: {"description": "Query returned no data with the given parameters."},
     },
 )
 async def get_hfp_raw_data(
@@ -133,13 +134,21 @@ async def get_hfp_raw_data(
         from_tst = from_tst.replace(tzinfo=tzone)
         to_tst = to_tst.replace(tzinfo=tzone)
 
-        await get_hfp_data(route_id, operator_id, vehicle_number, from_tst, to_tst, input_stream)
+        row_count = await get_hfp_data(route_id, operator_id, vehicle_number, from_tst, to_tst, input_stream)
+
+        if row_count == 0:
+            # No data was found, return no content response
+            return Response(status_code=204)
 
         logger.debug("Hfp data received. Compressing.")
-        data = input_stream.getvalue()
+
+        # Read as chunks to save memory
+        input_stream.seek(0)
+        chunk_size = 10000  # Adjust to optimize if needed
 
         with gzip.GzipFile(fileobj=output_stream, mode="wb") as compressed_data_stream:
-            compressed_data_stream.write(data)
+            while data := input_stream.read(chunk_size):
+                compressed_data_stream.write(data)
 
         # Add identifiers from query parameters if they exist
         identifiers = [
