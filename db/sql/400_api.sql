@@ -20,7 +20,7 @@ CREATE OR REPLACE VIEW api.view_as_original_hfp_event AS (
     observed_operator_id,
     odo,
     spd,
-    drst,
+    drst::int,
     loc,
     stop,
     ST_X(ST_Transform(geom, 4326)) AS longitude,
