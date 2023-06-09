@@ -89,7 +89,7 @@ async def get_hfp_raw_data(
             "Timestamp can be shortened - optional formats are "
             "`yyyy-MM-dd'T'HH:mm` and `yyyy-MM-dd` "
         ),
-        example="2023-01-12T15:00",
+        example="2023-01-12T15:00:00",
     ),
     tz: int = Query(
         default=0,
