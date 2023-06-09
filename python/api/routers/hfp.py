@@ -37,11 +37,13 @@ class GzippedFileResponse(Response):
     response_class=GzippedFileResponse,
     responses={
         200: {
-            "description": "Successful query. The data is returned as an attachment in the response.",
+            "description": "Successful query. The data is returned as an attachment in the response. "
+            "File format comes from query parameters: "
+            "`hfp-export_<from_date>_<route_id>_<operator_id>_<vehicle_number>.csv.gz`",
             "content": {"application/gzip": {"schema": None, "example": None}},
             "headers": {
                 "Content-Disposition": {
-                    "schema": {"example": 'attachment; filename="hfp-export-20230316-133132.csv.gz"'}
+                    "schema": {"example": 'attachment; filename="hfp-export_20230316_550_18_662.csv.gz"'}
                 }
             },
         }
@@ -139,7 +141,19 @@ async def get_hfp_raw_data(
         with gzip.GzipFile(fileobj=output_stream, mode="wb") as compressed_data_stream:
             compressed_data_stream.write(data)
 
-        filename = f"hfp-export-{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv.gz"
+        # Add identifiers from query parameters if they exist
+        identifiers = [
+            from_tst and from_tst.strftime("%Y%m%d"),
+            route_id,
+            operator_id,
+            vehicle_number,
+        ]
+
+        # Remove nones and change to format param_param_param
+        filename_identifier = "_".join(map(lambda x: str(x), filter(lambda x: x is not None, identifiers)))
+
+        filename = f"hfp-export_{filename_identifier}.csv.gz"
+
         response = GzippedFileResponse(filename=filename, content=output_stream.getvalue())
 
         duration = time.time() - fetch_start_time
