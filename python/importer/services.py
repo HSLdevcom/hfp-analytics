@@ -2,6 +2,7 @@
 from collections.abc import Iterable
 from datetime import datetime
 import logging
+import io
 
 from psycopg import sql
 from psycopg_pool import ConnectionPool  # todo: refactor to use common.database pool
@@ -179,7 +180,8 @@ def copy_data_to_db(db_schema: DBSchema, data_rows: Iterable[dict], invalid_blob
             )
 
             # Create a copy statement from selected field list
-            copy_query = sql.SQL("COPY {schema}.{table} ({fields}) FROM STDIN").format(
+            # FORMAT and NULL can be used with copy.write(), do not use if changed to copy.write_row()
+            copy_query = sql.SQL("COPY {schema}.{table} ({fields}) FROM STDIN (FORMAT TEXT, NULL '')").format(
                 schema=sql.Identifier(db_schema["copy_target"]["schema"]),
                 table=sql.Identifier(db_schema["copy_target"]["table"]),
                 fields=sql.SQL(",").join([sql.Identifier(f) for f in db_field_names]),
@@ -189,28 +191,35 @@ def copy_data_to_db(db_schema: DBSchema, data_rows: Iterable[dict], invalid_blob
 
             cur.execute(truncate_query)
 
+            data_stream = io.StringIO()
+
+            for row in data_rows:
+                # Map new fields if modifier function is defined
+                if modifier_function:
+                    row = modifier_function(row)
+
+                # Check the required fields
+                if any(row[key] is None for key in required_fields):
+                    logger.error(f"Found a row with an unique key error: {row}")
+                    slack.send_to_channel(f"Found a row with an unique key error: {row}")
+                    invalid_row_count += 1
+                    continue
+
+                # Construct a data row as a string to be copied
+                data_stream.write("\t".join([row[f] for f in raw_field_names]) + "\n")
+
+            # Copy data as chunks
+            data_stream.seek(0)
+            chunk_size = 10000
             with cur.copy(copy_query) as copy:
-                for row in data_rows:
-                    # Map new fields if modifier function is defined
-                    if modifier_function:
-                        row = modifier_function(row)
-
-                    # Check the required fields
-                    if any(row[key] is None for key in required_fields):
-                        logger.error(f"Found a row with an unique key error: {row}")
-                        slack.send_to_channel(f"Found a row with an unique key error: {row}")
-                        invalid_row_count += 1
-                        continue
-
-                    # Construct a tuple from a row based on selected rows
-                    # Convert empty string to None to avoid db type errors
-                    row_obj = tuple(row[f] if row[f] != "" else None for f in raw_field_names)
-                    copy.write_row(row_obj)
+                while data := data_stream.read(chunk_size):
+                    copy.write(data)
 
             if invalid_row_count > 0:
                 logger.error(f"Unique key error count for the blob: {invalid_row_count}")
                 slack.send_to_channel(f"Unique key error count for the blob: {invalid_row_count}")
 
+            # Move data from staging to persistent storage
             if not invalid_blob:
                 cur.execute(db_schema["scripts"]["process"])
             elif db_schema["scripts"]["process_invalid"]:
