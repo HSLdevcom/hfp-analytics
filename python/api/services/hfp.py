@@ -21,28 +21,13 @@ async def get_hfp_data(route_id: Optional[str],
             """
             COPY (
                 SELECT
-                    tst,
-                    event_type,
-                    route_id,
-                    direction_id,
-                    vehicle_operator_id,
-                    observed_operator_id,
-                    vehicle_number,
-                    oday,
-                    "start",
-                    stop,
-                    loc,
-                    latitude,
-                    longitude,
-                    odo,
-                    spd,
-                    drst
+                    *
                 FROM api.view_as_original_hfp_event
                 WHERE
                     (%(route_id)s IS NULL OR route_id = %(route_id)s) AND
                     (
                         (%(operator_id)s IS NULL AND %(vehicle_number)s IS NULL ) OR
-                        (vehicle_operator_id = %(operator_id)s AND vehicle_number = %(vehicle_number)s)
+                        (operator_id = %(operator_id)s AND vehicle_number = %(vehicle_number)s)
                     ) AND
                     tst >= %(from_tst)s AND tst <= %(to_tst)s
             ) TO STDOUT WITH CSV HEADER

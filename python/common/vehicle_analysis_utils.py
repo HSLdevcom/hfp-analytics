@@ -46,7 +46,7 @@ async def get_vehicle_ids(date: date, customTimeInterval=None, operator_id=None)
         async with conn.cursor() as cur:
             await cur.execute(
                 """
-                SELECT DISTINCT vehicle_number, vehicle_operator_id FROM api.view_as_original_hfp_event {where_clause}
+                SELECT DISTINCT vehicle_number, operator_id FROM api.view_as_original_hfp_event {where_clause}
                 """.format(where_clause=where_clause),
                 query_params
             )
@@ -502,7 +502,7 @@ async def get_vehicles_by_timestamp(date: date, vehicle_operator_id: int, vehicl
                 """
                 SELECT
                     tst,
-                    vehicle_operator_id,
+                    operator_id,
                     vehicle_number,
                     route_id,
                     direction_id,
@@ -513,8 +513,8 @@ async def get_vehicles_by_timestamp(date: date, vehicle_operator_id: int, vehicl
                     drst,
                     loc,
                     stop,
-                    longitude,
-                    latitude
+                    long,
+                    lat
                 FROM api.view_as_original_hfp_event
                 {where_clause}
                 """.format(where_clause=where_clause),
@@ -536,8 +536,8 @@ async def get_vehicles_by_timestamp(date: date, vehicle_operator_id: int, vehicl
                     "drst": r[9],
                     "loc": r[10],
                     "stop": r[11],
-                    "longitude": r[12],
-                    "latitude": r[13]
+                    "long": r[12],
+                    "lat": r[13]
                 }
                 for r in rows
             ]
