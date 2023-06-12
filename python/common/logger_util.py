@@ -55,6 +55,10 @@ class PostgresDBHandler(logging.Handler):
         )
 
     def emit(self, record):
+        if not (self.sql_cursor and self.sql_conn):
+            # DB logging not correctly initialized, exit.
+            return
+
         log_level = record.levelname.lower()
         log_msg = record.msg.strip()
         try:
