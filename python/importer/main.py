@@ -13,7 +13,6 @@ from psycopg import sql
 
 from common.logger_util import CustomDbLogHandler
 import common.constants as constants
-import common.slack as slack
 from common.config import (
     HFP_STORAGE_CONTAINER_NAME,
     HFP_STORAGE_CONNECTION_STRING,
@@ -56,14 +55,12 @@ def start_import():
 
     except Exception as e:
         logger.error(f"Error when creating locks for importer: {e}")
-        slack.send_to_channel(f"Error when creating locks for importer: {e}", alert=True)
 
     try:
         import_day_data_from_past(IMPORT_COVERAGE_DAYS)
 
     except Exception as e:
         logger.error(f"Error when running importer: {e}")
-        slack.send_to_channel(f"Error when running importer: {e}", alert=True)
     finally:
         # Remove lock at this point
         with pool.connection() as conn:
@@ -112,7 +109,6 @@ def import_day_data_from_past(day_since_today):
                 # Warn if min_oday is older than from yesterday (and blob is not marked as invalid)
                 if blob_date - min_oday > timedelta(1) and not is_invalid:
                     logger.warning(f"Bad oday data found in {name}, should be marked as invalid!")
-                    slack.send_to_channel(f"Bad oday data found in {name}, should be marked as invalid!", alert=True)
 
                 covered_by_import = event_type in HFP_EVENTS_TO_IMPORT
 
@@ -211,10 +207,6 @@ def import_blob(blob_name):
                     logger.error(
                         f"Error after {int(time.time() - blob_start_time)} seconds when reading blob chunks: {e}"
                     )
-                    slack.send_to_channel(
-                        f"Error after {int(time.time() - blob_start_time)} seconds when reading blob chunks: {e}",
-                        alert=True,
-                    )
                 conn.rollback()
                 success_status = "failed"
 
@@ -280,7 +272,6 @@ def read_imported_data_to_db(cur, downloader, blob_invalid: bool, blob_name):
 
     if invalid_row_count > 0:
         logger.error(f"Analytics found {invalid_row_count} invalid rows in blob {blob_name}")
-        slack.send_to_channel(f"Analytics found {invalid_row_count} invalid rows in blob {blob_name}", alert=True)
 
     if not blob_invalid:
         cur.execute("CALL staging.import_and_normalize_hfp()")
