@@ -37,15 +37,15 @@ def env_as_upper_str(env: str) -> str:
 
 
 def env_as_upper_str_list(env: str) -> list[str]:
-    return [item.strip().upper() for item in env.split(",")]
+    return [item.strip().upper() for item in filter(None, env.split(","))]
 
 
 def env_as_int_list(env: str) -> list[int]:
-    return [int(item.strip()) for item in env.split(",")]
+    return [int(item.strip()) for item in filter(None, env.split(","))]
 
 
 def env_as_float_list(env: str) -> list[float]:
-    return [float(item.strip()) for item in env.split(",")]
+    return [float(item.strip()) for item in filter(None, env.split(","))]
 
 
 def get_env(var_name: str, default_value: Union[str, None] = None, modifier: Callable = dummy):
