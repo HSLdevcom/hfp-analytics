@@ -107,11 +107,12 @@ def import_day_data_from_past(day_since_today):
                 event_type = tags.get("eventType")
                 min_oday = datetime.strptime(tags.get("min_oday", ""), "%Y-%m-%d")
                 blob_date = datetime.strptime(name[0:10], "%Y-%m-%d")
+                is_invalid = tags.get("invalid")
 
-                # Warn if min_oday is older than from yesterday
-                if blob_date - min_oday > timedelta(1):
-                    logger.warning(f"Bad oday data found in {name}")
-                    slack.send_to_channel(f"Bad oday data found in {name}", alert=True)
+                # Warn if min_oday is older than from yesterday (and blob is not marked as invalid)
+                if blob_date - min_oday > timedelta(1) and not is_invalid:
+                    logger.warning(f"Bad oday data found in {name}, should be marked as invalid!")
+                    slack.send_to_channel(f"Bad oday data found in {name}, should be marked as invalid!", alert=True)
 
                 covered_by_import = event_type in HFP_EVENTS_TO_IMPORT
 
@@ -129,7 +130,7 @@ def import_day_data_from_past(day_since_today):
                         tags.get("min_tst"),
                         tags.get("max_tst"),
                         tags.get("row_count"),
-                        tags.get("invalid"),
+                        is_invalid,
                         covered_by_import,
                     ),
                 )
