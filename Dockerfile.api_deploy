@@ -1,10 +1,6 @@
 FROM mcr.microsoft.com/azure-functions/python:4-python3.10
 
-# Workaround for obsolete jessie references (https://github.com/Azure/azure-functions-docker/issues/874)
-# Can be removed after fixed in base image.
-RUN sed -i '/jessie/d' /etc/apt/sources.list
-
-RUN apt-get update && apt-get install -y libpq5 && rm -rf /var/lib/apt/lists/*
+RUN apt-get --allow-releaseinfo-change update && apt-get install -y libpq5 && rm -rf /var/lib/apt/lists/*
 
 ENV TZ="Europe/Helsinki"
 ENV AzureWebJobsScriptRoot=/home/site/wwwroot
