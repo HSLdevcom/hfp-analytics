@@ -25,7 +25,7 @@ class SlackLoggingHandler(logging.Handler):
         msg_object = {
             "text": (
                 f"Msg from {ENVIRONMENT} [{log_level}]: {alert and self.alert_list if self.alert_list else ''}\n"
-                f"{log_msg}"
+                f"```{log_msg}```"
             )
         }
         requests.post(SLACK_WEBHOOK_URL, json=msg_object)
