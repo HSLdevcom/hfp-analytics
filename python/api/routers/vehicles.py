@@ -55,7 +55,7 @@ async def get_vehicles(
     analyzed_data = []
 
     # TODO: Metadata for timerange should be stored in db when analysis is done
-    # and then retrieved from the db with the rest of the data rather than hardcodin here
+    # and then retrieved from the db with the rest of the data rather than hardcoding it here
     timerange_metadata = {
         "start": "00:00:00.000+00",
         "end": "11:59:00.000+00"
@@ -95,7 +95,7 @@ async def get_vehicles(
     analyzed_data = []
 
     # TODO: Metadata for timerange should be stored in db when analysis is done
-    # and then retrieved from the db with the rest of the data rather than hardcodin here
+    # and then retrieved from the db with the rest of the data rather than hardcoding it here
     timerange_metadata = {
         "start": "00:00:00.000+00",
         "end": "11:59:00.000+00"
@@ -135,7 +135,7 @@ async def get_vehicles(
     Odo analysis endpoint
     """
     # TODO: Metadata for timerange should be stored in db when analysis is done
-    # and then retrieved from the db with the rest of the data rather than hardcodin here
+    # and then retrieved from the db with the rest of the data rather than hardcoding it here
     timerange_metadata = {
         "start": "00:00:00.000+00",
         "end": "11:59:00.000+00"
