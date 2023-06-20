@@ -100,6 +100,8 @@ AS $procedure$
   -- update min and max timestamps as we might get new values for them
   -- when importing hfp data to fill a gap or if more recent data is available
   -- when running import.
+  HAVING
+    (max(tst) - min(tst)) >= interval '1 minute'
   ON CONFLICT ON CONSTRAINT assumed_monitored_vehicle_journey_pkey DO UPDATE SET
     max_timestamp = greatest(assumed_monitored_vehicle_journey.max_timestamp, EXCLUDED.max_timestamp),
     min_timestamp = least(assumed_monitored_vehicle_journey.min_timestamp, EXCLUDED.min_timestamp),
