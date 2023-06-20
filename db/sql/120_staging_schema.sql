@@ -88,6 +88,7 @@ AS $procedure$
   -- Be careful about min_tst, because aggregate might not give all records, if there were ones before min_tst.
   FROM staging.hfp_raw
   WHERE
+    vehicle_operator_id != '0199' AND
     transport_mode IS NOT NULL AND
     route_id IS NOT NULL AND
     direction_id IS NOT NULL AND
