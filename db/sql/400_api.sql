@@ -30,6 +30,30 @@ CREATE OR REPLACE VIEW api.view_as_original_hfp_event AS (
 COMMENT ON VIEW api.view_as_original_hfp_event IS 'View HFP points named like in original HFP data format.';
 
 
+CREATE OR REPLACE VIEW api.view_as_original_apc_event AS (
+  SELECT
+    point_timestamp AS tst,
+    received_at,
+    vehicle_operator_id as operator_id,
+    vehicle_number as veh,
+    transport_mode as mode,
+    route_id as route,
+    direction_id as dir,
+    oday,
+    start,
+    observed_operator_id as oper,
+    stop,
+    vehicle_load,
+    vehicle_load_ratio,
+    doors_data as door_counts,
+    count_quality,
+    ST_X(ST_Transform(geom, 4326)) AS long,
+    ST_Y(ST_Transform(geom, 4326)) AS lat
+  FROM apc.apc
+);
+COMMENT ON VIEW api.view_as_original_apc_event IS 'View APC data named like in original APC data format.';
+
+
 CREATE VIEW api.view_jore_stop_4326 AS (
   WITH selected_cols AS (
     SELECT
