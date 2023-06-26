@@ -25,6 +25,15 @@ CREATE TABLE staging.hfp_raw (
 COMMENT ON TABLE staging.hfp_raw IS 'Table where the client copies hfp data to be imported to hfp schema.';
 
 
+CREATE OR REPLACE PROCEDURE staging.remove_accidental_signins()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    DELETE FROM hfp.assumed_monitored_vehicle_journey
+    WHERE age(max_timestamp, min_timestamp) < interval '1 minute';
+END;
+$$;
+
 CREATE OR REPLACE PROCEDURE staging.import_and_normalize_hfp()
 LANGUAGE sql
 AS $procedure$
@@ -101,8 +110,6 @@ AS $procedure$
   -- update min and max timestamps as we might get new values for them
   -- when importing hfp data to fill a gap or if more recent data is available
   -- when running import.
-  HAVING
-    (max(tst) - min(tst)) >= interval '1 minute'
   ON CONFLICT ON CONSTRAINT assumed_monitored_vehicle_journey_pkey DO UPDATE SET
     max_timestamp = greatest(assumed_monitored_vehicle_journey.max_timestamp, EXCLUDED.max_timestamp),
     min_timestamp = least(assumed_monitored_vehicle_journey.min_timestamp, EXCLUDED.min_timestamp),
