@@ -37,7 +37,7 @@ async def run_vehicle_analysis():
     yesterday = today_plus_6_hours - timedelta(days=1)
     logger.info(f"Starting vehicle analysis for day {yesterday}.")
     vehicles = await get_vehicle_ids(yesterday)
-    logger.info(f"Vehicle ids fetched: {vehicles}")
+    logger.info(f"Vehicle ids fetched: {len(vehicles)}")
     analyzeCount = 0
     for vehicle in vehicles:
         vehicle_number = vehicle['vehicle_number']
@@ -148,6 +148,11 @@ def run_analysis():
 
                 conn.commit()
 
+                cur.execute('CALL staging.remove_accidental_signins()')
+                logger.info(f'Accidental signins removed from api.assumed_monitored_vehicle_journey')
+                
+                conn.commit()
+                
                 duration = time.time() - start_time
                 logger.info(f'{get_time()} Analysis complete in {int(duration)} seconds.')
                 slack.send_to_channel(f'{get_time()} Analysis complete in {int(duration)} seconds.')
