@@ -9,22 +9,21 @@ CREATE OR REPLACE VIEW api.view_as_original_hfp_event AS (
   SELECT
     point_timestamp AS tst,
     hfp_event AS event_type,
-    received_at,
-    vehicle_operator_id,
-    vehicle_number,
-    transport_mode,
     route_id,
     direction_id,
+    vehicle_operator_id as operator_id,
+    observed_operator_id as oper,
+    vehicle_number,
+    transport_mode,
     oday,
     start,
-    observed_operator_id,
     odo,
     spd,
-    drst,
+    drst::int,
     loc,
     stop,
-    ST_X(ST_Transform(geom, 4326)) AS longitude,
-    ST_Y(ST_Transform(geom, 4326)) AS latitude
+    ST_X(ST_Transform(geom, 4326)) AS long,
+    ST_Y(ST_Transform(geom, 4326)) AS lat
   FROM hfp.hfp_point
 );
 COMMENT ON VIEW api.view_as_original_hfp_event IS 'View HFP points named like in original HFP data format.';

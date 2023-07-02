@@ -37,14 +37,17 @@ class GzippedFileResponse(Response):
     response_class=GzippedFileResponse,
     responses={
         200: {
-            "description": "Successful query. The data is returned as an attachment in the response.",
+            "description": "Successful query. The data is returned as an attachment in the response. "
+            "File format comes from query parameters: "
+            "`hfp-export_<from_date>_<route_id>_<operator_id>_<vehicle_number>.csv.gz`",
             "content": {"application/gzip": {"schema": None, "example": None}},
             "headers": {
                 "Content-Disposition": {
-                    "schema": {"example": 'attachment; filename="hfp-export-20230316-133132.csv.gz"'}
+                    "schema": {"example": 'attachment; filename="hfp-export_20230316_550_18_662.csv.gz"'}
                 }
             },
-        }
+        },
+        204: {"description": "Query returned no data with the given parameters."},
     },
 )
 async def get_hfp_raw_data(
@@ -89,7 +92,7 @@ async def get_hfp_raw_data(
             "Timestamp can be shortened - optional formats are "
             "`yyyy-MM-dd'T'HH:mm` and `yyyy-MM-dd` "
         ),
-        example="2023-01-12T15:00",
+        example="2023-01-12T15:00:00",
     ),
     tz: int = Query(
         default=0,
@@ -131,15 +134,35 @@ async def get_hfp_raw_data(
         from_tst = from_tst.replace(tzinfo=tzone)
         to_tst = to_tst.replace(tzinfo=tzone)
 
-        await get_hfp_data(route_id, operator_id, vehicle_number, from_tst, to_tst, input_stream)
+        row_count = await get_hfp_data(route_id, operator_id, vehicle_number, from_tst, to_tst, input_stream)
+
+        if row_count == 0:
+            # No data was found, return no content response
+            return Response(status_code=204)
 
         logger.debug("Hfp data received. Compressing.")
-        data = input_stream.getvalue()
+
+        # Read as chunks to save memory
+        input_stream.seek(0)
+        chunk_size = 10000  # Adjust to optimize if needed
 
         with gzip.GzipFile(fileobj=output_stream, mode="wb") as compressed_data_stream:
-            compressed_data_stream.write(data)
+            while data := input_stream.read(chunk_size):
+                compressed_data_stream.write(data)
 
-        filename = f"hfp-export-{datetime.now().strftime('%Y%m%d-%H%M%S')}.csv.gz"
+        # Add identifiers from query parameters if they exist
+        identifiers = [
+            from_tst and from_tst.strftime("%Y%m%d"),
+            route_id,
+            operator_id,
+            vehicle_number,
+        ]
+
+        # Remove nones and change to format param_param_param
+        filename_identifier = "_".join(map(lambda x: str(x), filter(lambda x: x is not None, identifiers)))
+
+        filename = f"hfp-export_{filename_identifier}.csv.gz"
+
         response = GzippedFileResponse(filename=filename, content=output_stream.getvalue())
 
         duration = time.time() - fetch_start_time
