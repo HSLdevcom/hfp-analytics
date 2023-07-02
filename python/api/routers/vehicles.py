@@ -22,7 +22,7 @@ router = APIRouter(
     tags=["Vehicle analytics data"]
 )
 
-spd_threshold = 1
+spd_threshold = 2
 error_types_translations = {
     'Drst inverted': 'Käänteinen ovitieto',
     f'Speed over {spd_threshold} m/s when doors open': 'Useita ovitapahtumia vauhdissa',
@@ -54,21 +54,12 @@ async def get_vehicles(
         "end": "11:59:00.000+00"
     }
     if is_current_date:
-        customTimeInterval = {
-            "start": " 04:00:00.000+00",
-            "end": " 05:00:00.000+00"
+        # Analysis for current date disabled for now
+        return {
+            "data": {
+                "message": "Analysis disabled for current date"
+            }
         }
-        timerange_metadata = customTimeInterval
-        vehicle_ids = await get_vehicle_ids(date, customTimeInterval, operator_id)
-        results = []
-        for vehicle in vehicle_ids:
-            vehicle_number = vehicle['vehicle_number']
-            vehicle_operator_id = vehicle['operator_id']
-            formatted_data = await get_vehicle_data(date, vehicle_operator_id, vehicle_number, customTimeInterval)
-            analyzed_door_data = analyze_vehicle_door_data(formatted_data)
-            for d in analyzed_door_data:
-                results.append(d)
-        analyzed_data = results
     else:
         analyzed_data = await get_door_analysis_by_date(date, operator_id)
         
@@ -78,7 +69,7 @@ async def get_vehicles(
     analyzed_data = sorted(analyzed_data, key=lambda x: x['vehicle_number'])
     return {
         "data": {
-            "analysis_time_range": {
+            "metadata": {
                 "start": timerange_metadata["start"].strip(),
                 "end": timerange_metadata["end"].strip(),
                 "date": date
@@ -103,21 +94,12 @@ async def get_vehicles(
     is_current_date = date == date.today()
     analyzed_data = []
     if is_current_date:
-        customTimeInterval = {
-            "start": " 04:00:00.000+00",
-            "end": " 05:00:00.000+00"
+        # Analysis for current date disabled for now
+        return {
+            "data": {
+                "message": "Analysis disabled for current date"
+            }
         }
-        timerange_metadata = customTimeInterval
-        vehicle_ids = await get_vehicle_ids(date, customTimeInterval, operator_id)
-        results = []
-        for vehicle in vehicle_ids:
-            vehicle_number = vehicle['vehicle_number']
-            vehicle_operator_id = vehicle['operator_id']
-            formatted_data = await get_vehicle_data(date, vehicle_operator_id, vehicle_number, customTimeInterval)
-            analyzed_odo_data = analyze_odo_data(formatted_data)
-            for d in analyzed_odo_data:
-                results.append(d)
-        analyzed_data = results
     else:
         analyzed_data = await get_odo_analysis_by_date(date, operator_id)
 
@@ -128,7 +110,7 @@ async def get_vehicles(
     analyzed_data = sorted(analyzed_data, key=lambda x: x['vehicle_number'])
     return {
         "data": {
-            "analysis_time_range": {
+            "metadata": {
                 "start": timerange_metadata["start"].strip(),
                 "end": timerange_metadata["end"].strip(),
                 "date": date
@@ -137,7 +119,7 @@ async def get_vehicles(
         }
     }
 
-@router.get("/csv")
+@router.get("/PTO")
 async def get_vehicles(
     date: date = Query(..., description="Format YYYY-MM-DD"),
     operator_id: Optional[int] = Query(None, description="HFP topic's operator id. Use without prefix zeros."),
@@ -149,23 +131,12 @@ async def get_vehicles(
     is_current_date = date == date.today()
     analyzed_data = []
     if is_current_date:
-        customTimeInterval = {
-            "start": " 04:00:00.000+00",
-            "end": " 05:00:00.000+00"
+        # Analysis for current date disabled for now
+        return {
+            "data": {
+                "message": "Analysis disabled for current date"
+            }
         }
-        vehicle_ids = await get_vehicle_ids(date, customTimeInterval, operator_id)
-        results = []
-        for vehicle in vehicle_ids:
-            vehicle_number = vehicle['vehicle_number']
-            vehicle_operator_id = vehicle['operator_id']
-            formatted_data = await get_vehicle_data(date, vehicle_operator_id, vehicle_number, customTimeInterval)
-            analyzed_odo_data = analyze_odo_data(formatted_data)
-            analyzed_door_data = analyze_vehicle_door_data(formatted_data)
-            combined_obj = {}
-            for obj in chain(analyzed_door_data, analyzed_odo_data):
-                combined_obj.update(obj)
-            results.append(combined_obj)
-        analyzed_data = results
     else:
         analyzed_data = await get_all_analysis_by_date(date, operator_id)
 

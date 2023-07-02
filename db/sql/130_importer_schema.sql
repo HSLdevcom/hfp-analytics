@@ -23,6 +23,7 @@ CREATE TABLE importer.blob (
   min_tst           timestamptz,
   max_tst           timestamptz,
   row_count         integer,
+  invalid           boolean       DEFAULT FALSE,
   listed_at         timestamptz   DEFAULT NOW(),
   covered_by_import boolean       DEFAULT FALSE,
   import_status     text REFERENCES importer.import_status(status) DEFAULT 'not started',
@@ -43,6 +44,8 @@ COMMENT ON COLUMN importer.blob.min_tst IS
 'Minimum timestamp in the data claimed by the tags of the blob.';
 COMMENT ON COLUMN importer.blob.max_tst IS
 'Maximum timestamp in the data claimed by the tags of the blob.';
+COMMENT ON COLUMN importer.blob.invalid IS
+'If the blob was marked by Transitdata to contain invalid data.';
 COMMENT ON COLUMN importer.blob.listed_at IS
 'When the blob was recognized by the importer.';
 COMMENT ON COLUMN importer.blob.covered_by_import IS

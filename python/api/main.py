@@ -9,7 +9,7 @@ from fastapi.openapi.docs import (
     get_swagger_ui_html,
 )
 
-from api.routers import hfp, stops, journeys, vehicles
+from api.routers import hfp, apc, stops, journeys, vehicles
 
 
 async def verify_api_code(
@@ -51,6 +51,8 @@ def main(req: func.HttpRequest, context: func.Context) -> func.HttpResponse:
 
 # /hfp/***
 app.include_router(hfp.router)
+# /apc/***
+app.include_router(apc.router)
 # /stops/***
 app.include_router(stops.router)
 # /journeys/***

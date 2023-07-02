@@ -4,6 +4,7 @@ import psycopg2
 import logging
 import time
 import common.constants as constants
+import common.slack as slack
 from datetime import date, timedelta, datetime
 from itertools import chain
 from common.database import pool
@@ -30,10 +31,13 @@ logger = logging.getLogger('importer')
 
 async def run_vehicle_analysis():
     today = date.today()
-    yesterday = today - timedelta(days=1)
+    # Situations where the analysis is run before midnight causes the date for "yesterday" to be the day before yesterday
+    # We're adding 6 hours to current datetime to make sure the date for "yesterday" is yesterday from next morning's perspective
+    today_plus_6_hours = today + timedelta(hours=6)
+    yesterday = today_plus_6_hours - timedelta(days=1)
     logger.info(f"Starting vehicle analysis for day {yesterday}.")
     vehicles = await get_vehicle_ids(yesterday)
-    logger.info(f"Vehicle ids fetched: {vehicles}")
+    logger.info(f"Vehicle ids fetched: {len(vehicles)}")
     analyzeCount = 0
     for vehicle in vehicles:
         vehicle_number = vehicle['vehicle_number']
@@ -144,10 +148,18 @@ def run_analysis():
 
                 conn.commit()
 
+                cur.execute('CALL staging.remove_accidental_signins()')
+                logger.info(f'Accidental signins removed from api.assumed_monitored_vehicle_journey')
+                
+                conn.commit()
+                
                 duration = time.time() - start_time
                 logger.info(f'{get_time()} Analysis complete in {int(duration)} seconds.')
+                slack.send_to_channel(f'{get_time()} Analysis complete in {int(duration)} seconds.')
+
     except Exception as e:
         logger.error(f"Analysis failed: {e}")
+        slack.send_to_channel(f"Analysis failed: {e}", alert=True)
     finally:
         conn.cursor().execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
         conn.close()

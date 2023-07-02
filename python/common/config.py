@@ -58,6 +58,7 @@ def get_env(var_name: str, default_value: Union[str, None] = None, modifier: Cal
 
 
 # Envs for connections to Posgtres and Azure
+APC_STORAGE_CONTAINER_NAME: str = get_env("APC_STORAGE_CONTAINER_NAME")
 HFP_STORAGE_CONTAINER_NAME: str = get_env("HFP_STORAGE_CONTAINER_NAME")
 HFP_STORAGE_CONNECTION_STRING: str = get_env("HFP_STORAGE_CONNECTION_STRING")
 POSTGRES_CONNECTION_STRING: str = get_env("POSTGRES_CONNECTION_STRING")
@@ -71,6 +72,10 @@ DEFAULT_AUTH_CODE: str = get_env("DEFAULT_AUTH_CODE", "")
 
 # Digitransit apikey for stop import
 DIGITRANSIT_APIKEY: str = get_env("DIGITRANSIT_APIKEY", "")
+
+# Envs for slack alerts
+SLACK_WEBHOOK_URL: str = get_env("SLACK_WEBHOOK_URL", "")
+SLACK_USERS_TO_ALERT: str = get_env("SLACK_USERS_TO_ALERT", "", modifier=env_as_upper_str_list)
 
 # Envs for stop analysis
 STOP_NEAR_LIMIT_M: float = get_env("STOP_NEAR_LIMIT_M", "50.0", modifier=env_as_float)
