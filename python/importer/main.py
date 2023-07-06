@@ -11,7 +11,6 @@ from common.config import (
     HFP_EVENTS_TO_IMPORT,
     IMPORT_COVERAGE_DAYS,
 )
-import common.slack as slack
 
 from .importer import Importer, parquet_to_dict_decoder, zst_csv_to_dict_decoder
 from .schemas import APC as APCSchema, HFP as HFPSchema
@@ -93,10 +92,6 @@ def import_blob(blob_name):
             logger.error(f"Blob {blob_name} not found.")
         else:
             logger.error(f"Error after {processing_time} seconds when reading blob chunks: {e}")
-            slack.send_to_channel(
-                f"Error after {processing_time} seconds when reading blob chunks: {e}",
-                alert=True,
-            )
 
 
 def run_import() -> None:
@@ -125,7 +120,6 @@ def main(importer: func.TimerRequest, context: func.Context) -> None:
             run_import()
         except Exception as e:
             logger.error(f"Error when running importer: {e}")
-            slack.send_to_channel(f"Error when running importer: {e}", alert=True)
         finally:
             # Remove lock at this point
             release_db_lock()

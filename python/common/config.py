@@ -32,16 +32,20 @@ def env_as_float(env: str) -> float:
     return float(env)
 
 
+def env_as_upper_str(env: str) -> str:
+    return env.strip().upper()
+
+
 def env_as_upper_str_list(env: str) -> list[str]:
-    return [item.strip().upper() for item in env.split(",")]
+    return [item.strip().upper() for item in filter(None, env.split(","))]
 
 
 def env_as_int_list(env: str) -> list[int]:
-    return [int(item.strip()) for item in env.split(",")]
+    return [int(item.strip()) for item in filter(None, env.split(","))]
 
 
 def env_as_float_list(env: str) -> list[float]:
-    return [float(item.strip()) for item in env.split(",")]
+    return [float(item.strip()) for item in filter(None, env.split(","))]
 
 
 def get_env(var_name: str, default_value: Union[str, None] = None, modifier: Callable = dummy):
@@ -56,6 +60,9 @@ def get_env(var_name: str, default_value: Union[str, None] = None, modifier: Cal
             raise ValueError(f"{var_name} is required, but was not found in env.")
     return modifier(env)
 
+
+# Environment, e.g., for loggers to inform
+ENVIRONMENT: str = get_env("ENVIRONMENT", "LOCAL", modifier=env_as_upper_str)
 
 # Envs for connections to Posgtres and Azure
 APC_STORAGE_CONTAINER_NAME: str = get_env("APC_STORAGE_CONTAINER_NAME")

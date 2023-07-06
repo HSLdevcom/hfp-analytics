@@ -4,7 +4,6 @@ import psycopg2
 import logging
 import time
 import common.constants as constants
-import common.slack as slack
 from datetime import date, timedelta, datetime
 from itertools import chain
 from common.database import pool
@@ -155,11 +154,9 @@ def run_analysis():
                 
                 duration = time.time() - start_time
                 logger.info(f'{get_time()} Analysis complete in {int(duration)} seconds.')
-                slack.send_to_channel(f'{get_time()} Analysis complete in {int(duration)} seconds.')
 
     except Exception as e:
         logger.error(f"Analysis failed: {e}")
-        slack.send_to_channel(f"Analysis failed: {e}", alert=True)
     finally:
         conn.cursor().execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
         conn.close()
