@@ -25,6 +25,15 @@ CREATE TABLE staging.hfp_raw (
 COMMENT ON TABLE staging.hfp_raw IS 'Table where the client copies hfp data to be imported to hfp schema.';
 
 
+CREATE OR REPLACE PROCEDURE staging.remove_accidental_signins()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    DELETE FROM hfp.assumed_monitored_vehicle_journey
+    WHERE age(max_timestamp, min_timestamp) < interval '1 minute';
+END;
+$$;
+
 CREATE OR REPLACE PROCEDURE staging.import_and_normalize_hfp()
 LANGUAGE sql
 AS $procedure$
@@ -88,6 +97,7 @@ AS $procedure$
   -- Be careful about min_tst, because aggregate might not give all records, if there were ones before min_tst.
   FROM staging.hfp_raw
   WHERE
+    vehicle_operator_id != '0199' AND
     transport_mode IS NOT NULL AND
     route_id IS NOT NULL AND
     direction_id IS NOT NULL AND
@@ -158,3 +168,70 @@ AS $procedure$
 $procedure$;
 
 COMMENT ON PROCEDURE staging.import_invalid_hfp IS 'Procedure to copy data marked as invalid from staging schema to hfp schema.';
+
+
+CREATE TABLE staging.apc_raw (
+  point_timestamp       timestamptz   NOT NULL,
+  received_at           timestamptz,
+  vehicle_operator_id   smallint      NOT NULL,
+  vehicle_number        integer       NOT NULL,
+  transport_mode        text,
+  route_id              text,
+  direction_id          smallint,
+  oday                  date,
+  "start"               interval,
+  observed_operator_id  smallint,
+  stop                  integer,
+  vehicle_load          integer,
+  vehicle_load_ratio    real,
+  doors_data            jsonb,
+  count_quality         text,
+  longitude             double precision,
+  latitude              double precision
+);
+
+CREATE OR REPLACE PROCEDURE staging.import_and_normalize_apc()
+LANGUAGE sql
+AS $procedure$
+  INSERT INTO apc.apc (
+    point_timestamp,
+    received_at,
+    vehicle_operator_id,
+    vehicle_number,
+    transport_mode,
+    route_id,
+    direction_id,
+    oday,
+    "start",
+    observed_operator_id,
+    stop,
+    vehicle_load,
+    vehicle_load_ratio,
+    doors_data,
+    count_quality,
+    geom
+  )
+  SELECT
+    point_timestamp,
+    received_at,
+    vehicle_operator_id,
+    vehicle_number,
+    transport_mode,
+    route_id,
+    direction_id,
+    oday,
+    "start",
+    observed_operator_id,
+    stop,
+    vehicle_load,
+    vehicle_load_ratio,
+    doors_data,
+    count_quality,
+    ST_Transform( ST_SetSRID( ST_MakePoint(longitude, latitude), 4326), 3067)
+  FROM staging.apc_raw
+  -- Ordering is here for a reason. It makes data clustered inside a blob so querying by route / vehicle is more efficient.
+  ORDER BY route_id, vehicle_number
+  ON CONFLICT DO NOTHING;
+$procedure$;
+
+COMMENT ON PROCEDURE staging.import_and_normalize_apc IS 'Procedure to copy data from staging schema to apc schema.';

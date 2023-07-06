@@ -1,287 +1,127 @@
 """HFP Analytics data importer"""
 import azure.functions as func
-from azure.storage.blob import ContainerClient
-from io import StringIO, TextIOWrapper
-import csv
+
 import logging
-import zstandard
-import time
 from datetime import datetime, timedelta
 
-from psycopg_pool import ConnectionPool  # todo: refactor to use common.database pool
-from psycopg import sql
-
 from common.logger_util import CustomDbLogHandler
-import common.constants as constants
 from common.config import (
+    APC_STORAGE_CONTAINER_NAME,
     HFP_STORAGE_CONTAINER_NAME,
-    HFP_STORAGE_CONNECTION_STRING,
-    POSTGRES_CONNECTION_STRING,
     HFP_EVENTS_TO_IMPORT,
     IMPORT_COVERAGE_DAYS,
 )
 
+from .importer import Importer, parquet_to_dict_decoder, zst_csv_to_dict_decoder
+from .schemas import APC as APCSchema, HFP as HFPSchema
+from .services import (
+    create_db_lock,
+    release_db_lock,
+    add_new_blob,
+    is_blob_listed,
+    mark_blob_status_started,
+    mark_blob_status_finished,
+    pickup_blobs_for_import,
+    copy_data_to_db,
+)
 
 logger = logging.getLogger("importer")
 
-pool = ConnectionPool(POSTGRES_CONNECTION_STRING, max_size=20)
+importers = {
+    "APC": Importer(
+        APC_STORAGE_CONTAINER_NAME, data_converter=parquet_to_dict_decoder, db_schema=APCSchema, blob_name_prefix="apc_"
+    ),
+    "HFP": Importer(HFP_STORAGE_CONTAINER_NAME, data_converter=zst_csv_to_dict_decoder, db_schema=HFPSchema),
+}
 
 
-def get_azure_container_client() -> ContainerClient:
-    return ContainerClient.from_connection_string(
-        conn_str=HFP_STORAGE_CONNECTION_STRING, container_name=HFP_STORAGE_CONTAINER_NAME
-    )
+def update_blob_list_for_import(day_since_today):
+    for importer_type, importer in importers.items():
+        import_date = datetime.now() - timedelta(day_since_today)
 
-
-def start_import():
-    # Create a lock for import
-    try:
-        with pool.connection() as conn:
-            with conn.cursor() as cur:
-                # Check if importer is locked or not. We use lock strategy to prevent executing importer
-                # and analysis more than once at a time
-                cur.execute("SELECT is_lock_enabled(%s)", (constants.IMPORTER_LOCK_ID,))
-                is_importer_locked = cur.fetchone()[0]
-
-                if is_importer_locked:
-                    logger.error(
-                        "Importer is LOCKED which means that importer should be already running. "
-                        "You can get rid of the lock by restarting the database if needed."
-                    )
-                    return
-
-                logger.info("Going to run importer.")
-                cur.execute("SELECT pg_advisory_lock(%s)", (constants.IMPORTER_LOCK_ID,))
-
-    except Exception as e:
-        logger.error(f"Error when creating locks for importer: {e}")
-
-    try:
-        import_day_data_from_past(IMPORT_COVERAGE_DAYS)
-
-    except Exception as e:
-        logger.error(f"Error when running importer: {e}")
-    finally:
-        # Remove lock at this point
-        with pool.connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
-
-    logger.info("Importer done.")
-
-
-def import_day_data_from_past(day_since_today):
-    logger.info(f"Importing HFP data {day_since_today} days from past.")
-
-    container_client = get_azure_container_client()
-    storage_blob_names = []
-
-    import_date = datetime.now() - timedelta(day_since_today)
-
-    while import_date <= datetime.now():
-        current_date_str = import_date.strftime("%Y-%m-%d")
-        blobs = container_client.list_blobs(name_starts_with=current_date_str)
-        for blob in blobs:
-            storage_blob_names.append(blob.name)
-        import_date += timedelta(days=1)
-
-    blob_names = []
-
-    with pool.connection() as conn:
-        with conn.cursor() as cur:
-            for i, name in enumerate(storage_blob_names):
-                cur.execute("SELECT EXISTS( SELECT 1 FROM importer.blob WHERE name = %s )", (name,))
-                res = cur.fetchone()
-                exists_in_list = res[0] if res else False
-
-                if exists_in_list:
+        while import_date <= datetime.now():
+            for blob_name in importer.list_blobs_for_date(import_date):
+                if is_blob_listed(blob_name):
                     # Already imported, no need to fetch tags or try to insert
                     continue
 
-                blob_client = container_client.get_blob_client(name)
-                tags = blob_client.get_blob_tags()
+                metadata = importer.get_metadata_for_blob(blob_name)
 
-                event_type = tags.get("eventType")
-                min_oday = datetime.strptime(tags.get("min_oday", ""), "%Y-%m-%d")
-                blob_date = datetime.strptime(name[0:10], "%Y-%m-%d")
-                is_invalid = tags.get("invalid")
+                blob_data = {}
 
-                # Warn if min_oday is older than from yesterday (and blob is not marked as invalid)
-                if blob_date - min_oday > timedelta(1) and not is_invalid:
-                    logger.warning(f"Bad oday data found in {name}, should be marked as invalid!")
+                blob_data["blob_name"] = blob_name
+                blob_data["event_type"] = metadata.get("eventType") if importer_type == "HFP" else "APC"
+                blob_data["min_oday"] = metadata.get("min_oday")
+                blob_data["max_oday"] = metadata.get("max_oday")
+                blob_data["min_tst"] = metadata.get("min_tst")
+                blob_data["max_tst"] = metadata.get("max_tst")
+                blob_data["row_count"] = metadata.get("row_count")
+                blob_data["invalid"] = metadata.get("invalid", False)
+                blob_data["covered_by_import"] = blob_data["event_type"] in HFP_EVENTS_TO_IMPORT
 
-                covered_by_import = event_type in HFP_EVENTS_TO_IMPORT
+                add_new_blob(blob_data)
 
-                cur.execute(
-                    """
-                    INSERT INTO importer.blob
-                    (name, type, min_oday, max_oday, min_tst, max_tst, row_count, invalid, covered_by_import)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING
-                    """,
-                    (
-                        name,
-                        event_type,
-                        tags.get("min_oday"),
-                        tags.get("max_oday"),
-                        tags.get("min_tst"),
-                        tags.get("max_tst"),
-                        tags.get("row_count"),
-                        is_invalid,
-                        covered_by_import,
-                    ),
-                )
-
-            conn.commit()
-
-            cur.execute(
-                """
-                WITH updated AS (
-                    UPDATE importer."blob"
-                    SET import_status = 'pending'
-                    WHERE covered_by_import AND import_status IN ('not started', 'pending')
-                    RETURNING name
-                )
-                SELECT * FROM updated ORDER BY name
-                """
-            )
-
-            blob_names = [r[0] for r in cur.fetchall()]
-
-    logger.debug(f"Running import for {blob_names}")
-
-    for b in blob_names:
-        import_blob(b)
+            import_date += timedelta(days=1)
 
 
 def import_blob(blob_name):
     logger.debug(f"Processing blob: {blob_name}")
-    with pool.connection() as conn:
-        with conn.cursor() as cur:
-            blob_start_time = time.time()
 
-            cur.execute(
-                """
-                UPDATE importer."blob"
-                SET import_started = %s, import_status = 'importing'
-                WHERE name = %s
-                RETURNING row_count, invalid
-                """,
-                (
-                    datetime.utcnow(),
-                    blob_name,
-                ),
-            )
-            res = cur.fetchone()
+    blob_metadata = mark_blob_status_started(blob_name)
+    blob_row_count = blob_metadata.get("row_count", 0)
+    blob_is_invalid = bool(blob_metadata.get("invalid"))
 
-            if res and len(res) == 2:
-                blob_row_count = res[0]
-                blob_invalid = res[1]
-            else:
-                raise Exception("Invalid db query or data for import")
+    try:
+        importer = importers["APC"] if blob_metadata.get("type") == "APC" else importers["HFP"]
+        data_rows = importer.get_data_from_blob(blob_name)
 
-            conn.commit()
+        copy_data_to_db(db_schema=importer.db_schema, data_rows=data_rows, invalid_blob=blob_is_invalid)
 
-            try:
-                container_client = get_azure_container_client()
-                blob_client = container_client.get_blob_client(blob=blob_name)
-                storage_stream_downloader = blob_client.download_blob()
+        processing_time = mark_blob_status_finished(blob_name)
 
-                read_imported_data_to_db(
-                    cur=cur, downloader=storage_stream_downloader, blob_name=blob_name, blob_invalid=blob_invalid
-                )
+        logger.debug(
+            f"{blob_name} is done. "
+            f"Imported {blob_row_count} rows in {processing_time} seconds "
+            f"({int(blob_row_count/processing_time)} rows/second)"
+        )
 
-                duration = time.time() - blob_start_time
+    except Exception as e:
+        processing_time = mark_blob_status_finished(blob_name, failed=True)
 
-                logger.debug(
-                    f"{blob_name} is done. "
-                    f"Imported {blob_row_count} rows in {int(duration)} seconds "
-                    f"({int(blob_row_count/duration)} rows/second)"
-                )
-                conn.commit()
-                success_status = "imported"
-
-            except Exception as e:
-                if "ErrorCode:BlobNotFound" in str(e):
-                    logger.error(f"Blob {blob_name} not found.")
-                else:
-                    logger.error(
-                        f"Error after {int(time.time() - blob_start_time)} seconds when reading blob chunks: {e}"
-                    )
-                conn.rollback()
-                success_status = "failed"
-
-            cur.execute(
-                "UPDATE importer.blob SET (import_finished, import_status) = (%s, %s) WHERE name = %s",
-                (
-                    datetime.utcnow(),
-                    success_status,
-                    blob_name,
-                ),
-            )
-            conn.commit()
+        if "ErrorCode:BlobNotFound" in str(e):
+            logger.error(f"Blob {blob_name} not found.")
+        else:
+            logger.error(f"Error after {processing_time} seconds when reading blob chunks: {e}")
 
 
-def read_imported_data_to_db(cur, downloader, blob_invalid: bool, blob_name):
-    compressed_content = downloader.content_as_bytes()
-    reader = zstandard.ZstdDecompressor().stream_reader(compressed_content)
-    hfp_dict_reader = csv.DictReader(TextIOWrapper(reader, encoding="utf-8"))
+def run_import() -> None:
+    """Function to init and run importer procedures"""
+    logger.info(f"Update blob list to cover last {IMPORT_COVERAGE_DAYS} days.")
+    update_blob_list_for_import(IMPORT_COVERAGE_DAYS)
 
-    # These fields will be imported. Keys are from csv, values are db columns.
-    # Order is guaranteed, so they are used with .keys() and .values() -methods
-    selected_fields = {
-        "tst": "tst",
-        "eventType": "event_type",
-        "receivedAt": "received_at",
-        "ownerOperatorId": "vehicle_operator_id",
-        "vehicleNumber": "vehicle_number",
-        "mode": "transport_mode",
-        "routeId": "route_id",
-        "directionId": "direction_id",
-        "oday": "oday",
-        "start": "start",
-        "oper": "observed_operator_id",
-        "odo": "odo",
-        "spd": "spd",
-        "drst": "drst",
-        "locationQualityMethod": "loc",
-        "stop": "stop",
-        "longitude": "longitude",
-        "latitude": "latitude",
-    }
+    logger.info("Selecting blobs for import.")
+    blob_names = pickup_blobs_for_import()
 
-    required_fields = ["tst", "oper", "vehicleNumber"]  # These are used for unique index
-
-    # Create a copy statement from selected field list
-    copy_sql = sql.SQL("COPY staging.hfp_raw ({fields}) FROM STDIN").format(
-        fields=sql.SQL(",").join([sql.Identifier(f) for f in selected_fields.values()])
-    )
-
-    invalid_row_count = 0
-
-    with cur.copy(copy_sql) as copy:
-        for row in hfp_dict_reader:
-            if any(row[key] is None for key in required_fields):
-                logger.error(f"Found a row with an unique key error: {row}")
-                invalid_row_count += 1
-                continue
-
-            # Construct a tuple from a row based on selected rows
-            # Convert empty string to None to avoid db type errors
-            row_obj = (row[f] if row[f] != "" else None for f in selected_fields.keys())
-            copy.write_row(row_obj)
-
-    if invalid_row_count > 0:
-        logger.error(f"Analytics found {invalid_row_count} invalid rows in blob {blob_name}")
-
-    if not blob_invalid:
-        cur.execute("CALL staging.import_and_normalize_hfp()")
-    else:
-        cur.execute("CALL staging.import_invalid_hfp()")
-
-    cur.execute("DELETE FROM staging.hfp_raw")
+    logger.debug(f"Running import for {blob_names}")
+    for blob in blob_names:
+        import_blob(blob)
 
 
 def main(importer: func.TimerRequest, context: func.Context) -> None:
     """Main function to be called by Azure Function"""
     with CustomDbLogHandler("importer"):
-        start_import()
+        # Create a lock for import
+        success = create_db_lock()
+
+        if not success:
+            return
+
+        try:
+            run_import()
+        except Exception as e:
+            logger.error(f"Error when running importer: {e}")
+        finally:
+            # Remove lock at this point
+            release_db_lock()
+
+        logger.info("Importer done.")

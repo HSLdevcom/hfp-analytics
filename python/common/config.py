@@ -65,6 +65,7 @@ def get_env(var_name: str, default_value: Union[str, None] = None, modifier: Cal
 ENVIRONMENT: str = get_env("ENVIRONMENT", "LOCAL", modifier=env_as_upper_str)
 
 # Envs for connections to Posgtres and Azure
+APC_STORAGE_CONTAINER_NAME: str = get_env("APC_STORAGE_CONTAINER_NAME")
 HFP_STORAGE_CONTAINER_NAME: str = get_env("HFP_STORAGE_CONTAINER_NAME")
 HFP_STORAGE_CONNECTION_STRING: str = get_env("HFP_STORAGE_CONNECTION_STRING")
 POSTGRES_CONNECTION_STRING: str = get_env("POSTGRES_CONNECTION_STRING")
