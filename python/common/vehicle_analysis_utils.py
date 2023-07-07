@@ -41,7 +41,7 @@ async def get_vehicle_ids(date: date, customTimeInterval=None, operator_id=None)
     where_clause = "WHERE tst > %(start)s AND tst < %(end)s AND event_type = 'VP'"
     if operator_id is not None:
         query_params['operator_id'] = operator_id
-        where_clause += " AND vehicle_operator_id = %(operator_id)s"
+        where_clause += " AND operator_id = %(operator_id)s"
     async with pool.connection() as conn:
         async with conn.cursor() as cur:
             await cur.execute(
@@ -491,8 +491,8 @@ async def get_vehicles_by_timestamp(date: date, vehicle_operator_id: int, vehicl
 
     where_clause = "WHERE tst > %(start)s AND tst < %(end)s AND event_type = 'VP'"
     if vehicle_operator_id is not None:
-        where_clause += " AND vehicle_operator_id = %(vehicle_operator_id)s"
-        query_params["vehicle_operator_id"] = vehicle_operator_id
+        where_clause += " AND operator_id = %(operator_id)s"
+        query_params["operator_id"] = vehicle_operator_id
     if vehicle_number is not None:
         where_clause += " AND vehicle_number = %(vehicle_number)s"
         query_params["vehicle_number"] = vehicle_number
