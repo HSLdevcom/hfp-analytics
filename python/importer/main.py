@@ -3,6 +3,7 @@ import azure.functions as func
 
 import logging
 from datetime import datetime, timedelta
+import traceback
 
 from common.logger_util import CustomDbLogHandler
 from common.config import (
@@ -91,7 +92,9 @@ def import_blob(blob_name):
         if "ErrorCode:BlobNotFound" in str(e):
             logger.error(f"Blob {blob_name} not found.")
         else:
-            logger.error(f"Error after {processing_time} seconds when reading blob chunks: {e}")
+            logger.error(
+                f"Error after {processing_time} seconds when reading blob {blob_name}\n{traceback.format_exc()}"
+            )
 
 
 def run_import() -> None:
