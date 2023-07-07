@@ -203,8 +203,9 @@ def copy_data_to_db(db_schema: DBSchema, data_rows: Iterable[dict], invalid_blob
                     invalid_row_count += 1
                     continue
 
-                # Construct a data row as a string to be copied
-                data_stream.write("\t".join([row[f] for f in raw_field_names]) + "\n")
+                # Construct a data row as a string to be copied.
+                # None will be converted as empty string "" instead of "None"
+                data_stream.write("\t".join([str(row[f]) if row[f] else "" for f in raw_field_names]) + "\n")
 
             # Copy data as chunks
             data_stream.seek(0)
