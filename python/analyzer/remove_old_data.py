@@ -23,8 +23,13 @@ def remove_old_data():
 
                 logger.info("Running analysis.")
                 cur.execute("SELECT pg_advisory_lock(%s)", (constants.IMPORTER_LOCK_ID,))
-                logger.info("Removing  observation data older than 3 weeks.")
+
+                logger.info("Removing observation data older than 3 weeks.")
                 cur.execute("DELETE FROM stopcorr.observation WHERE oday < now() - interval '3 week'")
+                logger.info(f"{cur.rowcount} rows deleted from observation.")
+
+                logger.info("Removing journey data older than 3 weeks.")
+                cur.execute("DELETE FROM hfp.assumed_monitored_vehicle_journey WHERE oday < now() - interval '3 week'")
                 logger.info(f"{cur.rowcount} rows deleted from observation.")
 
                 logger.info("Removing hfp_point data older than 2 weeks")
