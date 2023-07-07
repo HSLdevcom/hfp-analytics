@@ -30,7 +30,7 @@ def remove_old_data():
 
                 logger.info("Removing journey data older than 3 weeks.")
                 cur.execute("DELETE FROM hfp.assumed_monitored_vehicle_journey WHERE oday < now() - interval '3 week'")
-                logger.info(f"{cur.rowcount} rows deleted from observation.")
+                logger.info(f"{cur.rowcount} rows deleted from assumed monitored vehicle journeys.")
 
                 logger.info("Removing hfp_point data older than 2 weeks")
                 cur.execute("SELECT drop_chunks('hfp.hfp_point', interval '2 week')")
