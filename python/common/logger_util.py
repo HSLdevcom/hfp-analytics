@@ -24,7 +24,7 @@ class SlackLoggingHandler(logging.Handler):
 
         msg_object = {
             "text": (
-                f"Msg from {ENVIRONMENT} [{log_level}]: {alert if alert and self.alert_list else ''}\n"
+                f"Msg from {ENVIRONMENT} [{log_level}]: {self.alert_list if alert and self.alert_list else ''}\n"
                 f"```{log_msg}```"
             )
         }
