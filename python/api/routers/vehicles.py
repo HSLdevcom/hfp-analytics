@@ -31,6 +31,7 @@ error_types_translations = {
     f'Speed over {spd_threshold} m/s when doors open': 'Useita ovitapahtumia vauhdissa',
     'Drst missing': 'Ovitiedon arvo puuttuu',
     'Some of the drst values are missing': 'Ovitiedon arvo puuttuu osasta tapahtumia',
+    'Too many door events': 'Liian paljon ovitapahtumia'
     'Drst always true': 'Ovitieto aina auki',
     'Drst always false': 'Ovitieto aina kiinni',
     'Identical first and last odo values': 'ODO-metrin arvo ei muutu',

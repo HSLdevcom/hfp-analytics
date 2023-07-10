@@ -210,10 +210,6 @@ def analyze_vehicle_door_data(vehicle_data):
                 analysis[data['vehicle_number']]['true'] += 1
             else:
                 analysis[data['vehicle_number']]['false'] += 1
-            if drst and spd is not None and spd > spd_threshold:
-                event = f'Speed over {spd_threshold} m/s when doors open'
-                analysis[data['vehicle_number']]['door_error_events']['events'].append(error_obj(d, event))  
-                analysis[data['vehicle_number']]['door_error_events']['amount'] += 1 
 
     result = []
     for vehicle_number, analysis_data in analysis.items():
@@ -245,7 +241,7 @@ def analyze_vehicle_door_data(vehicle_data):
             event_type = event['type']
             error_types.add(event_type)
 
-        if true_ratio > 0.5 and true_ratio < 1:
+        if true_ratio > 0.85:
             error_types.add("Drst inverted")  
         if null_ratio == 1:
             error_types.add("Drst missing")  
@@ -254,7 +250,9 @@ def analyze_vehicle_door_data(vehicle_data):
         if true_ratio == 1:
             error_types.add("Drst always true")  
         if false_ratio == 1:
-            error_types.add("Drst always false")  
+            error_types.add("Drst always false") 
+        if true_ratio > 0.15 and true_ratio <= 0.85 
+            error_types.add("Too many door events")  
 
         if error_types:
             error_types = list(error_types)
