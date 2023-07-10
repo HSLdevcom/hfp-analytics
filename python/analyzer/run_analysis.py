@@ -41,7 +41,7 @@ async def run_vehicle_analysis():
     for vehicle in vehicles:
         vehicle_number = vehicle['vehicle_number']
         vehicle_operator_id = vehicle['operator_id']
-        logger.info(f"Fetching data for vehicle: {vehicle_operator_id}/{vehicle_number}")
+        #logger.info(f"Fetching data for vehicle: {vehicle_operator_id}/{vehicle_number}")
         formatted_data = await get_vehicle_data(yesterday, vehicle_operator_id, vehicle_number, None)
         analyzed_door_data = analyze_vehicle_door_data(formatted_data)
         analyzed_odo_data = analyze_odo_data(formatted_data)
@@ -49,10 +49,10 @@ async def run_vehicle_analysis():
         combined_obj = {}
         for obj in chain(analyzed_door_data, analyzed_odo_data, analyzed_positioning_data):
             combined_obj.update(obj)
-        logger.info(f"Inserting vehicle data {vehicle_operator_id}/{vehicle_number} to db.")
+        #logger.info(f"Inserting vehicle data {vehicle_operator_id}/{vehicle_number} to db.")
         await insert_vehicle_data([combined_obj])
         analyzeCount = analyzeCount + 1
-        print(f'Vehicle number: {vehicle_operator_id}/{vehicle_number} analyzed. {analyzeCount}/{len(vehicles)}')
+        #print(f'Vehicle number: {vehicle_operator_id}/{vehicle_number} analyzed. {analyzeCount}/{len(vehicles)}')
     logger.info("Vehicle analysis done.")
     return analyzeCount
 
