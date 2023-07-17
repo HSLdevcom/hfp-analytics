@@ -251,7 +251,7 @@ def analyze_vehicle_door_data(vehicle_data):
             error_types.add("Drst always true")  
         if false_ratio == 1:
             error_types.add("Drst always false") 
-        if true_ratio > 0.15 and true_ratio <= 0.85 
+        if true_ratio > 0.15 and true_ratio <= 0.85:
             error_types.add("Too many door events")  
 
         if error_types:
