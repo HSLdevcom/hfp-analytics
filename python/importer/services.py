@@ -35,7 +35,6 @@ def create_db_lock() -> bool:
                     )
                     return False
 
-                logger.info("Going to run importer.")
                 cur.execute("SELECT pg_advisory_lock(%s)", (constants.IMPORTER_LOCK_ID,))
     except Exception as e:
         logger.error(f"Error when creating locks for importer: {e}")

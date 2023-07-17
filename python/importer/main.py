@@ -101,10 +101,10 @@ def run_import() -> None:
     """Function to init and run importer procedures"""
     start_time = datetime.now()
 
-    logger.debug(f"Update blob list to cover last {IMPORT_COVERAGE_DAYS} days.")
+    # update importer.blob -table
     update_blob_list_for_import(IMPORT_COVERAGE_DAYS)
 
-    logger.debug("Selecting blobs for import.")
+    # get all pending blobs from importer.blob
     blob_names = pickup_blobs_for_import()
 
     logger.debug(f"Running import for {blob_names}")
@@ -119,6 +119,8 @@ def run_import() -> None:
 def main(importer: func.TimerRequest, context: func.Context) -> None:
     """Main function to be called by Azure Function"""
     with CustomDbLogHandler("importer"):
+        logger.debug("Going to run importer.")
+
         # Create a lock for import
         success = create_db_lock()
 
