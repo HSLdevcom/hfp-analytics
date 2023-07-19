@@ -9,7 +9,7 @@ from .run_analysis import run_analysis, run_vehicle_analysis
 from .remove_old_data import remove_old_data
 
 
-logger = logging.getLogger('importer')
+logger = logging.getLogger("importer")
 
 
 async def start_analysis():
@@ -29,12 +29,14 @@ async def start_analysis():
 
     vehicle_analysis_end = datetime.now()
 
-    logger.debug(f"Analyzer done. It took {removal_end - start_time} for data removal, "
-                 f"{analysis_end - removal_end} for stop and journey analysis, "
-                 f"and {vehicle_analysis_end - analysis_end} for vehicle analysis. "
-                 f"Total time: {vehicle_analysis_end - start_time}")
+    logger.info(
+        f"Analyzer done. It took {removal_end - start_time} for data removal, "
+        f"{analysis_end - removal_end} for stop and journey analysis, "
+        f"and {vehicle_analysis_end - analysis_end} for vehicle analysis. "
+        f"Total time: {vehicle_analysis_end - start_time}"
+    )
 
 
 async def main(analyzer: func.TimerRequest, context: func.Context):
-    with CustomDbLogHandler('importer'):
+    with CustomDbLogHandler("importer"):
         await start_analysis()

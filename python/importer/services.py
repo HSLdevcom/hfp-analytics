@@ -29,15 +29,15 @@ def create_db_lock() -> bool:
                 is_importer_locked = res[0] if res else False
 
                 if is_importer_locked:
-                    logger.error(
+                    logger.warn(
                         "Importer is LOCKED which means that importer should be already running. "
                         "You can get rid of the lock by restarting the database if needed."
                     )
                     return False
 
                 cur.execute("SELECT pg_advisory_lock(%s)", (constants.IMPORTER_LOCK_ID,))
-    except Exception as e:
-        logger.error(f"Error when creating locks for importer: {e}")
+    except Exception:
+        logger.exception("Error when creating locks for importer.")
         return False
 
     return True

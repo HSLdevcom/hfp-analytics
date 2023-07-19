@@ -1,10 +1,20 @@
 import logging
+import traceback
 
 import psycopg2
 from psycopg2 import sql
 import requests
 
 from common.config import ENVIRONMENT, POSTGRES_CONNECTION_STRING, SLACK_WEBHOOK_URL, SLACK_USERS_TO_ALERT
+
+SLACK_LOG_LEVEL = logging.INFO  # Do not log debug to slack
+SLACK_ALERT_LEVELS = ["CRITICAL", "ERROR"]  # Tag users in these log levels
+SLACK_LOG_LEVEL_EMOJIS = {
+    "CRITICAL": ":sos:",
+    "ERROR": ":red_circle:",
+    "WARNING": ":large_yellow_circle:",
+    "INFO": ":large_green_circle:",
+}
 
 
 class SlackLoggingHandler(logging.Handler):
@@ -20,11 +30,13 @@ class SlackLoggingHandler(logging.Handler):
         log_level = record.levelname.upper()
         log_msg = record.msg.strip()
 
-        alert = log_level in ["CRITICAL", "ERROR", "WARNING"]  # Tag users in these log levels
+        alert = log_level in SLACK_ALERT_LEVELS
+        emoji = SLACK_LOG_LEVEL_EMOJIS[log_level]
 
         msg_object = {
             "text": (
-                f"Msg from {ENVIRONMENT} [{log_level}]: {self.alert_list if alert and self.alert_list else ''}\n"
+                f"{emoji} Msg from {ENVIRONMENT} [{log_level}]: "
+                f"{self.alert_list if alert and self.alert_list else ''}\n"
                 f"```{log_msg}```"
             )
         }
@@ -61,6 +73,10 @@ class PostgresDBHandler(logging.Handler):
 
         log_level = record.levelname.lower()
         log_msg = record.msg.strip()
+
+        # Attach traceback info to error message. Available when called logger.exception
+        if record.exc_info:
+            log_msg += f"\n{traceback.format_exc()}"
         try:
             self.sql_cursor.execute(self.query_template, (log_level, log_msg))
             self.sql_conn.commit()
@@ -101,7 +117,7 @@ class CustomDbLogHandler:
             log_handlers = [
                 logging.StreamHandler(),
                 PostgresDBHandler(function_name=function_name),
-                SlackLoggingHandler(level=logging.INFO),  # Do not log debug to slack
+                SlackLoggingHandler(level=SLACK_LOG_LEVEL),
             ]
 
             for handler in log_handlers:
