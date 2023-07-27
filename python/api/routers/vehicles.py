@@ -31,7 +31,7 @@ error_types_translations = {
     f'Speed over {spd_threshold} m/s when doors open': 'Useita ovitapahtumia vauhdissa',
     'Drst missing': 'Ovitiedon arvo puuttuu',
     'Some of the drst values are missing': 'Ovitiedon arvo puuttuu osasta tapahtumia',
-    'Too many door events': 'Liian paljon ovitapahtumia'
+    'Too many door events': 'Liian paljon ovitapahtumia',
     'Drst always true': 'Ovitieto aina auki',
     'Drst always false': 'Ovitieto aina kiinni',
     'Identical first and last odo values': 'ODO-metrin arvo ei muutu',
@@ -70,7 +70,7 @@ async def get_vehicles(
         }
     else:
         analyzed_data = await get_positioning_analysis_by_date(date, operator_id)
-        
+
     analyzed_data = sorted(analyzed_data, key=lambda x: x['vehicle_number'])
     return {
         "data": {
@@ -110,10 +110,10 @@ async def get_vehicles(
         }
     else:
         analyzed_data = await get_door_analysis_by_date(date, operator_id)
-        
+
     if errors_only:
         analyzed_data = [vehicle for vehicle in analyzed_data if len(vehicle['door_error_events']["types"]) > 0]
-    
+
     analyzed_data = sorted(analyzed_data, key=lambda x: x['vehicle_number'])
     return {
         "data": {
@@ -212,15 +212,15 @@ async def get_vehicles(
             if 'loc_error_events' in item:
                 loc_error_types = item['loc_error_events']['types']
 
-            common_data = {                    
-                "Päivämäärä": date, 
-                "Operaattori": item['operator_id'], 
+            common_data = {
+                "Päivämäärä": date,
+                "Operaattori": item['operator_id'],
                 "Kylkinumero": item['vehicle_number']
             }
             if len(door_error_types) == 0 and len(odo_error_types) == 0 and len(loc_error_types) == 0:
                 row_data = {
                     **common_data,
-                    "Havaittu ongelma": "Ei havaittu ongelmia", 
+                    "Havaittu ongelma": "Ei havaittu ongelmia",
                     "Syyt": ""
                 }
                 writer.writerow(row_data)
@@ -241,7 +241,7 @@ async def get_vehicles(
 
                 row_data = {
                     **common_data,
-                    "Havaittu ongelma": detected_problems, 
+                    "Havaittu ongelma": detected_problems,
                     "Syyt": error_types_str
                 }
                 writer.writerow(row_data)
