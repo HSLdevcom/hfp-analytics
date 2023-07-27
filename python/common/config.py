@@ -63,6 +63,7 @@ def get_env(var_name: str, default_value: Union[str, None] = None, modifier: Cal
 
 # Environment, e.g., for loggers to inform
 ENVIRONMENT: str = get_env("ENVIRONMENT", "LOCAL", modifier=env_as_upper_str)
+BUILD_VERSION: str = get_env("BUILD_VERSION", "Build NaN")  # Azure pipeline will give this as a build argument.
 
 # Envs for connections to Posgtres and Azure
 APC_STORAGE_CONTAINER_NAME: str = get_env("APC_STORAGE_CONTAINER_NAME")
