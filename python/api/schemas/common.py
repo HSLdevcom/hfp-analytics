@@ -14,12 +14,12 @@ class Geometry(BaseModel):
 
 
 class PointGeometry(Geometry):
-    type = "Point"
+    type: str = "Point"
     coordinates: List[int] = Field(example=[24.92371, 60.17971])
 
 
 class PolygonGeometry(Geometry):
-    type = "Polygon"
+    type: str = "Polygon"
     coordinates: List[List[int]] = Field(example=[[384792, 6673806], [384678, 6673810], [384880, 6673826]])
 
 
