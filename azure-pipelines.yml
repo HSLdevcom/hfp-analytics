@@ -20,7 +20,7 @@ variables:
 
 stages:
 - stage: Build
-  displayName: Build and push test
+  displayName: Build and push
   jobs:
   - job: Build
     displayName: Build
@@ -28,9 +28,9 @@ stages:
       vmImage: $(vmImageName)
     steps:
     - task: Docker@2
-      displayName: Build and push api to container registry
+      displayName: Build api to container registry
       inputs:
-        command: buildAndPush
+        command: build
         repository: $(imageRepositoryApi)
         dockerfile: $(dockerfilePathApi)
         containerRegistry: Azure Container Registry Connection # Service connection created in Azure with this name
@@ -39,9 +39,20 @@ stages:
           $(imageTag)
         arguments: '--build-arg BUILD_VERSION=$(build.buildNumber)'
     - task: Docker@2
-      displayName: Build and push importer to container registry
+      displayName: Push api to container registry
       inputs:
-        command: buildAndPush
+        command: push
+        repository: $(imageRepositoryApi)
+        dockerfile: $(dockerfilePathApi)
+        containerRegistry: Azure Container Registry Connection # Service connection created in Azure with this name
+        # imageTag (dev/test/prod): a pipeline variable
+        tags: |
+          $(imageTag)
+
+    - task: Docker@2
+      displayName: Build importer to container registry
+      inputs:
+        command: build
         repository: $(imageRepositoryImporter)
         dockerfile: $(dockerfilePathImporter)
         containerRegistry: Azure Container Registry Connection # Service connection created in Azure with this name
@@ -49,3 +60,14 @@ stages:
         tags: |
           $(imageTag)
         arguments: '--build-arg BUILD_VERSION=$(build.buildNumber)'
+
+    - task: Docker@2
+      displayName: Push importer to container registry
+      inputs:
+        command: push
+        repository: $(imageRepositoryImporter)
+        dockerfile: $(dockerfilePathImporter)
+        containerRegistry: Azure Container Registry Connection # Service connection created in Azure with this name
+        # imageTag (dev/test/prod): a pipeline variable
+        tags: |
+          $(imageTag)
