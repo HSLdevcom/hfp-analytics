@@ -1,48 +1,79 @@
-from datetime import date, time
-from enum import Enum
-from typing import Generic, List, Literal, Optional, Type, TypeVar
+import datetime
+from typing import Generic, List, TypeVar
 
-from pydantic import BaseModel, Field, PositiveFloat, PositiveInt, create_model
+from pydantic import BaseModel, Field, PositiveInt, create_model
 
 AnalysisModelType = TypeVar("AnalysisModelType")
 
 
 class VehicleAnalysisErrorEvents(BaseModel):
-    events: List
-    types: List
+    events: List = Field(description="List of event objects that triggered errors.")
+    types: List = Field(description="List of error types found for vehicle.")
 
 
 class VehicleAnalysisObject(BaseModel):
-    vehicle_number: int
-    operator_id: int
-    date: date
-    events_amount: PositiveInt
+    vehicle_number: int = Field(description="Analyzed vehicle's number.")
+    operator_id: int = Field(description="Operator id of the analyzed vehicle.")
+    date: datetime.date = Field(description="Date of analyzed data for vehicle.")
+    events_amount: PositiveInt = Field(description="Total amount of all analyzed events for the vehicle.")
 
 
 class VehiclePositionAnalysisObject(VehicleAnalysisObject):
-    loc_null_ratio: float
-    loc_gps_ratio: float
-    loc_dr_ratio: float
+    loc_null_ratio: float = Field(
+        description="The relative proportion of `null` values in `loc` fields of analyzed data.",
+        ge=0,
+        le=1,
+    )
+    loc_gps_ratio: float = Field(
+        description="The relative proportion of `gps` values in `loc` fields of analyzed data.",
+        ge=0,
+        le=1,
+    )
+    loc_dr_ratio: float = Field(
+        description="The relative proportion of `dr` values in `loc` fields of analyzed data.",
+        ge=0,
+        le=1,
+    )
     loc_error_events: VehicleAnalysisErrorEvents
 
 
 class VehicleDoorsAnalysisObject(VehicleAnalysisObject):
-    drst_null_ratio: float
-    drst_true_ratio: float
-    drst_false_ratio: float
+    drst_null_ratio: float = Field(
+        description="The relative proportion of `null` values in `drst` fields of analyzed data.",
+        ge=0,
+        le=1,
+    )
+    drst_true_ratio: float = Field(
+        description="The relative proportion of `true` values in `drst` fields of analyzed data.",
+        ge=0,
+        le=1,
+    )
+    drst_false_ratio: float = Field(
+        description="The relative proportion of `false` values in `drst` fields of analyzed data.",
+        ge=0,
+        le=1,
+    )
     door_error_events: VehicleAnalysisErrorEvents
 
 
 class VehicleOdoAnalysisObject(VehicleAnalysisObject):
-    odo_exists_ratio: float
-    odo_null_ratio: float
+    odo_exists_ratio: float = Field(
+        description="The relative proportion of non-null values in `odo` fields of analyzed data.",
+        ge=0,
+        le=1,
+    )
+    odo_null_ratio: float = Field(
+        description="The relative proportion of `null` values in `odo` fields of analyzed data.",
+        ge=0,
+        le=1,
+    )
     odo_error_events: VehicleAnalysisErrorEvents
 
 
 class VehicleAnalysisMetadata(BaseModel):
-    start: time
-    end: time
-    date: date
+    start: datetime.time = Field(description="Starting timestamp for analysis window.")
+    end: datetime.time = Field(description="Ending timestamp for analysis window.")
+    date: datetime.date = Field(description="Date for analysis.")
 
 
 class VehicleAnalysisData(BaseModel, Generic[AnalysisModelType]):
