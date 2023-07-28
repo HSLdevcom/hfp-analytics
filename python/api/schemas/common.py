@@ -9,28 +9,29 @@ class Geometry(BaseModel):
         title="Coordinate reference system",
         description="Coordinate reference system is an optional object. "
         "Usually it's given if the CRS is something else than WGS84 (EPSG:4326).",
+        default=None,
     )
     coordinates: List
 
 
 class PointGeometry(Geometry):
-    type: str = "Point"
-    coordinates: List[int] = Field(example=[24.92371, 60.17971])
+    type: Literal["Point"]
+    coordinates: List[float] = Field(examples=[[24.92371, 60.17971]])
 
 
 class PolygonGeometry(Geometry):
-    type: str = "Polygon"
-    coordinates: List[List[int]] = Field(example=[[384792, 6673806], [384678, 6673810], [384880, 6673826]])
+    type: Literal["Polygon"]
+    coordinates: List[List[float]] = Field(examples=[[[384792, 6673806], [384678, 6673810], [384880, 6673826]]])
 
 
 class GeoJSONFeature(BaseModel):
-    type: str = "Feature"
+    type: Literal["Feature"]
     geometry: Geometry
     properties: Dict
 
 
 class GeoJSONFeatureCollection(BaseModel):
-    type: str = "FeatureCollection"
+    type: Literal["FeatureCollection"]
     features: List[GeoJSONFeature]
 
 
