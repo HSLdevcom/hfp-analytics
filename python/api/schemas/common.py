@@ -1,6 +1,9 @@
 """GeoJSON models"""
-from typing import Dict, List, Literal, Optional, Type
-from pydantic import BaseModel, Field, create_model
+from typing import Dict, Generic, List, Literal, Optional, TypeVar
+from pydantic import BaseModel, Field
+
+GeoJSONPropertyModelType = TypeVar("GeoJSONPropertyModelType")
+GeoJSONGeometryModelType = TypeVar("GeoJSONGeometryModelType")
 
 
 class Geometry(BaseModel):
@@ -24,36 +27,12 @@ class PolygonGeometry(Geometry):
     coordinates: List[List[float]] = Field(examples=[[[384792, 6673806], [384678, 6673810], [384880, 6673826]]])
 
 
-class GeoJSONFeature(BaseModel):
+class GeoJSONFeature(BaseModel, Generic[GeoJSONPropertyModelType, GeoJSONGeometryModelType]):
     type: Literal["Feature"]
     geometry: Geometry
-    properties: Dict
+    properties: GeoJSONPropertyModelType
 
 
-class GeoJSONFeatureCollection(BaseModel):
+class GeoJSONFeatureCollection(BaseModel, Generic[GeoJSONPropertyModelType, GeoJSONGeometryModelType]):
     type: Literal["FeatureCollection"]
-    features: List[GeoJSONFeature]
-
-
-def get_feature_model(
-    name: str, props_model: Type[BaseModel], geometry_type: Literal["Point", "Polygon"] = "Point"
-) -> Type[BaseModel]:
-    """Helper function to dynamically create new GeoJSON feature models"""
-    if geometry_type == "Point":
-        geometry_model = PointGeometry
-    elif geometry_type == "Polygon":
-        geometry_model = PolygonGeometry
-
-    return create_model(
-        f"{name}Feature", geometry=(geometry_model, ...), properties=(props_model, ...), __base__=GeoJSONFeature
-    )
-
-
-def get_feature_collection_model(
-    name: str, props_model: Type[BaseModel], geometry_type: Literal["Point", "Polygon"] = "Point"
-) -> Type[BaseModel]:
-    """Helper function to dynamically create new GeoJSON feature collection models"""
-    feature_model = get_feature_model(name, props_model, geometry_type)
-    return create_model(
-        f"{name}FeatureCollection", features=(List[feature_model], ...), __base__=GeoJSONFeatureCollection
-    )
+    features: List[GeoJSONFeature[GeoJSONPropertyModelType, GeoJSONGeometryModelType]]

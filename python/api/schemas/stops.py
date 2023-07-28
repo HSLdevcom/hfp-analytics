@@ -2,9 +2,9 @@ from datetime import date
 from enum import Enum
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, Field, PositiveFloat, PositiveInt
+from pydantic import BaseModel, Field, PositiveFloat, PositiveInt, create_model
 
-from .common import get_feature_collection_model
+from .common import GeoJSONFeatureCollection, PointGeometry, PolygonGeometry
 
 
 class StopModeEnum(str, Enum):
@@ -133,9 +133,15 @@ class HFPStopPoint(BaseModel):
     )
 
 
-JoreStopFeatureCollection = get_feature_collection_model("JoreStop", JoreStop)
-StopMedianFeatureCollection = get_feature_collection_model("StopMedian", StopMedian)
-StopMedianPercentileFeatureCollection = get_feature_collection_model(
-    "StopMedianPercentile", StopMedianPercentile, "Polygon"
+JoreStopFeatureCollection = create_model(
+    "JoreStopFeatureCollection", __base__=GeoJSONFeatureCollection[JoreStop, PointGeometry]
 )
-HFPStopPointFeatureCollection = get_feature_collection_model("HFPStopPoint", HFPStopPoint)
+StopMedianFeatureCollection = create_model(
+    "StopMedianFeatureCollection", __base__=GeoJSONFeatureCollection[StopMedian, PointGeometry]
+)
+StopMedianPercentileFeatureCollection = create_model(
+    "StopMedianPercentileFeatureCollection", __base__=GeoJSONFeatureCollection[StopMedianPercentile, PolygonGeometry]
+)
+HFPStopPointFeatureCollection = create_model(
+    "HFPStopPointFeatureCollection", __base__=GeoJSONFeatureCollection[HFPStopPoint, PointGeometry]
+)
