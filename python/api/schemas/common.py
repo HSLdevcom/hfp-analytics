@@ -29,7 +29,7 @@ class PolygonGeometry(Geometry):
 
 class GeoJSONFeature(BaseModel, Generic[GeoJSONPropertyModelType, GeoJSONGeometryModelType]):
     type: Literal["Feature"]
-    geometry: Geometry
+    geometry: GeoJSONGeometryModelType
     properties: GeoJSONPropertyModelType
 
 
