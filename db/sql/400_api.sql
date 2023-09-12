@@ -171,6 +171,7 @@ CREATE VIEW api.view_assumed_monitored_vehicle_journey AS (
     vehicle_number,
     min_timestamp,
     max_timestamp,
+    arr_count,
     modified_at
   FROM hfp.assumed_monitored_vehicle_journey
 );
