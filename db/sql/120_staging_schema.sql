@@ -80,7 +80,7 @@ AS $procedure$
   ON CONFLICT DO NOTHING;
 
   INSERT INTO hfp.assumed_monitored_vehicle_journey (
-    vehicle_operator_id, vehicle_number, transport_mode, route_id, direction_id, oday, "start", observed_operator_id, min_timestamp, max_timestamp, arr_count, vp_count
+    vehicle_operator_id, vehicle_number, transport_mode, route_id, direction_id, oday, "start", observed_operator_id, min_timestamp, max_timestamp, arr_count
   )
   SELECT
     vehicle_operator_id,
