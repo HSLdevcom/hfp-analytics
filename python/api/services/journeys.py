@@ -3,6 +3,7 @@ Services related to /journeys data endpoint
 """
 from common.database import pool
 from datetime import date
+from pprint import pprint
 
 
 async def get_journeys_by_oday(oday: date) -> list:
@@ -22,6 +23,7 @@ async def get_journeys_by_oday(oday: date) -> list:
                     transport_mode,
                     min_timestamp,
                     max_timestamp,
+                    arr_count,
                     modified_at
                 FROM api.view_assumed_monitored_vehicle_journey
                 WHERE oday = %(oday)s
@@ -42,12 +44,57 @@ async def get_journeys_by_oday(oday: date) -> list:
                     "transport_mode": r[7],
                     "min_tst": r[8],
                     "max_tst": r[9],
-                    "modified_at": r[10].isoformat(timespec="seconds")
+                    "arr_count": r[10],
+                    "modified_at": r[11].isoformat(timespec="seconds")
                 }
                 for r in rows
             ]
+            hashmap = {}
+            for item in data:
+                key = (item['route_id'], item['direction_id'], item['oday'], item['start'])
+                
+                if item['arr_count'] < 2:
+                    continue
 
-            return data
+                if key in hashmap:
+                    hashmap[key].append(item)
+                else:
+                    hashmap[key] = [item]
+
+            items_to_keep = []
+
+            for key, value_list in hashmap.items():
+                if len(value_list) > 1:
+                    max_arr_count = max(value['arr_count'] for value in value_list)
+                    
+                    for value in value_list:
+                        if value['arr_count'] >= 0.9 * max_arr_count:
+                            items_to_keep.append(value)
+                else:
+                    items_to_keep.append(value_list[0])
+
+            hashmap = {}
+            final_data = []
+
+            root_keys = ['route_id', 'direction_id', 'oday', 'start', 'transport_mode']
+            vehicle_keys = ['oper', 'operator_id', 'vehicle_number', 'max_tst', 'min_tst', 'modified_at']
+
+            for item in items_to_keep:
+                # Filter out items with arr_count less than 2
+                if item['arr_count'] < 2:
+                    continue
+
+                key = tuple(item[k] for k in root_keys)
+                if key in hashmap:
+                    hashmap[key]['vehicles'].append({k: item[k] for k in vehicle_keys})
+                else:
+                    new_item = {k: item[k] for k in root_keys}
+                    new_item['vehicles'] = [{k: item[k] for k in vehicle_keys}]
+                    hashmap[key] = new_item
+
+            final_data = list(hashmap.values())
+
+            return final_data
 
 
 async def get_last_modified_of_oday(oday: date):

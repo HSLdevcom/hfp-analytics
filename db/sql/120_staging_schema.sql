@@ -80,7 +80,7 @@ AS $procedure$
   ON CONFLICT DO NOTHING;
 
   INSERT INTO hfp.assumed_monitored_vehicle_journey (
-    vehicle_operator_id, vehicle_number, transport_mode, route_id, direction_id, oday, "start", observed_operator_id, min_timestamp, max_timestamp
+    vehicle_operator_id, vehicle_number, transport_mode, route_id, direction_id, oday, "start", observed_operator_id, min_timestamp, max_timestamp, arr_count
   )
   SELECT
     vehicle_operator_id,
@@ -92,7 +92,8 @@ AS $procedure$
     "start",
     observed_operator_id,
     min(tst) AS min_timestamp,
-    max(tst) AS max_timestamp
+    max(tst) AS max_timestamp,
+    SUM(CASE WHEN event_type = 'ARR' THEN 1 ELSE 0 END) AS arr_count
   -- (Add further aggregates such as N of hfp_point rows here, if required later.
   -- Be careful about min_tst, because aggregate might not give all records, if there were ones before min_tst.
   FROM staging.hfp_raw
@@ -113,11 +114,13 @@ AS $procedure$
   ON CONFLICT ON CONSTRAINT assumed_monitored_vehicle_journey_pkey DO UPDATE SET
     max_timestamp = greatest(assumed_monitored_vehicle_journey.max_timestamp, EXCLUDED.max_timestamp),
     min_timestamp = least(assumed_monitored_vehicle_journey.min_timestamp, EXCLUDED.min_timestamp),
+    arr_count = assumed_monitored_vehicle_journey.arr_count + EXCLUDED.arr_count,
     modified_at = now()
   WHERE
   -- Update only if values are actually changed, so that modified_at -field shows the correct time.
     assumed_monitored_vehicle_journey.min_timestamp != EXCLUDED.min_timestamp OR
-    assumed_monitored_vehicle_journey.max_timestamp != EXCLUDED.max_timestamp;
+    assumed_monitored_vehicle_journey.max_timestamp != EXCLUDED.max_timestamp OR
+    (assumed_monitored_vehicle_journey.arr_count + EXCLUDED.arr_count) != assumed_monitored_vehicle_journey.arr_count;
 $procedure$;
 
 COMMENT ON PROCEDURE staging.import_and_normalize_hfp IS 'Procedure to copy data from staging schema to hfp schema.';

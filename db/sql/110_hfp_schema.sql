@@ -69,6 +69,7 @@ CREATE TABLE hfp.assumed_monitored_vehicle_journey (
   observed_operator_id  smallint      NOT NULL,
   min_timestamp         timestamptz   NOT NULL,
   max_timestamp         timestamptz   NOT NULL,
+  arr_count             integer       NULL        DEFAULT 0,
   modified_at           timestamptz   NULL        DEFAULT now(),
   CONSTRAINT assumed_monitored_vehicle_journey_pkey PRIMARY KEY (vehicle_operator_id, vehicle_number, oday, route_id, direction_id, "start", observed_operator_id)
 );
