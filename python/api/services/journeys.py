@@ -113,19 +113,19 @@ def convert_to_30h_clock(data):
         for vehicle in item["vehicles"]:
             for timestamp_key in ["max_tst", "min_tst"]:
                 timestamp = vehicle[timestamp_key]
+                calendar_date = timestamp.strftime("%Y-%m-%d")
+                vehicle["calendar_date"] = calendar_date
                 if isinstance(timestamp, str):
                     timestamp = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%f%z")
 
                 if timestamp.date() == next_day and timestamp.hour < 7:
                     new_hour = timestamp.hour + 24
-                    
-                    formatted_date = timestamp.strftime("%Y-%m-%d")
+                    formatted_date = oday.strftime("%Y-%m-%d")
                     formatted_time = "{:02}:{:02}:{:02}.{:06}+00:00".format(
                         new_hour, timestamp.minute, timestamp.second, timestamp.microsecond
                     )
                     new_timestamp_str = "{}T{}".format(formatted_date, formatted_time)
                     vehicle[timestamp_key] = new_timestamp_str
-                    vehicle["calendar_date"] = formatted_date
 
     return data
 
