@@ -33,10 +33,3 @@ conditional_mkdir results
 conditional_mkdir analytics-data
 
 docker-compose build
-
-if [ ! "$(docker network ls | grep hfp_analytics_nw)" ]; then
-  docker network create --attachable hfp_analytics_nw
-  echo "hfp_analytics_nw docker network created"
-else
-  echo "hfp_analytics_nw docker network already exists"
-fi
