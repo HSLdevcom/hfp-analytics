@@ -2,8 +2,9 @@
 Services related to /journeys data endpoint
 """
 from common.database import pool
-from datetime import date, timedelta, datetime
+from datetime import date, timedelta, datetime, timezone
 from pprint import pprint
+import pytz
 
 
 async def get_journeys_by_oday(oday: date) -> list:
@@ -50,8 +51,8 @@ async def get_journeys_by_oday(oday: date) -> list:
                 for r in rows
             ]
             filtered_data = filter_data(data)
-            converted_data = convert_to_30h_clock(filtered_data)
-            return converted_data
+            adjusted_data = adjust_start_based_on_vehicle_tst(filtered_data)
+            return adjusted_data
 
 
 def filter_data(data):
@@ -105,27 +106,44 @@ def filter_data(data):
     return filtered_data
 
 
-def convert_to_30h_clock(data):
+def adjust_start_based_on_vehicle_tst(data):
+    finnish_tz = pytz.timezone('Europe/Helsinki')
+
     for item in data:
         oday = item["oday"]
-        next_day = oday + timedelta(days=1)
+        if isinstance(oday, str):
+            oday = datetime.strptime(oday, "%Y-%m-%d").date()
+
+        start_time_str = item["start"]
+        start_time = datetime.strptime(start_time_str, "%H:%M:%S")
+        full_start_time = datetime.combine(oday, start_time.time())
+
+        max_tst_local = None
 
         for vehicle in item["vehicles"]:
-            for timestamp_key in ["max_tst", "min_tst"]:
-                timestamp = vehicle[timestamp_key]
-                calendar_date = timestamp.strftime("%Y-%m-%d")
-                vehicle["calendar_date"] = calendar_date
-                if isinstance(timestamp, str):
-                    timestamp = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%f%z")
+            max_tst = vehicle["max_tst"]
+            if isinstance(max_tst, str): 
+                max_tst = datetime.strptime(max_tst, "%Y-%m-%dT%H:%M:%S.%f%z")
 
-                if timestamp.date() == next_day and timestamp.hour < 7:
-                    new_hour = timestamp.hour + 24
-                    formatted_date = oday.strftime("%Y-%m-%d")
-                    formatted_time = "{:02}:{:02}:{:02}.{:06}+00:00".format(
-                        new_hour, timestamp.minute, timestamp.second, timestamp.microsecond
-                    )
-                    new_timestamp_str = "{}T{}".format(formatted_date, formatted_time)
-                    vehicle[timestamp_key] = new_timestamp_str
+            max_tst_local_current = max_tst.astimezone(finnish_tz)
+
+            if max_tst_local is None or max_tst_local_current > max_tst_local:
+                max_tst_local = max_tst_local_current
+
+        if max_tst_local.date() == (oday + timedelta(days=1)) and max_tst_local.hour < 7:
+            new_hour = full_start_time.hour + 24
+
+            formatted_time = "{:02}:{:02}:{:02}".format(
+                new_hour, full_start_time.minute, full_start_time.second
+            )
+
+            new_start_str = formatted_time
+
+            item["start"] = new_start_str
+
+        calendar_date_str = oday.strftime("%Y-%m-%d")
+        for vehicle in item["vehicles"]:
+            vehicle["calendar_date"] = calendar_date_str
 
     return data
 
