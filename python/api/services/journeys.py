@@ -130,17 +130,15 @@ def adjust_start_based_on_vehicle_tst(data):
             if max_tst_local is None or max_tst_local_current > max_tst_local:
                 max_tst_local = max_tst_local_current
 
-        new_start_str = start_time_str 
-
-        if max_tst_local.date() == (oday + timedelta(days=1)) and max_tst_local.hour < 7:
+        new_hour = full_start_time.hour 
+        if max_tst_local.date() == (oday + timedelta(days=1)) and 0 <= full_start_time.hour < 7:
             new_hour = full_start_time.hour + 24
 
-            formatted_time = "{:02}:{:02}:{:02}".format(
-                new_hour, full_start_time.minute, full_start_time.second
-            )
+        formatted_time = "{:02}:{:02}:{:02}".format(
+            new_hour, full_start_time.minute, full_start_time.second
+        )
 
-            new_start_str = formatted_time 
-
+        new_start_str = formatted_time
         item["start_30h"] = new_start_str
 
         calendar_date_str = oday.strftime("%Y-%m-%d")
@@ -148,6 +146,7 @@ def adjust_start_based_on_vehicle_tst(data):
             vehicle["calendar_date"] = calendar_date_str
 
     return data
+
 
 
 async def get_last_modified_of_oday(oday: date):
