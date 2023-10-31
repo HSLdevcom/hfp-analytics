@@ -131,7 +131,7 @@ def adjust_start_based_on_vehicle_tst(data):
                 max_tst_local = max_tst_local_current
 
         new_hour = full_start_time.hour 
-        if 0 <= full_start_time.hour < 7:
+        if max_tst_local.date() == (oday + timedelta(days=1)) and 0 <= full_start_time.hour < 7:
             new_hour = full_start_time.hour + 24
 
         formatted_time = "{:02}:{:02}:{:02}".format(
