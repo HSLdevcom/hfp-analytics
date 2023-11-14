@@ -11,7 +11,6 @@ from common.config import (
     HFP_EVENTS_TO_IMPORT,
     IMPORT_COVERAGE_DAYS,
 )
-import common.slack as slack
 
 from .importer import Importer, parquet_to_dict_decoder, zst_csv_to_dict_decoder
 from .schemas import APC as APCSchema, HFP as HFPSchema
@@ -92,29 +91,33 @@ def import_blob(blob_name):
         if "ErrorCode:BlobNotFound" in str(e):
             logger.error(f"Blob {blob_name} not found.")
         else:
-            logger.error(f"Error after {processing_time} seconds when reading blob chunks: {e}")
-            slack.send_to_channel(
-                f"Error after {processing_time} seconds when reading blob chunks: {e}",
-                alert=True,
-            )
+            logger.exception("Error after {processing_time} seconds when reading blob {blob_name}.")
 
 
 def run_import() -> None:
     """Function to init and run importer procedures"""
-    logger.info(f"Update blob list to cover last {IMPORT_COVERAGE_DAYS} days.")
+    start_time = datetime.now()
+
+    # update importer.blob -table
     update_blob_list_for_import(IMPORT_COVERAGE_DAYS)
 
-    logger.info("Selecting blobs for import.")
+    # get all pending blobs from importer.blob
     blob_names = pickup_blobs_for_import()
 
     logger.debug(f"Running import for {blob_names}")
     for blob in blob_names:
         import_blob(blob)
 
+    end_time = datetime.now()
+
+    logger.info(f"Imported {len(blob_names)} blobs in {end_time - start_time}")
+
 
 def main(importer: func.TimerRequest, context: func.Context) -> None:
     """Main function to be called by Azure Function"""
     with CustomDbLogHandler("importer"):
+        logger.debug("Going to run importer.")
+
         # Create a lock for import
         success = create_db_lock()
 
@@ -123,11 +126,10 @@ def main(importer: func.TimerRequest, context: func.Context) -> None:
 
         try:
             run_import()
-        except Exception as e:
-            logger.error(f"Error when running importer: {e}")
-            slack.send_to_channel(f"Error when running importer: {e}", alert=True)
+        except Exception:
+            logger.exception(f"Error when running importer.")
         finally:
             # Remove lock at this point
             release_db_lock()
 
-        logger.info("Importer done.")
+        logger.debug("Importer done.")

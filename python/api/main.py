@@ -9,6 +9,7 @@ from fastapi.openapi.docs import (
     get_swagger_ui_html,
 )
 
+from common.config import BUILD_VERSION
 from api.routers import hfp, apc, stops, journeys, vehicles
 
 
@@ -20,6 +21,7 @@ async def verify_api_code(
 
 app = FastAPI(
     title="HSL Analytics REST API",
+    version=BUILD_VERSION,
     description="This REST API is used to get results from analytics done with Jore-data and HFP-data. "
     "The documentation of HFP schema is here: "
     "<a href=https://digitransit.fi/en/developers/apis/4-realtime-api/vehicle-positions/ > "

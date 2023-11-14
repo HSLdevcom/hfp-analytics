@@ -1,7 +1,7 @@
 FROM mcr.microsoft.com/azure-functions/python:4-python3.10
 
-RUN apt-get --allow-releaseinfo-change update && apt-get install -y libpq5 && rm -rf /var/lib/apt/lists/*
-
+ARG BUILD_VERSION
+ENV BUILD_VERSION=${BUILD_VERSION}
 ENV TZ="Europe/Helsinki"
 ENV AzureWebJobsScriptRoot=/home/site/wwwroot
 ENV AzureFunctionsJobHost__Logging__Console__IsEnabled=true

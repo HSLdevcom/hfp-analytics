@@ -9,7 +9,6 @@ from psycopg_pool import ConnectionPool  # todo: refactor to use common.database
 
 from common.config import POSTGRES_CONNECTION_STRING
 import common.constants as constants
-import common.slack as slack
 
 from .schemas import DBSchema
 
@@ -30,16 +29,15 @@ def create_db_lock() -> bool:
                 is_importer_locked = res[0] if res else False
 
                 if is_importer_locked:
-                    logger.error(
+                    logger.warn(
                         "Importer is LOCKED which means that importer should be already running. "
                         "You can get rid of the lock by restarting the database if needed."
                     )
                     return False
 
-                logger.info("Going to run importer.")
                 cur.execute("SELECT pg_advisory_lock(%s)", (constants.IMPORTER_LOCK_ID,))
-    except Exception as e:
-        logger.error(f"Error when creating locks for importer: {e}")
+    except Exception:
+        logger.exception("Error when creating locks for importer.")
         return False
 
     return True
@@ -201,12 +199,12 @@ def copy_data_to_db(db_schema: DBSchema, data_rows: Iterable[dict], invalid_blob
                 # Check the required fields
                 if any(row[key] is None for key in required_fields):
                     logger.error(f"Found a row with an unique key error: {row}")
-                    slack.send_to_channel(f"Found a row with an unique key error: {row}")
                     invalid_row_count += 1
                     continue
 
-                # Construct a data row as a string to be copied
-                data_stream.write("\t".join([row[f] for f in raw_field_names]) + "\n")
+                # Construct a data row as a string to be copied.
+                # None will be converted as empty string "" instead of "None"
+                data_stream.write("\t".join([str(row[f]) if row[f] else "" for f in raw_field_names]) + "\n")
 
             # Copy data as chunks
             data_stream.seek(0)
@@ -217,7 +215,6 @@ def copy_data_to_db(db_schema: DBSchema, data_rows: Iterable[dict], invalid_blob
 
             if invalid_row_count > 0:
                 logger.error(f"Unique key error count for the blob: {invalid_row_count}")
-                slack.send_to_channel(f"Unique key error count for the blob: {invalid_row_count}")
 
             # Move data from staging to persistent storage
             if not invalid_blob:

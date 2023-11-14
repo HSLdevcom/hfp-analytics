@@ -20,8 +20,9 @@ def get_conn_params() -> str:
     return os.getenv("POSTGRES_CONNECTION_STRING", "")
 
 pool = AsyncConnectionPool(get_conn_params(), max_size=20)
-spd_threshold = 2
 stationary_odo_events_threshold = 5
+spd_threshold = 2
+loc_gps_threshold = 0.95
 
 
 async def get_vehicle_ids(date: date, customTimeInterval=None, operator_id=None) -> list:
@@ -41,12 +42,12 @@ async def get_vehicle_ids(date: date, customTimeInterval=None, operator_id=None)
     where_clause = "WHERE tst > %(start)s AND tst < %(end)s AND event_type = 'VP'"
     if operator_id is not None:
         query_params['operator_id'] = operator_id
-        where_clause += " AND vehicle_operator_id = %(operator_id)s"
+        where_clause += " AND operator_id = %(operator_id)s"
     async with pool.connection() as conn:
         async with conn.cursor() as cur:
             await cur.execute(
                 """
-                SELECT DISTINCT vehicle_number, vehicle_operator_id FROM api.view_as_original_hfp_event {where_clause}
+                SELECT DISTINCT vehicle_number, operator_id FROM api.view_as_original_hfp_event {where_clause}
                 """.format(where_clause=where_clause),
                 query_params
             )
@@ -85,6 +86,81 @@ def tz_diff(tz1, tz2):
     return (tz1.localize(date) - 
             tz2.localize(date).astimezone(tz1))\
             .seconds/3600
+
+def analyze_positioning_data(vehicle_data):
+    analysis = defaultdict(lambda: {'loc_null': 0, 'loc_gps': 0, 'loc_dr': 0, 'loc_error_events': {'amount': 0, 'events': []}})
+    for data in vehicle_data:
+        data_list = data.get('data', [])
+        data_list_sorted = sorted(data_list, key=lambda x: x['tst'])
+        operator_id = data.get('operator_id')
+        date = data.get('date')
+        analysis[data['vehicle_number']]['operator_id'] = operator_id
+        analysis[data['vehicle_number']]['date'] = date
+        for d in data_list_sorted:
+            loc = d.get('loc')
+            if loc is None:
+                analysis[data['vehicle_number']]['loc_null'] += 1
+            elif loc == 'GPS':
+                analysis[data['vehicle_number']]['loc_gps'] += 1
+            elif loc == 'DR':
+                analysis[data['vehicle_number']]['loc_dr'] += 1
+
+    result = []
+    for vehicle_number, analysis_data in analysis.items():
+        total = sum([analysis_data[key] for key in analysis_data if key in ['loc_null', 'loc_gps', 'loc_dr']])
+
+        # No analysis when less than 100 hfp events
+        if total < 100:
+            result.append({
+                'vehicle_number': vehicle_number,
+                'operator_id': analysis_data['operator_id'],
+                'date': analysis_data['date'],
+                'loc_null_ratio': None,
+                'loc_gps_ratio': None,
+                'loc_dr_ratio': None,
+                'events_amount': None,
+                'loc_error_types': [],
+                'loc_error_events': {
+                    "events": [],
+                    "types": []
+                }
+            })
+            continue
+
+        loc_null_ratio = round(analysis_data['loc_null']/total, 3)
+        loc_gps_ratio = round(analysis_data['loc_gps']/total, 3)
+        loc_dr_ratio = round(analysis_data['loc_dr']/total, 3)
+
+        error_types = set()
+        for event in analysis_data['loc_error_events']['events']:
+            event_type = event['type']
+            error_types.add(event_type)
+
+        if loc_gps_ratio < loc_gps_threshold:
+            error_types.add(f'GPS ratio below {loc_gps_threshold}')    
+
+        if error_types:
+            error_types = list(error_types)
+            analysis_data['loc_error_events']['types'] = error_types
+        else:
+            analysis_data['loc_error_events']['types'] = []
+
+        analysis_data = {
+            'vehicle_number': vehicle_number,
+            'operator_id': analysis_data['operator_id'],
+            'date': analysis_data['date'],
+            'loc_null_ratio': loc_null_ratio,
+            'loc_gps_ratio': loc_gps_ratio,
+            'loc_dr_ratio': loc_dr_ratio,
+            'events_amount': total,
+            'loc_error_types': analysis_data['loc_error_events']['types'],
+            'loc_error_events': analysis_data['loc_error_events']
+        }
+
+        result.append(analysis_data)
+    
+    sortedResult = sorted(result, key=lambda x: x['vehicle_number'])
+    return sortedResult
 
 def analyze_vehicle_door_data(vehicle_data):
     analysis = defaultdict(lambda: {'null': 0, 'true': 0, 'false': 0, 'door_error_events': {'amount': 0, 'events': []}})
@@ -134,14 +210,11 @@ def analyze_vehicle_door_data(vehicle_data):
                 analysis[data['vehicle_number']]['true'] += 1
             else:
                 analysis[data['vehicle_number']]['false'] += 1
-            if drst and spd is not None and spd > spd_threshold:
-                event = f'Speed over {spd_threshold} m/s when doors open'
-                analysis[data['vehicle_number']]['door_error_events']['events'].append(error_obj(d, event))  
-                analysis[data['vehicle_number']]['door_error_events']['amount'] += 1 
 
     result = []
     for vehicle_number, analysis_data in analysis.items():
         total = sum([analysis_data[key] for key in analysis_data if key in ['null', 'true', 'false']])
+         # No analysis when less than 100 hfp events
         if total < 100:
             result.append({
                 'vehicle_number': vehicle_number,
@@ -158,6 +231,7 @@ def analyze_vehicle_door_data(vehicle_data):
                 }
             })
             continue
+        
         true_ratio = round(analysis_data['true']/total, 3)
         false_ratio = round(analysis_data['false']/total, 3)
         null_ratio = round(analysis_data['null']/total, 3)
@@ -167,7 +241,7 @@ def analyze_vehicle_door_data(vehicle_data):
             event_type = event['type']
             error_types.add(event_type)
 
-        if true_ratio > 0.5 and true_ratio < 1:
+        if true_ratio > 0.85:
             error_types.add("Drst inverted")  
         if null_ratio == 1:
             error_types.add("Drst missing")  
@@ -176,7 +250,9 @@ def analyze_vehicle_door_data(vehicle_data):
         if true_ratio == 1:
             error_types.add("Drst always true")  
         if false_ratio == 1:
-            error_types.add("Drst always false")  
+            error_types.add("Drst always false") 
+        if true_ratio > 0.15 and true_ratio <= 0.85:
+            error_types.add("Too many door events")  
 
         if error_types:
             error_types = list(error_types)
@@ -323,6 +399,54 @@ class DateTimeEncoder(json.JSONEncoder):
             return obj.isoformat()
         return json.JSONEncoder.default(self, obj)
 
+async def get_positioning_analysis_by_date(date: date, operator_id=None) -> list:
+    """Query door analysis filtered by date and operator_id and return them as a list of dicts"""
+    date_str = str(date)
+    where_clause = f"WHERE date = '{date_str}'"
+    query_params = {"date": date_str}
+
+    if operator_id is not None:
+        where_clause += " AND vehicle_operator_id = %(operator_id)s"
+        query_params["operator_id"] = operator_id
+    async with pool.connection() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                """
+                SELECT
+                    vehicle_number,
+                    vehicle_operator_id,
+                    date,
+                    events_amount,
+                    loc_null_ratio,
+                    loc_gps_ratio,
+                    loc_dr_ratio,
+                    loc_error_events,
+                    loc_error_types
+                FROM hfp.vehicle_analysis
+                {where_clause}
+                """.format(where_clause=where_clause),
+                query_params
+            )
+            rows = await cur.fetchall()
+
+            data = [
+                {
+                    "vehicle_number": r[0],
+                    "operator_id": r[1],
+                    "date": r[2],
+                    "events_amount": r[3],
+                    "loc_null_ratio": r[4],
+                    "loc_gps_ratio": r[5],
+                    "loc_dr_ratio": r[6],
+                    "loc_error_events": {
+                        "events": r[7],
+                        "types": r[8]
+                    }
+                }
+                for r in rows
+            ]
+            return data
+
 async def get_door_analysis_by_date(date: date, operator_id=None) -> list:
     """Query door analysis filtered by date and operator_id and return them as a list of dicts"""
     date_str = str(date)
@@ -434,15 +558,12 @@ async def get_all_analysis_by_date(date: date, operator_id=None) -> list:
                     vehicle_operator_id,
                     date,
                     events_amount,
-                    drst_null_ratio,
-                    drst_true_ratio,
-                    drst_false_ratio,
                     door_error_events,
                     door_error_types,
-                    odo_exists_ratio,
-                    odo_null_ratio,
                     odo_error_events,
-                    odo_error_types
+                    odo_error_types,
+                    loc_error_events,
+                    loc_error_types
                 FROM hfp.vehicle_analysis
                 {where_clause}
                 """.format(where_clause=where_clause),
@@ -456,18 +577,17 @@ async def get_all_analysis_by_date(date: date, operator_id=None) -> list:
                     "operator_id": r[1],
                     "date": r[2],
                     "events_amount": r[3],
-                    "drst_null_ratio": r[4],
-                    "drst_true_ratio": r[5],
-                    "drst_false_ratio": r[6],
-                    "odo_exists_ratio": r[9],
-                    "odo_null_ratio": r[10],
                     "door_error_events": {
-                        "events": r[7],
-                        "types": r[8]
+                        "events": r[4],
+                        "types": r[5]
                     },
                     "odo_error_events": {
-                        "events": r[11],
-                        "types": r[12]
+                        "events": r[6],
+                        "types": r[7]
+                    },
+                    "loc_error_events": {
+                        "events": r[8],
+                        "types": r[9]
                     }
                 }
                 for r in rows
@@ -491,8 +611,8 @@ async def get_vehicles_by_timestamp(date: date, vehicle_operator_id: int, vehicl
 
     where_clause = "WHERE tst > %(start)s AND tst < %(end)s AND event_type = 'VP'"
     if vehicle_operator_id is not None:
-        where_clause += " AND vehicle_operator_id = %(vehicle_operator_id)s"
-        query_params["vehicle_operator_id"] = vehicle_operator_id
+        where_clause += " AND operator_id = %(operator_id)s"
+        query_params["operator_id"] = vehicle_operator_id
     if vehicle_number is not None:
         where_clause += " AND vehicle_number = %(vehicle_number)s"
         query_params["vehicle_number"] = vehicle_number
@@ -502,7 +622,7 @@ async def get_vehicles_by_timestamp(date: date, vehicle_operator_id: int, vehicl
                 """
                 SELECT
                     tst,
-                    vehicle_operator_id,
+                    operator_id,
                     vehicle_number,
                     route_id,
                     direction_id,
@@ -513,8 +633,8 @@ async def get_vehicles_by_timestamp(date: date, vehicle_operator_id: int, vehicl
                     drst,
                     loc,
                     stop,
-                    longitude,
-                    latitude
+                    long,
+                    lat
                 FROM api.view_as_original_hfp_event
                 {where_clause}
                 """.format(where_clause=where_clause),
@@ -536,8 +656,8 @@ async def get_vehicles_by_timestamp(date: date, vehicle_operator_id: int, vehicl
                     "drst": r[9],
                     "loc": r[10],
                     "stop": r[11],
-                    "longitude": r[12],
-                    "latitude": r[13]
+                    "long": r[12],
+                    "lat": r[13]
                 }
                 for r in rows
             ]
@@ -554,8 +674,27 @@ async def insert_vehicle_data(vehicle_data):
                 vehicleNumber = data['vehicle_number']
                 try:
                     await cur.execute(
-                        "INSERT INTO hfp.vehicle_analysis (vehicle_number, vehicle_operator_id, date, drst_null_ratio, drst_true_ratio, drst_false_ratio, door_error_events, door_error_types, odo_exists_ratio, odo_null_ratio, odo_error_events, odo_error_types, events_amount) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                        (data['vehicle_number'], data['operator_id'], data['date'], data['drst_null_ratio'], data['drst_true_ratio'], data['drst_false_ratio'], json.dumps(data['door_error_events']['events'], cls=DateTimeEncoder), data['door_error_events']['types'], data['odo_exists_ratio'], data['odo_null_ratio'], json.dumps(data['odo_error_events']['events'], cls=DateTimeEncoder), data['odo_error_events']['types'], data['events_amount'])
+                        "INSERT INTO hfp.vehicle_analysis "
+                        "(vehicle_number, vehicle_operator_id, date, drst_null_ratio, "
+                        "drst_true_ratio, drst_false_ratio, door_error_events, door_error_types, "
+                        "odo_exists_ratio, odo_null_ratio, odo_error_events, odo_error_types, "
+                        "loc_null_ratio, loc_gps_ratio, loc_dr_ratio, loc_error_events, loc_error_types, "
+                        "events_amount) "
+                        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                        (
+                            data['vehicle_number'], data['operator_id'], data['date'],
+                            data['drst_null_ratio'], data['drst_true_ratio'],
+                            data['drst_false_ratio'], 
+                            json.dumps(data['door_error_events']['events'], cls=DateTimeEncoder), 
+                            data['door_error_events']['types'], 
+                            data['odo_exists_ratio'], data['odo_null_ratio'], 
+                            json.dumps(data['odo_error_events']['events'], cls=DateTimeEncoder), 
+                            data['odo_error_events']['types'], 
+                            data['loc_null_ratio'], data['loc_gps_ratio'], data['loc_dr_ratio'],
+                            json.dumps(data['loc_error_events']['events'], cls=DateTimeEncoder),
+                            data['loc_error_events']['types'], 
+                            data['events_amount']
+                        )
                     )
                 except Exception as e:
                     print(f"Error: {e}. Skipping row with date={data['date']} and vehicle_number={data['vehicle_number']}")

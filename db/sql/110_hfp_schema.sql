@@ -48,8 +48,6 @@ COMMENT ON COLUMN hfp.hfp_point.geom IS 'Vehicle position point in ETRS-TM35 coo
 
 SELECT create_hypertable('hfp.hfp_point', 'point_timestamp', chunk_time_interval => INTERVAL '6 hours');
 
-CREATE INDEX hfp_point_point_timestamp_idx ON hfp.hfp_point (point_timestamp DESC); -- This could be covered by other indices?
-COMMENT ON INDEX hfp.hfp_point_point_timestamp_idx IS 'Index timestamp filtering.';
 CREATE INDEX hfp_point_route_vehicle_idx ON hfp.hfp_point (route_id, vehicle_operator_id, vehicle_number, point_timestamp DESC);
 COMMENT ON INDEX hfp.hfp_point_route_vehicle_idx IS 'Index for hfp raw data queries.';
 CREATE INDEX hfp_point_event_idx ON hfp.hfp_point (hfp_event, point_timestamp DESC);
@@ -71,6 +69,7 @@ CREATE TABLE hfp.assumed_monitored_vehicle_journey (
   observed_operator_id  smallint      NOT NULL,
   min_timestamp         timestamptz   NOT NULL,
   max_timestamp         timestamptz   NOT NULL,
+  arr_count             integer       NULL        DEFAULT 0,
   modified_at           timestamptz   NULL        DEFAULT now(),
   CONSTRAINT assumed_monitored_vehicle_journey_pkey PRIMARY KEY (vehicle_operator_id, vehicle_number, oday, route_id, direction_id, "start", observed_operator_id)
 );
@@ -95,12 +94,17 @@ CREATE TABLE hfp.vehicle_analysis (
   odo_null_ratio FLOAT,
   odo_error_types TEXT[],
   odo_error_events JSONB,
+  loc_null_ratio FLOAT,
+  loc_gps_ratio FLOAT,
+  loc_dr_ratio FLOAT,
+  loc_error_types TEXT[],
+  loc_error_events JSONB,
   events_amount INTEGER
 );
 
-CREATE INDEX vehicle_analysis_date_vehicle_number_op_id_idx 
+CREATE INDEX vehicle_analysis_date_vehicle_number_op_id_idx
   ON hfp.vehicle_analysis (date, vehicle_number, vehicle_operator_id);
 
-ALTER TABLE hfp.vehicle_analysis 
-  ADD CONSTRAINT date_vehicle_number_op_id_unique 
+ALTER TABLE hfp.vehicle_analysis
+  ADD CONSTRAINT date_vehicle_number_op_id_unique
   UNIQUE (date, vehicle_number, vehicle_operator_id);

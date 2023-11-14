@@ -47,7 +47,5 @@ COMMENT ON COLUMN apc.apc.geom IS 'Vehicle position point in ETRS-TM35 coordinat
 SELECT create_hypertable('apc.apc', 'point_timestamp', chunk_time_interval => INTERVAL '24 hours');
 
 
-CREATE INDEX apc_timestamp_idx ON apc.apc (point_timestamp DESC); -- This could be covered by other indices?
-COMMENT ON INDEX apc.apc_timestamp_idx IS 'Index timestamp filtering.';
 CREATE INDEX apc_route_vehicle_idx ON apc.apc (route_id, vehicle_operator_id, vehicle_number, point_timestamp DESC);
 COMMENT ON INDEX apc.apc_route_vehicle_idx IS 'Index for apc raw data queries.';
