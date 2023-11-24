@@ -43,7 +43,9 @@ async def run_vehicle_analysis():
         # We're adding 6 hours to current datetime to make sure the date
         # for "yesterday" is yesterday from next morning's perspective
         now_plus_6_hours = now + timedelta(hours=6)
-        yesterday = now_plus_6_hours - timedelta(days=1)
+        yesterday_datetime = now_plus_6_hours - timedelta(days=1)
+        yesterday = yesterday_datetime.strftime("%Y-%m-%d")
+        
         logger.debug(f"Starting vehicle analysis for day {yesterday}.")
 
         vehicles = await get_vehicle_ids(yesterday)
