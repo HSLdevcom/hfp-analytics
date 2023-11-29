@@ -22,7 +22,14 @@ async def get_hfp_data(
     Query hfp raw data filtered by parameters to CSV format. Save the result to the input stream.
     Return row count.
     """
-    query = """
+    event_types_list = []
+    event_types_filter = "TRUE" 
+    
+    if event_types:
+        event_types_list = event_types.split(',')
+        event_types_filter = "event_type = ANY(%(event_types_list)s)"
+
+    query = f"""
         COPY (
             SELECT
                 *
@@ -33,20 +40,11 @@ async def get_hfp_data(
                     (%(operator_id)s IS NULL AND %(vehicle_number)s IS NULL ) OR
                     (operator_id = %(operator_id)s AND vehicle_number = %(vehicle_number)s)
                 ) AND
-                tst >= %(from_tst)s AND tst <= %(to_tst)s
+                tst >= %(from_tst)s AND tst <= %(to_tst)s AND
+                {event_types_filter}
+        ) TO STDOUT WITH CSV HEADER
     """
 
-    if event_types:
-        event_types_list = event_types.split(',')
-    else:
-        event_types_list = None
-    if event_types_list:
-        query += " AND event_type = ANY(%(event_types_list)s)"
-    else:
-        event_types_list = None
-
-    query += ") TO STDOUT WITH CSV HEADER"
-    
     async with pool.connection() as conn:
         async with conn.cursor().copy(
             query,
