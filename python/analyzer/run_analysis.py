@@ -4,7 +4,7 @@ import psycopg2
 import logging
 import time
 import common.constants as constants
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from itertools import chain
 from common.vehicle_analysis_utils import (
     analyze_vehicle_door_data,
@@ -37,13 +37,15 @@ logger = logging.getLogger('importer')
 
 async def run_vehicle_analysis():
     try:
-        today = date.today()
+        now = datetime.now()
         # Situations where the analysis is run before midnight causes the date
         # for "yesterday" to be the day before yesterday
         # We're adding 6 hours to current datetime to make sure the date
         # for "yesterday" is yesterday from next morning's perspective
-        today_plus_6_hours = today + timedelta(hours=6)
-        yesterday = today_plus_6_hours - timedelta(days=1)
+        now_plus_6_hours = now + timedelta(hours=6)
+        yesterday_datetime = now_plus_6_hours - timedelta(days=1)
+        yesterday = yesterday_datetime.strftime("%Y-%m-%d")
+        
         logger.debug(f"Starting vehicle analysis for day {yesterday}.")
 
         vehicles = await get_vehicle_ids(yesterday)

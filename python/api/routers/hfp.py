@@ -29,7 +29,6 @@ class GzippedFileResponse(Response):
             headers={"content-disposition": f'attachment; filename="{filename}"'},
         )
 
-
 @router.get(
     "/data",
     summary="Get HFP raw data",
@@ -68,6 +67,11 @@ async def get_hfp_raw_data(
         default=None,
         description="Vehicle number (in HFP topic). **Required** when no `route_id` provided.",
         example="662",
+    ),
+    event_types: Optional[str] = Query(
+        default=None,
+        description="Filter returned rows by event types.",
+        example="DOO,DOC",
     ),
     from_tst: datetime = Query(
         title="Minimum timestamp",
@@ -134,7 +138,7 @@ async def get_hfp_raw_data(
         from_tst = from_tst.replace(tzinfo=tzone)
         to_tst = to_tst.replace(tzinfo=tzone)
 
-        row_count = await get_hfp_data(route_id, operator_id, vehicle_number, from_tst, to_tst, input_stream)
+        row_count = await get_hfp_data(route_id, operator_id, vehicle_number, event_types, from_tst, to_tst, input_stream)
 
         if row_count == 0:
             # No data was found, return no content response
