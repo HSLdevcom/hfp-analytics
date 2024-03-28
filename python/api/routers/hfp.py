@@ -4,16 +4,18 @@ import io
 import gzip
 from typing import Optional
 from datetime import datetime, timezone, timedelta
+from http import HTTPStatus
 
 import time
 import logging
 from common.logger_util import CustomDbLogHandler
 
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import Response
+from fastapi.responses import Response, JSONResponse
+from fastapi.encoders import jsonable_encoder
 
 from api.services.hfp import get_hfp_data
-from api.services.tlr import get_tlr_data
+from api.services.tlr import get_tlr_data, get_tlr_data_as_json
 
 logger = logging.getLogger("api")
 
@@ -248,6 +250,11 @@ async def get_tlr_raw_data(
         ),
         example=2,
     ),
+    json: Optional[bool] = Query(
+        default=False,
+        title="Return JSON",
+        description="If set to true return data as JSON. Otherwise data will be returned as csv.",
+    ),
 ) -> Response:
     """
     Get tlr data in raw csv format filtered by parameters.
@@ -264,22 +271,23 @@ async def get_tlr_raw_data(
         to_tst = to_tst or from_tst + timedelta(hours=24)
         from_tst, to_tst = set_timezone(from_tst, tz), set_timezone(to_tst, tz)
 
-        input_stream = io.BytesIO()
-        output_stream = io.BytesIO()
-        row_count = await get_tlr_data(route_id, operator_id, vehicle_number, from_tst, to_tst, input_stream)
+        if json:
+            data = await get_tlr_data_as_json(route_id, operator_id, vehicle_number, from_tst, to_tst)
+            return JSONResponse(content=jsonable_encoder(data))
+        else:
+            input_stream = io.BytesIO()
+            output_stream = io.BytesIO()
+            row_count = await get_tlr_data(route_id, operator_id, vehicle_number, from_tst, to_tst, input_stream)
 
-        if row_count == 0:
-            return Response(status_code=HTTPStatus.NO_CONTENT)
+            logger.debug("Tlr data received. Compressing.")
 
-        logger.debug("Tlr data received. Compressing.")
+            input_stream.seek(0)
+            with gzip.GzipFile(fileobj=output_stream, mode="wb") as compressed_data_stream:
+                for data in iter(lambda: input_stream.read(CHUNK_SIZE), b''):
+                    compressed_data_stream.write(data)
 
-        input_stream.seek(0)
-        with gzip.GzipFile(fileobj=output_stream, mode="wb") as compressed_data_stream:
-            for data in iter(lambda: input_stream.read(CHUNK_SIZE), b''):
-                compressed_data_stream.write(data)
+            filename = create_filename("tlr-export_", from_tst.strftime("%Y%m%d") if from_tst else None, route_id, operator_id, vehicle_number)
+            response = GzippedFileResponse(filename=filename, content=output_stream.getvalue())
 
-        filename = create_filename("tlr-export_", from_tst.strftime("%Y%m%d") if from_tst else None, route_id, operator_id, vehicle_number)
-        response = GzippedFileResponse(filename=filename, content=output_stream.getvalue())
-
-        logger.debug(f"Tlr raw data fetch and export completed in {int(time.time() - fetch_start_time)} seconds. Exported file: {filename}")
-        return response
+            logger.debug(f"Tlr raw data fetch and export completed in {int(time.time() - fetch_start_time)} seconds. Exported file: {filename}")
+            return response
