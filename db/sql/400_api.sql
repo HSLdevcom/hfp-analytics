@@ -52,7 +52,7 @@ CREATE OR REPLACE VIEW api.view_as_original_apc_event AS (
 );
 COMMENT ON VIEW api.view_as_original_apc_event IS 'View APC data named like in original APC data format.';
 
-CREATE OR REPLACE VIEW api.view_as_original_tlr_event AS (
+CREATE OR REPLACE VIEW api.view_as_original_tlp_event AS (
   SELECT
     acc,
     desi,
@@ -110,7 +110,7 @@ CREATE OR REPLACE VIEW api.view_as_original_tlr_event AS (
     uuid,
     veh,
     vehicle_number
-  FROM tlr.tlr
+  FROM tlp.tlp
 );
 
 
