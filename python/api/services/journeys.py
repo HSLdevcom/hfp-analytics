@@ -59,6 +59,9 @@ def filter_data(data):
     hashmap = {}
     filtered_keys = set()
 
+    # We want to ignore journeys with less than two arrival events
+    data = [item for item in data if item['arr_count'] >= 2]
+
     for item in data:
         key = (item['route_id'], item['direction_id'], item['oday'], item['start'])
         item['filtered'] = False
