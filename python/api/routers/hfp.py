@@ -177,19 +177,19 @@ async def get_hfp_raw_data(
         return response
 
 @router.get(
-    "/tlr",
-    summary="Get TLR data",
-    description="Returns TLR data in a gzip compressed csv file.",
+    "/trafficlightpriority",
+    summary="Get TLR/TLA data",
+    description="Returns TLR/TLA data in a gzip compressed csv file.",
     response_class=GzippedFileResponse,
     responses={
         200: {
             "description": "Successful query. The data is returned as an attachment in the response. "
             "File format comes from query parameters: "
-            "`tlr-export_<from_date>_<route_id>_<operator_id>_<vehicle_number>.csv.gz`",
+            "`trafficlightpriority-export_<from_date>_<route_id>_<operator_id>_<vehicle_number>.csv.gz`",
             "content": {"application/gzip": {"schema": None, "example": None}},
             "headers": {
                 "Content-Disposition": {
-                    "schema": {"example": 'attachment; filename="tlr-export_20240318_1003H6.csv.gz"'}
+                    "schema": {"example": 'attachment; filename="trafficlightpriority-export_20240318_1003H6.csv.gz"'}
                 }
             },
         },
@@ -257,11 +257,11 @@ async def get_tlr_raw_data(
     ),
 ) -> Response:
     """
-    Get tlr data in raw csv format filtered by parameters.
+    Get TLR/TLA data in raw csv format filtered by parameters.
     """
     with CustomDbLogHandler("api"):
         fetch_start_time = time.time()
-        logger.debug(f"Fetching tlr data. route_id: {route_id}, operator_id: {operator_id}, "
+        logger.debug(f"Fetching TLR/TLA data. route_id: {route_id}, operator_id: {operator_id}, "
                      f"vehicle_number: {vehicle_number}, from_tst: {from_tst}, to_tst: {to_tst}")
 
         if not route_id and not (operator_id and vehicle_number):
@@ -279,15 +279,15 @@ async def get_tlr_raw_data(
             output_stream = io.BytesIO()
             row_count = await get_tlr_data(route_id, operator_id, vehicle_number, from_tst, to_tst, input_stream)
 
-            logger.debug("Tlr data received. Compressing.")
+            logger.debug("TLR/TLA data received. Compressing.")
 
             input_stream.seek(0)
             with gzip.GzipFile(fileobj=output_stream, mode="wb") as compressed_data_stream:
                 for data in iter(lambda: input_stream.read(CHUNK_SIZE), b''):
                     compressed_data_stream.write(data)
 
-            filename = create_filename("tlr-export_", from_tst.strftime("%Y%m%d") if from_tst else None, route_id, operator_id, vehicle_number)
+            filename = create_filename("trafficlightpriority-export_", from_tst.strftime("%Y%m%d") if from_tst else None, route_id, operator_id, vehicle_number)
             response = GzippedFileResponse(filename=filename, content=output_stream.getvalue())
 
-            logger.debug(f"Tlr raw data fetch and export completed in {int(time.time() - fetch_start_time)} seconds. Exported file: {filename}")
+            logger.debug(f"TLR/TLA raw data fetch and export completed in {int(time.time() - fetch_start_time)} seconds. Exported file: {filename}")
             return response
