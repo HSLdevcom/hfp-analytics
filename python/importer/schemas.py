@@ -118,10 +118,10 @@ HFP: DBSchema = {
     },
 }
 
-TLR: DBSchema = {
+TLP: DBSchema = {
     "copy_target": {
         "schema": "staging",
-        "table": "tlr_raw",
+        "table": "tlp_raw",
     },
     "fields": {
         "mapping": {
@@ -186,7 +186,7 @@ TLR: DBSchema = {
         "modifier_function": None,
     },
     "scripts": {
-        "process": SQL("CALL staging.import_and_normalize_tlr()"),
+        "process": SQL("CALL staging.import_and_normalize_tlp()"),
         "process_invalid": None,
     },
 }

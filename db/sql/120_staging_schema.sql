@@ -239,7 +239,7 @@ $procedure$;
 
 COMMENT ON PROCEDURE staging.import_and_normalize_apc IS 'Procedure to copy data from staging schema to apc schema.';
 
-CREATE TABLE staging.tlr_raw (
+CREATE TABLE staging.tlp_raw (
   acc                   real,
   desi                  text,
   dir                   integer,
@@ -299,10 +299,10 @@ CREATE TABLE staging.tlr_raw (
 );
 
 
-CREATE OR REPLACE PROCEDURE staging.import_and_normalize_tlr()
+CREATE OR REPLACE PROCEDURE staging.import_and_normalize_tlp()
 LANGUAGE sql
 AS $procedure$
-  INSERT INTO tlr.tlr (
+  INSERT INTO tlp.tlp (
     acc,
     desi,
     dir,
@@ -417,9 +417,9 @@ AS $procedure$
     uuid,
     veh,
     vehicle_number
-  FROM staging.tlr_raw
+  FROM staging.tlp_raw
   ORDER BY route_id, vehicle_number
   ON CONFLICT DO NOTHING;
 $procedure$;
 
-COMMENT ON PROCEDURE staging.import_and_normalize_tlr IS 'Procedure to copy data from staging schema to tlr schema.';
+COMMENT ON PROCEDURE staging.import_and_normalize_tlp IS 'Procedure to copy data from staging schema to tlp schema.';

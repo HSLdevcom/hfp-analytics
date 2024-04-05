@@ -15,7 +15,7 @@ from fastapi.responses import Response, JSONResponse
 from fastapi.encoders import jsonable_encoder
 
 from api.services.hfp import get_hfp_data
-from api.services.tlr import get_tlr_data, get_tlr_data_as_json
+from api.services.tlp import get_tlp_data, get_tlp_data_as_json
 
 logger = logging.getLogger("api")
 
@@ -196,7 +196,7 @@ async def get_hfp_raw_data(
         204: {"description": "Query returned no data with the given parameters."},
     },
 )
-async def get_tlr_raw_data(
+async def get_tlp_raw_data(
     route_id: Optional[str] = Query(
         default=None,
         title="Route ID",
@@ -272,12 +272,12 @@ async def get_tlr_raw_data(
         from_tst, to_tst = set_timezone(from_tst, tz), set_timezone(to_tst, tz)
 
         if json:
-            data = await get_tlr_data_as_json(route_id, operator_id, vehicle_number, from_tst, to_tst)
+            data = await get_tlp_data_as_json(route_id, operator_id, vehicle_number, from_tst, to_tst)
             return JSONResponse(content=jsonable_encoder(data))
         else:
             input_stream = io.BytesIO()
             output_stream = io.BytesIO()
-            row_count = await get_tlr_data(route_id, operator_id, vehicle_number, from_tst, to_tst, input_stream)
+            row_count = await get_tlp_data(route_id, operator_id, vehicle_number, from_tst, to_tst, input_stream)
 
             logger.debug("TLR & TLA data received. Compressing.")
 
