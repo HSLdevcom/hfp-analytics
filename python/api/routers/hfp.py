@@ -15,7 +15,7 @@ from fastapi.responses import Response, JSONResponse
 from fastapi.encoders import jsonable_encoder
 
 from api.services.hfp import get_hfp_data
-from api.services.tlr import get_tlr_data, get_tlr_data_as_json
+from api.services.tlp import get_tlp_data, get_tlp_data_as_json
 
 logger = logging.getLogger("api")
 
@@ -177,26 +177,26 @@ async def get_hfp_raw_data(
         return response
 
 @router.get(
-    "/trafficlightpriority",
-    summary="Get TLR/TLA data",
-    description="Returns TLR/TLA data in a gzip compressed csv file.",
+    "/tlp",
+    summary="Get TLR & TLA data",
+    description="Returns TLR & TLA data in a gzip compressed csv file.",
     response_class=GzippedFileResponse,
     responses={
         200: {
             "description": "Successful query. The data is returned as an attachment in the response. "
             "File format comes from query parameters: "
-            "`trafficlightpriority-export_<from_date>_<route_id>_<operator_id>_<vehicle_number>.csv.gz`",
+            "`tlp-export_<from_date>_<route_id>_<operator_id>_<vehicle_number>.csv.gz`",
             "content": {"application/gzip": {"schema": None, "example": None}},
             "headers": {
                 "Content-Disposition": {
-                    "schema": {"example": 'attachment; filename="trafficlightpriority-export_20240318_1003H6.csv.gz"'}
+                    "schema": {"example": 'attachment; filename="tlp-export_20240318_1003H6.csv.gz"'}
                 }
             },
         },
         204: {"description": "Query returned no data with the given parameters."},
     },
 )
-async def get_tlr_raw_data(
+async def get_tlp_raw_data(
     route_id: Optional[str] = Query(
         default=None,
         title="Route ID",
@@ -257,11 +257,11 @@ async def get_tlr_raw_data(
     ),
 ) -> Response:
     """
-    Get TLR/TLA data in raw csv format filtered by parameters.
+    Get TLR & TLA data in raw csv format filtered by parameters.
     """
     with CustomDbLogHandler("api"):
         fetch_start_time = time.time()
-        logger.debug(f"Fetching TLR/TLA data. route_id: {route_id}, operator_id: {operator_id}, "
+        logger.debug(f"Fetching TLR & TLA data. route_id: {route_id}, operator_id: {operator_id}, "
                      f"vehicle_number: {vehicle_number}, from_tst: {from_tst}, to_tst: {to_tst}")
 
         if not route_id and not (operator_id and vehicle_number):
@@ -272,22 +272,22 @@ async def get_tlr_raw_data(
         from_tst, to_tst = set_timezone(from_tst, tz), set_timezone(to_tst, tz)
 
         if json:
-            data = await get_tlr_data_as_json(route_id, operator_id, vehicle_number, from_tst, to_tst)
+            data = await get_tlp_data_as_json(route_id, operator_id, vehicle_number, from_tst, to_tst)
             return JSONResponse(content=jsonable_encoder(data))
         else:
             input_stream = io.BytesIO()
             output_stream = io.BytesIO()
-            row_count = await get_tlr_data(route_id, operator_id, vehicle_number, from_tst, to_tst, input_stream)
+            row_count = await get_tlp_data(route_id, operator_id, vehicle_number, from_tst, to_tst, input_stream)
 
-            logger.debug("TLR/TLA data received. Compressing.")
+            logger.debug("TLR & TLA data received. Compressing.")
 
             input_stream.seek(0)
             with gzip.GzipFile(fileobj=output_stream, mode="wb") as compressed_data_stream:
                 for data in iter(lambda: input_stream.read(CHUNK_SIZE), b''):
                     compressed_data_stream.write(data)
 
-            filename = create_filename("trafficlightpriority-export_", from_tst.strftime("%Y%m%d") if from_tst else None, route_id, operator_id, vehicle_number)
+            filename = create_filename("tlp-export_", from_tst.strftime("%Y%m%d") if from_tst else None, route_id, operator_id, vehicle_number)
             response = GzippedFileResponse(filename=filename, content=output_stream.getvalue())
 
-            logger.debug(f"TLR/TLA raw data fetch and export completed in {int(time.time() - fetch_start_time)} seconds. Exported file: {filename}")
+            logger.debug(f"TLR & TLA raw data fetch and export completed in {int(time.time() - fetch_start_time)} seconds. Exported file: {filename}")
             return response

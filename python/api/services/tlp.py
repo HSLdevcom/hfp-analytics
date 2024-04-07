@@ -8,7 +8,7 @@ from psycopg.rows import dict_row
 from common.database import pool
 from typing import Optional
 
-async def get_tlr_data(
+async def get_tlp_data(
     route_id: Optional[str],
     operator_id: Optional[int],
     vehicle_number: Optional[int],
@@ -17,14 +17,14 @@ async def get_tlr_data(
     stream: BytesIO,
 ) -> int:
     """
-    Query tlr raw data filtered by parameters and return as CSV or JSON.
+    Query tlp raw data filtered by parameters and return as CSV or JSON.
     """
 
     query = f"""
         COPY (
             SELECT
                 *
-            FROM api.view_as_original_tlr_event
+            FROM api.view_as_original_tlp_event
             WHERE
                 (%(route_id)s IS NULL OR route_id = %(route_id)s) AND
                 (
@@ -53,19 +53,19 @@ async def get_tlr_data(
                 stream.write(row)
         return row_count
 
-async def get_tlr_data_as_json(
+async def get_tlp_data_as_json(
     route_id: Optional[str],
     operator_id: Optional[int],
     vehicle_number: Optional[int],
     from_tst: datetime,
     to_tst: datetime,
 ) -> list[dict]:
-    """Query TLR raw data filtered by parameters to JSON."""
+    """Query TLP raw data filtered by parameters to JSON."""
     async with pool.connection() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(
                 """
-                SELECT * FROM api.view_as_original_tlr_event
+                SELECT * FROM api.view_as_original_tlp_event
                 WHERE
                     (%(route_id)s::text IS NULL OR route_id = %(route_id)s) AND
                     (
