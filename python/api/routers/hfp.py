@@ -215,6 +215,11 @@ async def get_tlp_raw_data(
         description="Vehicle number (in HFP topic). **Required** when no `route_id` provided.",
         example="662",
     ),
+    sid: Optional[int] = Query(
+        default=None,
+        description="Filter results by SID",
+        example="",
+    ),
     from_tst: datetime = Query(
         title="Minimum timestamp",
         description=(
@@ -262,7 +267,7 @@ async def get_tlp_raw_data(
     with CustomDbLogHandler("api"):
         fetch_start_time = time.time()
         logger.debug(f"Fetching TLR & TLA data. route_id: {route_id}, operator_id: {operator_id}, "
-                     f"vehicle_number: {vehicle_number}, from_tst: {from_tst}, to_tst: {to_tst}")
+                     f"vehicle_number: {vehicle_number}, sid: {sid}, from_tst: {from_tst}, to_tst: {to_tst}")
 
         if not route_id and not (operator_id and vehicle_number):
             logger.error("Missing required parameters.")
@@ -272,12 +277,12 @@ async def get_tlp_raw_data(
         from_tst, to_tst = set_timezone(from_tst, tz), set_timezone(to_tst, tz)
 
         if json:
-            data = await get_tlp_data_as_json(route_id, operator_id, vehicle_number, from_tst, to_tst)
+            data = await get_tlp_data_as_json(route_id, operator_id, vehicle_number, sid, from_tst, to_tst)
             return JSONResponse(content=jsonable_encoder(data))
         else:
             input_stream = io.BytesIO()
             output_stream = io.BytesIO()
-            row_count = await get_tlp_data(route_id, operator_id, vehicle_number, from_tst, to_tst, input_stream)
+            row_count = await get_tlp_data(route_id, operator_id, vehicle_number, sid, from_tst, to_tst, input_stream)
 
             logger.debug("TLR & TLA data received. Compressing.")
 

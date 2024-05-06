@@ -74,7 +74,13 @@ def import_blob(blob_name):
 
     try:
         importer_type = blob_metadata.get("type")
-        importer = importers["APC"] if importer_type == "APC" else importers["TLP"] if importer_type == "TLP" else importers["HFP"]
+        if importer_type == "APC":
+            importer = importers["APC"]
+        elif importer_type in ["TLR", "TLA"]:
+            importer = importers["TLP"]
+        else:
+            importer = importers["HFP"]
+
 
         data_rows = importer.get_data_from_blob(blob_name)
 
