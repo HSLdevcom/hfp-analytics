@@ -80,8 +80,7 @@ def import_blob(blob_name):
             importer = importers["TLP"]
         else:
             importer = importers["HFP"]
-            print(importer.db_schema)
-            print(importer_type)
+
 
         data_rows = importer.get_data_from_blob(blob_name)
 
