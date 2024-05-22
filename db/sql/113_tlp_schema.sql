@@ -9,6 +9,7 @@ CREATE TABLE tlp.tlp (
   longitude             double precision,
   oday                  date,
   oper                  integer,
+  direction_id          smallint,
   received_at           timestamptz,
   route_id              text,
   sid                   integer,

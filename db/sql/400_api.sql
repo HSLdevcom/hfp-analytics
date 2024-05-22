@@ -61,6 +61,7 @@ CREATE OR REPLACE VIEW api.view_as_original_tlp_event AS (
     longitude AS long,
     oday,
     oper,
+    direction_id,
     received_at,
     route_id,
     sid,
