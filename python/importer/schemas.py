@@ -132,6 +132,7 @@ TLP: DBSchema = {
             "oday": "oday",
             "oper": "oper",
             "receivedAt": "received_at",
+            "dir": "direction_id",
             "routeId": "route_id",
             "sid": "sid",
             "signalGroupId": "signal_group_id",
