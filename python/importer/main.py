@@ -13,7 +13,7 @@ from common.config import (
 )
 
 from .importer import Importer, parquet_to_dict_decoder, zst_csv_to_dict_decoder
-from .schemas import APC as APCSchema, HFP as HFPSchema
+from .schemas import APC as APCSchema, HFP as HFPSchema, TLP as TLPSchema
 from .services import (
     create_db_lock,
     release_db_lock,
@@ -32,6 +32,7 @@ importers = {
         APC_STORAGE_CONTAINER_NAME, data_converter=parquet_to_dict_decoder, db_schema=APCSchema, blob_name_prefix="apc_"
     ),
     "HFP": Importer(HFP_STORAGE_CONTAINER_NAME, data_converter=zst_csv_to_dict_decoder, db_schema=HFPSchema),
+    "TLP": Importer(HFP_STORAGE_CONTAINER_NAME, data_converter=zst_csv_to_dict_decoder, db_schema=TLPSchema),
 }
 
 
@@ -50,7 +51,7 @@ def update_blob_list_for_import(day_since_today):
                 blob_data = {}
 
                 blob_data["blob_name"] = blob_name
-                blob_data["event_type"] = metadata.get("eventType") if importer_type == "HFP" else "APC"
+                blob_data["event_type"] = metadata.get("eventType") if importer_type in ["HFP", "TLP"] else "APC"
                 blob_data["min_oday"] = metadata.get("min_oday")
                 blob_data["max_oday"] = metadata.get("max_oday")
                 blob_data["min_tst"] = metadata.get("min_tst")
@@ -72,7 +73,15 @@ def import_blob(blob_name):
     blob_is_invalid = bool(blob_metadata.get("invalid"))
 
     try:
-        importer = importers["APC"] if blob_metadata.get("type") == "APC" else importers["HFP"]
+        importer_type = blob_metadata.get("type")
+        if importer_type == "APC":
+            importer = importers["APC"]
+        elif importer_type in ["TLR", "TLA"]:
+            importer = importers["TLP"]
+        else:
+            importer = importers["HFP"]
+
+
         data_rows = importer.get_data_from_blob(blob_name)
 
         copy_data_to_db(db_schema=importer.db_schema, data_rows=data_rows, invalid_blob=blob_is_invalid)

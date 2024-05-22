@@ -238,3 +238,80 @@ AS $procedure$
 $procedure$;
 
 COMMENT ON PROCEDURE staging.import_and_normalize_apc IS 'Procedure to copy data from staging schema to apc schema.';
+
+CREATE TABLE staging.tlp_raw (
+  event_type            text,
+  location_quality_method text,
+  latitude              double precision,
+  longitude             double precision,
+  oday                  date,
+  oper                  integer,
+  direction_id          smallint,
+  received_at           timestamptz,
+  route_id              text,
+  sid                   integer,
+  signal_group_id       integer,
+  start                 text,
+  tlp_att_seq           integer,
+  tlp_decision          text,
+  tlp_priority_level    text,
+  tlp_reason            text,
+  tlp_request_type      text,
+  tlp_signal_group_nbr  integer,
+  point_timestamp       timestamptz,
+  vehicle_number        integer NOT NULL
+);
+
+
+CREATE OR REPLACE PROCEDURE staging.import_and_normalize_tlp()
+LANGUAGE sql
+AS $procedure$
+  INSERT INTO tlp.tlp (
+    event_type,
+    location_quality_method,
+    latitude,
+    longitude,
+    oday,
+    oper,
+    direction_id,
+    received_at,
+    route_id,
+    sid,
+    signal_group_id,
+    start,
+    tlp_att_seq,
+    tlp_decision,
+    tlp_priority_level,
+    tlp_reason,
+    tlp_request_type,
+    tlp_signal_group_nbr,
+    point_timestamp,
+    vehicle_number
+  )
+  SELECT
+    event_type,
+    location_quality_method,
+    latitude,
+    longitude,
+    oday,
+    oper,
+    direction_id,
+    received_at,
+    route_id,
+    sid,
+    signal_group_id,
+    start,
+    tlp_att_seq,
+    tlp_decision,
+    tlp_priority_level,
+    tlp_reason,
+    tlp_request_type,
+    tlp_signal_group_nbr,
+    point_timestamp,
+    vehicle_number
+  FROM staging.tlp_raw
+  ORDER BY route_id, vehicle_number
+  ON CONFLICT DO NOTHING;
+$procedure$;
+
+COMMENT ON PROCEDURE staging.import_and_normalize_tlp IS 'Procedure to copy data from staging schema to tlp schema.';
