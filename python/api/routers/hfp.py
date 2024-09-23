@@ -14,7 +14,7 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response, JSONResponse
 from fastapi.encoders import jsonable_encoder
 
-from api.services.hfp import get_hfp_data
+from api.services.hfp import get_hfp_data, get_speeding_data
 from api.services.tlp import get_tlp_data, get_tlp_data_as_json
 
 logger = logging.getLogger("api")
@@ -296,3 +296,113 @@ async def get_tlp_raw_data(
 
             logger.debug(f"TLR & TLA raw data fetch and export completed in {int(time.time() - fetch_start_time)} seconds. Exported file: {filename}")
             return response
+
+
+@router.get(
+    "/speeding",
+    summary="Get speeding data by route id, given speed limit, tst range and bounding box",
+    description="Returns speeding data in a gzip compressed csv file.",
+    response_class=GzippedFileResponse,
+    responses={
+        200: {
+            "description": "Successful query. The data is returned as an attachment in the response. "
+            "File format comes from query parameters: "
+            "`speeding-export_<from_tst>_<to_tst>_<route_id>_<min_spd>.csv.gz`",
+            "content": {"application/gzip": {"schema": None, "example": None}},
+            "headers": {
+                "Content-Disposition": {
+                    "schema": {"example": 'attachment; filename="speeding-export_20240915_20240923_2015_20.csv"'}
+                }
+            },
+        },
+        204: {"description": "Query returned no data with the given parameters."},
+    },
+)
+async def get_speeding(
+    route_id: int = Query(
+        default=None,
+        title="Route ID",
+        description="JORE ID of the route",
+        example=2015,
+    ),
+    min_spd: int = Query(
+        default=None,
+        title="Speed limit",
+        description="Speed limit in km/h",
+        example=23,
+    ),
+    from_tst: datetime = Query(
+        title="Minimum timestamp",
+        description=(
+            "The timestamp from which the data will be queried. (tst in HFP payload) "
+            "Timestamp will be read as UTC"
+        ),
+        example="2024-09-15T00:00:00",
+    ),
+    to_tst: datetime = Query(
+        default=None,
+        title="Maximum timestamp",
+        description=(
+            "The timestamp to which the data will be queried. (tst in HFP payload) "
+            "Timestamp will be read as UTC"
+        ),
+        example="2024-09-23T00:00:00",
+    ),
+    x_min: int = Query(
+        default=None,
+        title="x_min",
+        description="Coordinate of south-west corner of the bounding box (x_min, y_min). Coordinate should be given in ETRS-TM35FIN coordinate system.",
+        example=378651,
+    ),
+    y_min: int = Query(
+        default=None,
+        title="y_min",
+        description="Coordinate of south-west corner of the bounding box (x_min, y_min). Coordinate should be given in ETRS-TM35FIN coordinate system.",
+        example=6677277,
+    ),
+    x_max: int = Query(
+        default=None,
+        title="x_max",
+        description="Coordinate of north-east corner of the bounding box (x_max, y_max). Coordinate should be given in ETRS-TM35FIN coordinate system.",
+        example=378893,
+    ),
+    y_max: int = Query(
+        default=None,
+        title="y_max",
+        description="Coordinate of north-east corner of the bounding box (x_max, y_max). Coordinate should be given in ETRS-TM35FIN coordinate system.",
+        example=6677652,
+    ),
+) -> JSONResponse:
+    input_stream = io.BytesIO()
+    output_stream = io.BytesIO()
+
+    required_params = {
+        "route_id": route_id,
+        "min_spd": min_spd,
+        "from_tst": from_tst,
+        "to_tst": to_tst,
+        "x_min": x_min,
+        "y_min": y_min,
+        "x_max": x_max,
+        "y_max": y_max,
+    }
+
+    missing_params = [param_name for param_name, param_value in required_params.items() if param_value is None]
+
+    if missing_params:
+        logger.error(f"Missing required parameters: {', '.join(missing_params)}")
+        raise HTTPException(
+            status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
+            detail=f"The following parameters are missing: {', '.join(missing_params)}"
+        )
+    
+    data = await get_speeding_data(route_id, min_spd, from_tst, to_tst, x_min, y_min, x_max, y_max, input_stream)
+    input_stream.seek(0)
+    with gzip.GzipFile(fileobj=output_stream, mode="wb") as compressed_data_stream:
+        for data in iter(lambda: input_stream.read(CHUNK_SIZE), b''):
+            compressed_data_stream.write(data)
+
+    filename = create_filename("speeding-export_", from_tst.strftime("%Y%m%d"), to_tst.strftime("%Y%m%d"), route_id, min_spd)
+    response = GzippedFileResponse(filename=filename, content=output_stream.getvalue())
+    return response
+
