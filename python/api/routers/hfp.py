@@ -373,36 +373,43 @@ async def get_speeding(
         example=6677652,
     ),
 ) -> JSONResponse:
-    input_stream = io.BytesIO()
-    output_stream = io.BytesIO()
+    with CustomDbLogHandler("api"):
+        fetch_start_time = time.time()
 
-    required_params = {
-        "route_id": route_id,
-        "min_spd": min_spd,
-        "from_tst": from_tst,
-        "to_tst": to_tst,
-        "x_min": x_min,
-        "y_min": y_min,
-        "x_max": x_max,
-        "y_max": y_max,
-    }
+        input_stream = io.BytesIO()
+        output_stream = io.BytesIO()
 
-    missing_params = [param_name for param_name, param_value in required_params.items() if param_value is None]
+        required_params = {
+            "route_id": route_id,
+            "min_spd": min_spd,
+            "from_tst": from_tst,
+            "to_tst": to_tst,
+            "x_min": x_min,
+            "y_min": y_min,
+            "x_max": x_max,
+            "y_max": y_max,
+        }
 
-    if missing_params:
-        logger.error(f"Missing required parameters: {', '.join(missing_params)}")
-        raise HTTPException(
-            status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
-            detail=f"The following parameters are missing: {', '.join(missing_params)}"
-        )
-    
-    data = await get_speeding_data(route_id, min_spd, from_tst, to_tst, x_min, y_min, x_max, y_max, input_stream)
-    input_stream.seek(0)
-    with gzip.GzipFile(fileobj=output_stream, mode="wb") as compressed_data_stream:
-        for data in iter(lambda: input_stream.read(CHUNK_SIZE), b''):
-            compressed_data_stream.write(data)
+        missing_params = [param_name for param_name, param_value in required_params.items() if param_value is None]
 
-    filename = create_filename("speeding-export_", from_tst.strftime("%Y%m%d"), to_tst.strftime("%Y%m%d"), route_id, min_spd)
-    response = GzippedFileResponse(filename=filename, content=output_stream.getvalue())
-    return response
+        if missing_params:
+            logger.error(f"Missing required parameters: {', '.join(missing_params)}")
+            raise HTTPException(
+                status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
+                detail=f"The following parameters are missing: {', '.join(missing_params)}"
+            )
+        logger.debug(f"Fetching speeding data. route_id: {route_id}, min_spd: {min_spd}, from_tst: {from_tst}, to_tst:{to_tst}")
+        data = await get_speeding_data(route_id, min_spd, from_tst, to_tst, x_min, y_min, x_max, y_max, input_stream)
+        logger.debug(f"Speeding data for {route_id} received. Compressing.")
+        input_stream.seek(0)
+        with gzip.GzipFile(fileobj=output_stream, mode="wb") as compressed_data_stream:
+            for data in iter(lambda: input_stream.read(CHUNK_SIZE), b''):
+                compressed_data_stream.write(data)
+
+        filename = create_filename("speeding-export_", from_tst.strftime("%Y%m%d"), to_tst.strftime("%Y%m%d"), route_id, min_spd)
+        response = GzippedFileResponse(filename=filename, content=output_stream.getvalue())
+
+        logger.debug(f"Speeding data fetch and export completed in {int(time.time() - fetch_start_time)} seconds. Exported file: {filename}")
+
+        return response
 
