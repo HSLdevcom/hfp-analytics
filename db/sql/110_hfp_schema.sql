@@ -20,6 +20,7 @@ CREATE TABLE hfp.hfp_point (
   drst                  bool,
   loc                   text,
   stop                  integer,
+  hdg                   integer,
   geom                  geometry(POINT, 3067),
   CONSTRAINT hfp_point_pkey PRIMARY KEY (point_timestamp, vehicle_operator_id, vehicle_number, hfp_event)
 );
