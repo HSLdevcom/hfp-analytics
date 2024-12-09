@@ -10,7 +10,6 @@ from common.config import (
     HFP_STORAGE_CONTAINER_NAME,
     HFP_EVENTS_TO_IMPORT,
     IMPORT_COVERAGE_DAYS,
-    APC_IMPORT_COVERAGE_DAYS,
 )
 
 from .importer import Importer, parquet_to_dict_decoder, zst_csv_to_dict_decoder
@@ -37,14 +36,10 @@ importers = {
 }
 
 
-def update_blob_list_for_import():
+def update_blob_list_for_import(day_since_today):
     for importer_type, importer in importers.items():
-        if importer_type == 'APC':
-            day_since_today = APC_IMPORT_COVERAGE_DAYS
-        else:
-            day_since_today = IMPORT_COVERAGE_DAYS
+        import_date = datetime.now() - timedelta(day_since_today)
 
-        import_date = datetime.now() - timedelta(days=day_since_today)
         while import_date <= datetime.now():
             for blob_name in importer.list_blobs_for_date(import_date):
                 if is_blob_listed(blob_name):
@@ -113,7 +108,7 @@ def run_import() -> None:
     start_time = datetime.now()
 
     # update importer.blob -table
-    update_blob_list_for_import()
+    update_blob_list_for_import(IMPORT_COVERAGE_DAYS)
 
     # get all pending blobs from importer.blob
     blob_names = pickup_blobs_for_import()
