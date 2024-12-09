@@ -74,7 +74,6 @@ POSTGRES_CONNECTION_STRING: str = get_env("POSTGRES_CONNECTION_STRING")
 # Envs related to importing blob
 HFP_EVENTS_TO_IMPORT: list[str] = get_env("HFP_EVENTS_TO_IMPORT", modifier=env_as_upper_str_list)
 IMPORT_COVERAGE_DAYS: int = get_env("IMPORT_COVERAGE_DAYS", "14", modifier=env_as_int)
-APC_IMPORT_COVERAGE_DAYS: int = get_env("APC_IMPORT_COVERAGE_DAYS", "365", modifier=env_as_int)
 
 # Authentication str for docs.
 DEFAULT_AUTH_CODE: str = get_env("DEFAULT_AUTH_CODE", "")
