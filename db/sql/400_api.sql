@@ -22,6 +22,7 @@ CREATE OR REPLACE VIEW api.view_as_original_hfp_event AS (
     drst::int,
     loc,
     stop,
+    hdg,
     ST_X(ST_Transform(geom, 4326)) AS long,
     ST_Y(ST_Transform(geom, 4326)) AS lat
   FROM hfp.hfp_point
@@ -51,6 +52,32 @@ CREATE OR REPLACE VIEW api.view_as_original_apc_event AS (
   FROM apc.apc
 );
 COMMENT ON VIEW api.view_as_original_apc_event IS 'View APC data named like in original APC data format.';
+
+
+CREATE OR REPLACE VIEW api.view_as_original_tlp_event AS (
+  SELECT
+    event_type,
+    location_quality_method,
+    latitude AS lat,
+    longitude AS long,
+    oday,
+    oper,
+    direction_id,
+    received_at,
+    route_id,
+    sid,
+    signal_group_id,
+    start,
+    tlp_att_seq,
+    tlp_decision,
+    tlp_priority_level,
+    tlp_reason,
+    tlp_request_type,
+    tlp_signal_group_nbr,
+    point_timestamp AS tst,
+    vehicle_number
+  FROM tlp.tlp
+);
 
 
 CREATE VIEW api.view_jore_stop_4326 AS (

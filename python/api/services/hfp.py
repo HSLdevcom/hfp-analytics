@@ -63,3 +63,57 @@ async def get_hfp_data(
                 row_count += 1
                 stream.write(row)
         return row_count
+
+async def get_speeding_data(
+    route_id: int,
+    min_spd: int,
+    from_tst: datetime,
+    to_tst: datetime,
+    x_min: int,
+    y_min: int,
+    x_max: int,
+    y_max: int,
+    stream: BytesIO,
+):
+    # Speed limit given in km/h. Convert to m/s
+    min_spd = min_spd / 3.6 
+
+    async with pool.connection() as conn:
+        async with conn.cursor().copy(
+            """
+            COPY (
+                SELECT
+                    (hp.spd * 3.6) AS spd_km,
+                    hp.oday,
+                    hp."start",
+                    hp.direction_id,
+                    hp.vehicle_number,
+                    hp.point_timestamp
+                FROM
+                    hfp.hfp_point hp
+                WHERE
+                    hp.spd > %(min_spd)s
+                    AND hp.point_timestamp > %(from_tst)s
+                    AND hp.point_timestamp < %(to_tst)s
+                    AND hp.route_id = '%(route_id)s'
+                    AND hp.hfp_event = 'VP'
+                    AND hp.geom && ST_MakeEnvelope(%(x_min)s, %(y_min)s, %(x_max)s, %(y_max)s, 3067)
+            ) TO STDOUT WITH CSV HEADER
+            """,
+            {
+                "min_spd": min_spd,
+                "from_tst": from_tst,
+                "to_tst": to_tst,
+                "route_id": route_id,
+                "x_min": x_min,
+                "y_min": y_min,
+                "x_max": x_max,
+                "y_max": y_max,
+            },
+        ) as copy:
+            row_count = 0
+            async for row in copy:
+                row_count += 1
+                stream.write(row)
+        return row_count
+

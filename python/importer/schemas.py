@@ -106,6 +106,7 @@ HFP: DBSchema = {
             "drst": "drst",
             "locationQualityMethod": "loc",
             "stop": "stop",
+            "hdg": "hdg",
             "longitude": "longitude",
             "latitude": "latitude",
         },
@@ -115,5 +116,42 @@ HFP: DBSchema = {
     "scripts": {
         "process": SQL("CALL staging.import_and_normalize_hfp()"),
         "process_invalid": SQL("CALL staging.import_invalid_hfp()"),
+    },
+}
+
+TLP: DBSchema = {
+    "copy_target": {
+        "schema": "staging",
+        "table": "tlp_raw",
+    },
+    "fields": {
+        "mapping": {
+            "eventType": "event_type",
+            "latitude": "latitude",
+            "locationQualityMethod": "location_quality_method",
+            "longitude": "longitude",
+            "oday": "oday",
+            "oper": "oper",
+            "receivedAt": "received_at",
+            "dir": "direction_id",
+            "routeId": "route_id",
+            "sid": "sid",
+            "signalGroupId": "signal_group_id",
+            "start": "start",
+            "tlpAttSeq": "tlp_att_seq",
+            "tlpDecision": "tlp_decision",
+            "tlpPriorityLevel": "tlp_priority_level",
+            "tlpReason": "tlp_reason",
+            "tlpRequestType": "tlp_request_type",
+            "tlpSignalGroupNbr": "tlp_signal_group_nbr",
+            "tst": "point_timestamp",
+            "vehicleNumber": "vehicle_number",
+        },
+        "required": ["tst", "oper", "vehicleNumber"],
+        "modifier_function": None,
+    },
+    "scripts": {
+        "process": SQL("CALL staging.import_and_normalize_tlp()"),
+        "process_invalid": None,
     },
 }
