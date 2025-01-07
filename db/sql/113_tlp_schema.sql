@@ -41,5 +41,5 @@ COMMENT ON COLUMN tlp.tlp.stop IS 'Id of the stop that the tlp point was related
 SELECT create_hypertable('tlp.tlp', 'point_timestamp', chunk_time_interval => INTERVAL '24 hours');
 
 
-CREATE INDEX tlp_route_vehicle_idx ON tlp.tlp (route_id, vehicle_operator_id, vehicle_number, point_timestamp DESC);
+CREATE INDEX tlp_route_vehicle_idx ON tlp.tlp (route_id, vehicle_number, point_timestamp DESC);
 COMMENT ON INDEX tlp.tlp_route_vehicle_idx IS 'Index for tlp raw data queries.';
