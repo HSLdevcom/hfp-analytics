@@ -22,7 +22,6 @@ CREATE OR REPLACE VIEW api.view_as_original_hfp_event AS (
     drst::int,
     loc,
     stop,
-    hdg,
     ST_X(ST_Transform(geom, 4326)) AS long,
     ST_Y(ST_Transform(geom, 4326)) AS lat
   FROM hfp.hfp_point

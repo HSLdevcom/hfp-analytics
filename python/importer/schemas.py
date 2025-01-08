@@ -106,7 +106,6 @@ HFP: DBSchema = {
             "drst": "drst",
             "locationQualityMethod": "loc",
             "stop": "stop",
-            "hdg": "hdg",
             "longitude": "longitude",
             "latitude": "latitude",
         },
