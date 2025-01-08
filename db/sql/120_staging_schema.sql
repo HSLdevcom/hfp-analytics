@@ -19,7 +19,6 @@ CREATE TABLE staging.hfp_raw (
   drst                  bool,
   loc                   text,
   stop                  integer,
-  hdg                   integer,
   longitude             double precision,
   latitude              double precision
 );
@@ -55,7 +54,6 @@ AS $procedure$
     drst,
     loc,
     stop,
-    hdg,
     geom
   )
   SELECT
@@ -75,7 +73,6 @@ AS $procedure$
     drst,
     loc,
     stop,
-    hdg,
     ST_Transform( ST_SetSRID( ST_MakePoint(longitude, latitude), 4326), 3067)
   FROM staging.hfp_raw
   -- Ordering is here for a reason. It makes data clustered inside a blob so querying by route / vehicle is more efficient.
@@ -149,7 +146,6 @@ AS $procedure$
     drst,
     loc,
     stop,
-    hdg,
     geom
   )
   SELECT
@@ -169,7 +165,6 @@ AS $procedure$
     drst,
     loc,
     stop,
-    hdg,
     ST_Transform( ST_SetSRID( ST_MakePoint(longitude, latitude), 4326), 3067)
   FROM staging.hfp_raw
   ON CONFLICT DO NOTHING;
