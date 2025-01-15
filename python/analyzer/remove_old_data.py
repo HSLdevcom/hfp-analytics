@@ -35,6 +35,9 @@ def remove_old_data():
                 logger.debug("Removing hfp_point data older than 2 weeks")
                 cur.execute("SELECT drop_chunks('hfp.hfp_point', interval '2 week')")
 
+                logger.debug("Removing apc data older than 2 weeks")
+                cur.execute("SELECT drop_chunks('apc.apc', interval '2 week')")
+
                 logger.debug(f"Removing old logs and blob info")
                 cur.execute("DELETE FROM importer.blob WHERE listed_at < now() - interval '4 week'")
                 logger.debug(f"{cur.rowcount} rows deleted from importer.blob .")

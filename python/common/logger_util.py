@@ -135,7 +135,7 @@ class CustomDbLogHandler:
 
     def __exit__(self, *args):
         if self.logger_name not in log_handler_store:
-            # Possibly log a warning or ignore silently
+            # No hander found, exiting
             return
 
         # Execution done, decrease count
