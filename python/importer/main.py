@@ -100,7 +100,7 @@ def import_blob(blob_name):
         if "ErrorCode:BlobNotFound" in str(e):
             logger.error(f"Blob {blob_name} not found.")
         else:
-            logger.exception("Error after {processing_time} seconds when reading blob {blob_name}.")
+            logger.exception(f"Error after {processing_time} seconds when reading blob {blob_name}.")
 
 
 def run_import() -> None:

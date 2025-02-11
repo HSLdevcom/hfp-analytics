@@ -29,14 +29,12 @@ CREATE TABLE tlp.tlp (
 COMMENT ON COLUMN tlp.tlp.point_timestamp IS 'Absolute timestamp of the observation.';
 COMMENT ON COLUMN tlp.tlp.received_at IS 'Absolute timestamp when the underlying observation was received by server.';
 COMMENT ON COLUMN tlp.tlp.vehicle_number IS 'Vehicle number, unique within operator. `vehicle_number` in tlp payload.';
-COMMENT ON COLUMN tlp.tlp.mode IS 'Mode of the vehicle. `mode` in tlp topic.';
 COMMENT ON COLUMN tlp.tlp.route_id IS 'Route identifier originating from Jore. `route_id` in tlp payload.';
 COMMENT ON COLUMN tlp.tlp.direction_id IS 'Direction identifier originating from Jore: 1 or 2. `direction_id` in tlp payload.';
 COMMENT ON COLUMN tlp.tlp.oday IS 'Operating date originating from Jore. `oday` in tlp payload.';
 COMMENT ON COLUMN tlp.tlp."start" IS 'Start time on the operating date, HH:MM:SS. `start` in tlp payload.
 N.B. tlp uses 24h clock which can break journeys originally planned beyond >24:00:00.
 Interval type is used for future support of such start times.';
-COMMENT ON COLUMN tlp.tlp.stop IS 'Id of the stop that the tlp point was related to.';
 
 SELECT create_hypertable('tlp.tlp', 'point_timestamp', chunk_time_interval => INTERVAL '24 hours');
 
