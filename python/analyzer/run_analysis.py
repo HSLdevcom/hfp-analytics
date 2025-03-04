@@ -4,8 +4,12 @@ import psycopg2
 import logging
 import time
 import common.constants as constants
-from datetime import date, timedelta, datetime
+import pandas as pd
+import httpx
+from io import BytesIO
+from datetime import date, timedelta, datetime, time
 from itertools import chain
+from .preprocess import preprocess, load_delay_hfp_data
 from common.vehicle_analysis_utils import (
     analyze_vehicle_door_data,
     analyze_positioning_data,
@@ -27,11 +31,12 @@ from common.config import (
     LARGE_SCATTER_RADIUS_M,
     LARGE_JORE_DIST_M,
     STOP_GUESSED_PERCENTAGE,
-    TERMINAL_IDS
+    TERMINAL_IDS,
+    DIGITRANSIT_APIKEY
 )
 
-
 start_time = 0
+GRAPHQL_URL = 'https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql'
 logger = logging.getLogger('importer')
 
 
@@ -165,3 +170,46 @@ def run_analysis():
     finally:
         conn.cursor().execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
         conn.close()
+
+def create_route_query():
+    query = '''
+    {
+        routes(name: "") {
+          gtfsId
+        }
+    }
+    '''
+    return query
+
+
+async def get_query_async(query):
+    async with httpx.AsyncClient() as client:
+        req = await client.post(
+            url=GRAPHQL_URL,
+            content=query,
+            headers={
+                "Content-Type": "application/graphql",
+                "digitransit-subscription-key": DIGITRANSIT_APIKEY,
+            }
+        )
+    if req.status_code == 200:
+        return req.json()
+    else:
+        raise Exception(f'{req} failed with status code {req.status_code}')
+
+async def run_delay_analysis():
+    query = create_route_query()
+    routes_res = await get_query_async(query)
+    route_ids = [route["gtfsId"].split(":")[1] for route in routes_res["data"]["routes"]]
+
+    for i, route_id in enumerate(route_ids, start=1):
+        df, df_from_tst, df_to_tst = await load_delay_hfp_data(route_id)
+        logger.debug(f"[{i}/{len(route_ids)}] Data fetched for route_id={route_id}. Starting preprocessing.")
+
+        try:
+            await preprocess(df, route_id, df_from_tst, df_to_tst)
+        except ValueError as e:
+            logger.error(f"[{i}/{len(route_ids)}] Preprocessing failed for route_id={route_id}, skipping. Error: {e}")
+            continue
+        
+        logger.debug(f"[{i}/{len(route_ids)}] Preprocessed {route_id}.")

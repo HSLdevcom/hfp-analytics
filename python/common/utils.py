@@ -1,6 +1,6 @@
 import pptx
 import logging as logger
-
+from datetime import date, timedelta, datetime, time
 
 def tuples_to_feature_collection(geom_tuples: list[tuple]) -> dict:
     """Transforms GeoJSON tuples returned by psycopg into a FeatureCollection dict for REST API."""
@@ -35,3 +35,31 @@ def analyze_pptx(input_pptx, output_pptx):
                     logger.info("{} has no text attribute".format(phf.type))
                 logger.info('{} {}'.format(phf.idx, shape.name))
     prs.save(output_pptx)
+
+def set_timezone(timestamp, tz_offset):
+    tzone = timezone(timedelta(hours=tz_offset))
+    return timestamp.replace(tzinfo=tzone)
+
+def create_filename(prefix, *args):
+    identifiers = filter(None, args)
+    filename_identifier = "_".join(map(str, identifiers))
+    return f"{prefix}{filename_identifier}.csv.gz"
+
+def get_previous_day_tst():
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+
+    from_tst = datetime.combine(yesterday, time(0, 0, 0))
+    to_tst = datetime.combine(yesterday, time(23, 59, 59))
+    return from_tst.isoformat(), to_tst.isoformat()
+
+def get_season(timestamp):
+    month = timestamp.month
+    if month in [12, 1, 2]:
+        return "winter"
+    elif month in [3, 4, 5]:
+        return "spring"
+    elif month in [6, 7, 8]:
+        return "summer"
+    elif month in [9, 10, 11]:
+        return "autumn"
