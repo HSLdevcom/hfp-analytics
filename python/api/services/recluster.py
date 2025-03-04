@@ -52,7 +52,7 @@ async def load_compressed_cluster_csv(route_id: str, from_tst: str, to_tst: str)
         row = await conn.execute(
             """
             SELECT zst
-            FROM delay.clusters
+            FROM delay.preprocess_clusters
             WHERE route_id = %(route_id)s AND from_date >= %(from_tst)s AND to_date >= %(to_tst)s
             """,
             {
@@ -76,7 +76,7 @@ async def load_compressed_departures_csv(route_id: str, from_tst: str, to_tst: s
         row = await conn.execute(
             """
             SELECT zst
-            FROM delay.departures
+            FROM delay.preprocess_departures
             WHERE route_id = %(route_id)s AND from_date >= %(from_tst)s AND to_date >= %(to_tst)s
             """,
             {
