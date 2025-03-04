@@ -2,11 +2,17 @@
 
 import io
 import gzip
+import zipfile
+import pandas as pd
+import pytz
+import numpy as np
+
+from sklearn.cluster import DBSCAN
+from collections import Counter
 from typing import Optional
-from datetime import datetime, timezone, timedelta
+from datetime import date, timedelta, datetime, time
 from http import HTTPStatus
 
-import time
 import logging
 from common.logger_util import CustomDbLogHandler
 
@@ -16,21 +22,14 @@ from fastapi.encoders import jsonable_encoder
 
 from api.services.hfp import get_hfp_data, get_speeding_data
 from api.services.tlp import get_tlp_data, get_tlp_data_as_json
+from api.services.recluster import recluster_analysis, load_compressed_cluster
+from common.utils import get_previous_day_tst, create_filename, set_timezone
 
 logger = logging.getLogger("api")
 
 router = APIRouter(prefix="/hfp", tags=["HFP data"])
 
 CHUNK_SIZE = 10000 # Adjust to optimize if needed
-
-def set_timezone(timestamp, tz_offset):
-    tzone = timezone(timedelta(hours=tz_offset))
-    return timestamp.replace(tzinfo=tzone)
-
-def create_filename(prefix, *args):
-    identifiers = filter(None, args)
-    filename_identifier = "_".join(map(str, identifiers))
-    return f"{prefix}{filename_identifier}.csv.gz"
 
 
 class GzippedFileResponse(Response):
@@ -413,3 +412,54 @@ async def get_speeding(
 
         return response
 
+@router.get(
+    "/delay_analytics",
+    summary="Get HFP raw data",
+    description="Returns raw HFP data in a gzip compressed csv file.",
+    response_class=GzippedFileResponse,
+    responses={
+        200: {
+            "description": "Successful query. The data is returned as an attachment in the response. "
+            "File format comes from query parameters: "
+            "`hfp-export_<from_date>_<route_id>_<operator_id>_<vehicle_number>.csv.gz`",
+            "content": {"application/gzip": {"schema": None, "example": None}},
+            "headers": {
+                "Content-Disposition": {
+                    "schema": {"example": 'attachment; filename="hfp-export_20230316_550_18_662.csv.gz"'}
+                }
+            },
+        },
+        204: {"description": "Query returned no data with the given parameters."},
+    },
+)
+async def get_delay_analytics_data(
+    route_id: str = Query(
+        default=None,
+        title="Route ID",
+        description="JORE ID of the route.",
+        example="1057",
+    )
+) -> Response:
+    """
+    Get delay analytics data.
+    """
+    with CustomDbLogHandler("api"):
+        logger.debug(f"Fetching delay hfp data. route_id: {route_id}")
+        from_tst, to_tst = get_previous_day_tst() # TODO: replace with request params
+        await recluster_analysis(route_id, from_tst, to_tst)
+
+        routecluster_geojson = await load_compressed_cluster("route_clusters", route_id, from_tst, to_tst)
+        modecluster_geojson = await load_compressed_cluster("mode_clusters", route_id, from_tst, to_tst)
+
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w") as zf:
+            zf.writestr("routecluster.geojson", routecluster_geojson)
+            zf.writestr("modecluster.geojson", modecluster_geojson)
+
+        zip_buffer.seek(0)
+
+        return Response(
+            content=zip_buffer.getvalue(),
+            media_type="application/zip",
+            headers={"Content-Disposition": "attachment; filename=clusters_package.zip"}
+        )

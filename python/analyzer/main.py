@@ -1,16 +1,17 @@
 """HFP Analytics data importer"""
 import azure.functions as func
-
 import logging
-from datetime import datetime
+import pandas as pd
+import httpx
 
+from io import BytesIO
+from datetime import date, timedelta, datetime, time
 from common.logger_util import CustomDbLogHandler
-from .run_analysis import run_analysis, run_vehicle_analysis
+from .run_analysis import run_analysis, run_vehicle_analysis, run_delay_analysis
 from .remove_old_data import remove_old_data
-
+from .preprocess import preprocess, load_delay_hfp_data
 
 logger = logging.getLogger("importer")
-
 
 async def start_analysis():
     start_time = datetime.now()
@@ -26,14 +27,20 @@ async def start_analysis():
 
     logger.debug("Going to run vehicle analysis.")
     await run_vehicle_analysis()
-
     vehicle_analysis_end = datetime.now()
+
+    logger.debug("Going to run delay analysis.")
+
+    await run_delay_analysis()
+
+    delay_analysis_end = datetime.now()
 
     logger.info(
         f"Analyzer done. It took {removal_end - start_time} for data removal, "
         f"{analysis_end - removal_end} for stop and journey analysis, "
-        f"and {vehicle_analysis_end - analysis_end} for vehicle analysis. "
-        f"Total time: {vehicle_analysis_end - start_time}"
+        f"and {vehicle_analysis_end - analysis_end} for vehicle analysis, "
+        f"and {delay_analysis_end - vehicle_analysis_end} for delay analysis. "
+        f"Total time: {delay_analysis_end - start_time}"
     )
 
 
