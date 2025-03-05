@@ -7,7 +7,7 @@ import common.constants as constants
 import pandas as pd
 import httpx
 from io import BytesIO
-from datetime import date, timedelta, datetime, time
+from datetime import date, timedelta, datetime
 from itertools import chain
 from .preprocess import preprocess, load_delay_hfp_data
 from common.vehicle_analysis_utils import (
