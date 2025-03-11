@@ -20,7 +20,14 @@ async def start_analysis():
 
     removal_end = datetime.now()
 
+    logger.debug("Going to run delay analysis.")
+
+    await run_delay_analysis()
+
+    delay_analysis_end = datetime.now()
+
     logger.debug("Going to run analysis.")
+
     run_analysis()
 
     analysis_end = datetime.now()
@@ -29,18 +36,13 @@ async def start_analysis():
     await run_vehicle_analysis()
     vehicle_analysis_end = datetime.now()
 
-    logger.debug("Going to run delay analysis.")
-
-    await run_delay_analysis()
-
-    delay_analysis_end = datetime.now()
 
     logger.info(
         f"Analyzer done. It took {removal_end - start_time} for data removal, "
-        f"{analysis_end - removal_end} for stop and journey analysis, "
+        f"and {delay_analysis_end - removal_end} for delay analysis. "
+        f"{analysis_end - delay_analysis_end} for stop and journey analysis, "
         f"and {vehicle_analysis_end - analysis_end} for vehicle analysis, "
-        f"and {delay_analysis_end - vehicle_analysis_end} for delay analysis. "
-        f"Total time: {delay_analysis_end - start_time}"
+        f"Total time: {analysis_end - start_time}"
     )
 
 
