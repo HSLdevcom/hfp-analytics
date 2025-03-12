@@ -471,5 +471,5 @@ async def get_delay_analytics_data(
     return Response(
         content=parent_file_buffer.getvalue(),
         media_type="application/zip",
-        headers={"Content-Disposition": 'attachment; filename="clusters_package.zip"'}
+        headers={"Content-Disposition": 'attachment; filename="clusters.zip"'}
     )
