@@ -205,12 +205,12 @@ async def run_delay_analysis():
 
     for i, route_id in enumerate(route_ids, start=1):
         df, df_from_tst, df_to_tst = await load_delay_hfp_data(route_id)
-        logger.debug(f"[{i}/{len(route_ids)}] Data fetched for route_id={route_id}. Starting preprocessing.")
+        logger.debug(f"[{i}/{len(route_ids)}] Data fetched from {df_from_tst} to {df_to_tst} for route_id={route_id}. Starting preprocessing.")
 
         try:
             await preprocess(df, route_id, df_from_tst, df_to_tst)
         except ValueError as e:
-            logger.error(f"[{i}/{len(route_ids)}] Preprocessing failed for route_id={route_id}, skipping. Error: {e}")
+            logger.debug(f"[{i}/{len(route_ids)}] Preprocessing failed for route_id={route_id}, skipping. Error: {e}")
             continue
         
         logger.debug(f"[{i}/{len(route_ids)}] Preprocessed {route_id}.")
