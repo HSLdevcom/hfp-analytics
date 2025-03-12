@@ -443,23 +443,33 @@ async def get_delay_analytics_data(
     """
     Get delay analytics data.
     """
-    with CustomDbLogHandler("api"):
-        logger.debug(f"Fetching delay hfp data. route_id: {route_id}")
-        from_tst, to_tst = get_previous_day_tst() # TODO: replace with request params
-        await recluster_analysis(route_id, from_tst, to_tst)
+    from_tst, to_tst = get_previous_day_tst() # TODO: replace with request params
+    await recluster_analysis(route_id, from_tst, to_tst)
 
-        routecluster_geojson = await load_compressed_cluster("route_clusters", route_id, from_tst, to_tst)
-        modecluster_geojson = await load_compressed_cluster("mode_clusters", route_id, from_tst, to_tst)
+    routecluster_geojson = await load_compressed_cluster("route_clusters", route_id, from_tst, to_tst)
+    modecluster_geojson = await load_compressed_cluster("mode_clusters", route_id, from_tst, to_tst)
 
-        zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, "w") as zf:
-            zf.writestr("routecluster.geojson", routecluster_geojson)
-            zf.writestr("modecluster.geojson", modecluster_geojson)
+    parent_file_buffer = io.BytesIO()
+    with zipfile.ZipFile(parent_file_buffer, "w") as parent_zip:
 
-        zip_buffer.seek(0)
+        route_buffer = io.BytesIO()
+        with zipfile.ZipFile(route_buffer, "w") as route_zip:
+            route_zip.writestr("routecluster.geojson", routecluster_geojson)
+        route_buffer.seek(0)
 
-        return Response(
-            content=zip_buffer.getvalue(),
-            media_type="application/zip",
-            headers={"Content-Disposition": "attachment; filename=clusters_package.zip"}
-        )
+        parent_zip.writestr("routecluster.zip", route_buffer.getvalue())
+
+        mode_buffer = io.BytesIO()
+        with zipfile.ZipFile(mode_buffer, "w") as mode_zip:
+            mode_zip.writestr("modecluster.geojson", modecluster_geojson)
+        mode_buffer.seek(0)
+
+        parent_zip.writestr("modecluster.zip", mode_buffer.getvalue())
+
+
+    parent_file_buffer.seek(0)
+    return Response(
+        content=parent_file_buffer.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="clusters_package.zip"'}
+    )
