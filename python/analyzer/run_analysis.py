@@ -199,18 +199,40 @@ async def get_query_async(query):
         raise Exception(f'{req} failed with status code {req.status_code}')
 
 async def run_delay_analysis():
-    query = create_route_query()
-    routes_res = await get_query_async(query)
-    route_ids = [route["gtfsId"].split(":")[1] for route in routes_res["data"]["routes"]]
 
-    for i, route_id in enumerate(route_ids, start=1):
-        df, df_from_tst, df_to_tst = await load_delay_hfp_data(route_id)
-        logger.debug(f"[{i}/{len(route_ids)}] Data fetched from {df_from_tst} to {df_to_tst} for route_id={route_id}. Starting preprocessing.")
+    conn = psycopg2.connect(POSTGRES_CONNECTION_STRING)
+    try:
+        with conn:
+            with conn.cursor() as cur:
 
-        try:
-            await preprocess(df, route_id, df_from_tst, df_to_tst)
-        except ValueError as e:
-            logger.debug(f"[{i}/{len(route_ids)}] Preprocessing failed for route_id={route_id}, skipping. Error: {e}")
-            continue
-        
-        logger.debug(f"[{i}/{len(route_ids)}] Preprocessed {route_id}.")
+                cur.execute("SELECT is_lock_enabled(%s)", (constants.IMPORTER_LOCK_ID,))
+                is_importer_locked = cur.fetchone()[0]
+
+                if is_importer_locked:
+                    logger.warn("Importer is LOCKED which means that importer should be already running. You can get"
+                                "rid of the lock by restarting the database if needed.")
+                    return
+
+                cur.execute("SELECT pg_advisory_lock(%s)", (constants.IMPORTER_LOCK_ID,))
+
+                query = create_route_query()
+                routes_res = await get_query_async(query)
+                route_ids = [route["gtfsId"].split(":")[1] for route in routes_res["data"]["routes"]]
+
+                for i, route_id in enumerate(route_ids, start=1):
+                    df, df_from_tst, df_to_tst = await load_delay_hfp_data(route_id)
+                    logger.debug(f"[{i}/{len(route_ids)}] Data fetched from {df_from_tst} to {df_to_tst} for route_id={route_id}. Running preprocess.")
+
+                    try:
+                        await preprocess(df, route_id, df_from_tst, df_to_tst)
+                    except ValueError as e:
+                        logger.debug(f"[{i}/{len(route_ids)}] Preprocessing failed for route_id={route_id}, skipping. Error: {e}")
+                        continue
+                    
+                    logger.debug(f"[{i}/{len(route_ids)}] Preprocessed {route_id}.")
+
+    except Exception:
+        logger.exception("Analysis failed.")
+    finally:
+        conn.cursor().execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
+        conn.close()
