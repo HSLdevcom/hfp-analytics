@@ -220,11 +220,11 @@ async def run_delay_analysis():
                 route_ids = [route["gtfsId"].split(":")[1] for route in routes_res["data"]["routes"]]
 
                 for i, route_id in enumerate(route_ids, start=1):
-                    df, df_from_tst, df_to_tst = await load_delay_hfp_data(route_id)
-                    logger.debug(f"[{i}/{len(route_ids)}] Data fetched from {df_from_tst} to {df_to_tst} for route_id={route_id}. Running preprocess.")
+                    df, oday = await load_delay_hfp_data(route_id)
+                    logger.debug(f"[{i}/{len(route_ids)}] Data fetched from oday {oday} for route_id={route_id}. Running preprocess.")
 
                     try:
-                        await preprocess(df, route_id, df_from_tst, df_to_tst)
+                        await preprocess(df, route_id, oday)
                     except ValueError as e:
                         logger.debug(f"[{i}/{len(route_ids)}] Preprocessing failed for route_id={route_id}, skipping. Error: {e}")
                         continue
