@@ -13,7 +13,7 @@ from typing import Optional
 from datetime import date, timedelta, datetime, time
 from io import BytesIO
 
-from common.utils import get_previous_day_tst
+from common.utils import get_previous_day_oday
 
 logger = logging.getLogger("analyzer")
 
@@ -53,12 +53,12 @@ TIME_GROUP_D = {
 
 async def load_delay_hfp_data(route_id: Optional[str]) -> pd.DataFrame:
     csv_buffer = io.BytesIO()
-    row_count, from_tst, to_tst = await get_delay_hfp_data(route_id, csv_buffer)
+    row_count, oday = await get_delay_hfp_data(route_id, csv_buffer)
 
     csv_buffer.seek(0)
 
     df = pd.read_csv(csv_buffer)
-    return df, from_tst, to_tst
+    return df, oday
 
 async def get_delay_hfp_data(
     route_id: Optional[str],
@@ -67,7 +67,14 @@ async def get_delay_hfp_data(
     """
     Query delay hfp data.
     """
-    from_tst, to_tst = get_previous_day_tst()
+    oday = get_previous_day_oday()
+    oday_datetime = datetime.strptime(oday, "%Y-%m-%d").date()
+
+    from_datetime = datetime.combine(oday_datetime, time(0, 0, 0))
+    to_datetime = from_datetime + timedelta(days=1, hours=4)
+
+    from_tst = from_datetime.isoformat()
+    to_tst = to_datetime.isoformat()
 
     query = f"""
         COPY (
@@ -76,7 +83,7 @@ async def get_delay_hfp_data(
             FROM api.view_as_original_hfp_event
             WHERE
                 (%(route_id)s IS NULL OR route_id = %(route_id)s) AND
-                tst >= %(from_tst)s AND tst <= %(to_tst)s
+                oday = %(oday)s AND tst >= %(from_tst)s AND tst <= %(to_tst)s
         ) TO STDOUT WITH CSV HEADER
     """
 
@@ -86,8 +93,9 @@ async def get_delay_hfp_data(
             query,
             {
                 "route_id": route_id,
+                "oday": oday,
                 "from_tst": from_tst,
-                "to_tst": to_tst,
+                "to_tst": to_tst
             },
         ) as copy:
             row_count = -1
@@ -95,7 +103,7 @@ async def get_delay_hfp_data(
             async for row in copy:
                 row_count += 1
                 stream.write(row)
-        return row_count, from_tst, to_tst
+        return row_count, oday
 
 def tst_seconds_from_midnight(df):
     """
@@ -160,8 +168,7 @@ async def store_compressed_csv(
     table: str,
     route_id: str,
     mode: str,
-    from_date: str,
-    to_date: str,
+    oday: str,
     df: pd.DataFrame
 ):
     """
@@ -176,11 +183,10 @@ async def store_compressed_csv(
 
     table_full_name = f"delay.{table}"
     query = f"""
-        INSERT INTO {table_full_name} (route_id, mode, from_date, to_date, zst)
-        VALUES (%(route_id)s, %(mode)s, %(from_date)s, %(to_date)s, %(zst)s)
-        ON CONFLICT (route_id, from_date, to_date) DO UPDATE
-            SET from_date = EXCLUDED.from_date,
-                to_date   = EXCLUDED.to_date,
+        INSERT INTO {table_full_name} (route_id, mode, oday, zst)
+        VALUES (%(route_id)s, %(mode)s, %(oday)s, %(zst)s)
+        ON CONFLICT (route_id, oday) DO UPDATE
+            SET oday      = EXCLUDED.oday,
                 zst       = EXCLUDED.zst
     """
 
@@ -190,8 +196,7 @@ async def store_compressed_csv(
             {
                 "route_id": route_id,
                 "mode": mode,
-                "from_date": from_date,
-                "to_date": to_date,
+                "oday": oday,
                 "zst": compressed_csv,
             },
         )
@@ -200,8 +205,7 @@ async def store_compressed_csv(
 async def preprocess(
     df: pd.DataFrame,
     route_id: str,
-    from_tst: str,
-    to_tst: str
+    oday: str,
 ):
 
     clusters = []  # tämä on aggregoinnin tason 1 output!,
@@ -383,10 +387,10 @@ async def preprocess(
 
     if clusters:
         clusters_df = pd.concat(clusters)
-        await store_compressed_csv("preprocess_clusters", route_id, mode, from_tst, to_tst, clusters_df)
+        await store_compressed_csv("preprocess_clusters", route_id, mode, oday, clusters_df)
     if departures:
         departures_df = pd.concat(departures)
-        await store_compressed_csv("preprocess_departures", route_id, mode, from_tst, to_tst, departures_df)
+        await store_compressed_csv("preprocess_departures", route_id, mode, oday, departures_df)
     if vp_events_in_clusters:
         path = f"./HFP_vp_events_in_clusters_{str(key[0])}_{file_date}.csv"
         #pd.concat(vp_events_in_clusters).to_csv(path, sep=";", encoding="utf-8", index=False)

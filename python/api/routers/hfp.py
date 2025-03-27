@@ -23,7 +23,7 @@ from fastapi.encoders import jsonable_encoder
 from api.services.hfp import get_hfp_data, get_speeding_data
 from api.services.tlp import get_tlp_data, get_tlp_data_as_json
 from api.services.recluster import recluster_analysis, load_compressed_cluster
-from common.utils import get_previous_day_tst, create_filename, set_timezone
+from common.utils import get_previous_day_oday, create_filename, set_timezone
 
 logger = logging.getLogger("api")
 
@@ -438,16 +438,41 @@ async def get_delay_analytics_data(
         title="Route ID",
         description="JORE ID of the route.",
         example="1057",
-    )
+    ),
+    from_oday: date = Query(default=None, title="From Date (YYYY-MM-DD)", example="2025-02-10"),
+    to_oday: date = Query(default=None, title="To Date (YYYY-MM-DD)", example="2025-02-11")
 ) -> Response:
     """
     Get delay analytics data.
     """
-    from_tst, to_tst = get_previous_day_tst() # TODO: replace with request params
-    await recluster_analysis(route_id, from_tst, to_tst)
+    default_oday = get_previous_day_oday()
 
-    routecluster_geojson = await load_compressed_cluster("route_clusters", route_id, from_tst, to_tst)
-    modecluster_geojson = await load_compressed_cluster("mode_clusters", route_id, from_tst, to_tst)
+    # TODO: use optional params 
+    if (from_oday is None):
+        from_oday = default_oday
+
+    if (to_oday is None):
+        to_oday = from_oday
+
+
+    await recluster_analysis(route_id, from_oday, to_oday)
+
+    routecluster_geojson = await load_compressed_cluster("recluster_routes", route_id, from_oday, to_oday)
+    modecluster_geojson = await load_compressed_cluster("recluster_modes", route_id, from_oday, to_oday)
+
+    if routecluster_geojson is None:
+        return Response(
+            content=f"No routecluster data found with route_id: {route_id}, from_oday: {from_oday}, to_oday: {to_oday}",
+            media_type="application/json",
+            headers={}
+        )
+
+    if modecluster_geojson is None:
+        return Response(
+            content=f"No modecluster data found with route_id: {route_id}, from_oday: {from_oday}, to_oday: {to_oday}",
+            media_type="application/json",
+            headers={}
+        )
 
     parent_file_buffer = io.BytesIO()
     with zipfile.ZipFile(parent_file_buffer, "w") as parent_zip:
