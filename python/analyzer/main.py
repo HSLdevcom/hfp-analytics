@@ -33,7 +33,7 @@ async def start_analysis():
     analysis_end = datetime.now()
 
     logger.debug("Going to run vehicle analysis.")
-    await run_vehicle_analysis()
+    #await run_vehicle_analysis()
     vehicle_analysis_end = datetime.now()
 
 
