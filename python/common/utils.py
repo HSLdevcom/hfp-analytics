@@ -45,9 +45,9 @@ def create_filename(prefix, *args):
     filename_identifier = "_".join(map(str, identifiers))
     return f"{prefix}{filename_identifier}.csv.gz"
 
-def get_previous_day_oday():
+def get_previous_day_oday(offset=1):
     today = date.today()
-    yesterday = today - timedelta(days=1)
+    yesterday = today - timedelta(days=offset)
 
     from_oday = yesterday.strftime("%Y-%m-%d")
     return from_oday
