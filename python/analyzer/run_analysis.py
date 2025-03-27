@@ -10,6 +10,8 @@ from io import BytesIO
 from datetime import date, timedelta, datetime
 from itertools import chain
 from .preprocess import preprocess, load_delay_hfp_data
+from common.utils import get_previous_day_oday
+from common.recluster import recluster_analysis
 from common.vehicle_analysis_utils import (
     analyze_vehicle_door_data,
     analyze_positioning_data,
@@ -218,7 +220,6 @@ async def run_delay_analysis():
                 query = create_route_query()
                 routes_res = await get_query_async(query)
                 route_ids = [route["gtfsId"].split(":")[1] for route in routes_res["data"]["routes"]]
-
                 for i, route_id in enumerate(route_ids, start=1):
                     df, oday = await load_delay_hfp_data(route_id)
                     logger.debug(f"[{i}/{len(route_ids)}] Data fetched from oday {oday} for route_id={route_id}. Running preprocess.")
@@ -230,6 +231,11 @@ async def run_delay_analysis():
                         continue
                     
                     logger.debug(f"[{i}/{len(route_ids)}] Preprocessed {route_id}.")
+                
+                from_oday = get_previous_day_oday()
+                to_oday = get_previous_day_oday()
+                logger.debug(f"Running reclustering for all routes from {from_oday} to {to_oday}")
+                await recluster_analysis(None, from_oday, to_oday)
 
     except Exception:
         logger.exception("Analysis failed.")

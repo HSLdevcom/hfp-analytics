@@ -4,6 +4,7 @@ import io
 import gzip
 import zipfile
 import pandas as pd
+import geopandas as gpd
 import pytz
 import numpy as np
 
@@ -22,7 +23,7 @@ from fastapi.encoders import jsonable_encoder
 
 from api.services.hfp import get_hfp_data, get_speeding_data
 from api.services.tlp import get_tlp_data, get_tlp_data_as_json
-from api.services.recluster import recluster_analysis, load_compressed_cluster
+from common.recluster import recluster_analysis, load_compressed_cluster
 from common.utils import get_previous_day_oday, create_filename, set_timezone
 
 logger = logging.getLogger("api")
@@ -419,13 +420,11 @@ async def get_speeding(
     response_class=GzippedFileResponse,
     responses={
         200: {
-            "description": "Successful query. The data is returned as an attachment in the response. "
-            "File format comes from query parameters: "
-            "`hfp-export_<from_date>_<route_id>_<operator_id>_<vehicle_number>.csv.gz`",
+            "description": "Successful query. The data is returned as an attachment in the response. ",
             "content": {"application/gzip": {"schema": None, "example": None}},
             "headers": {
                 "Content-Disposition": {
-                    "schema": {"example": 'attachment; filename="hfp-export_20230316_550_18_662.csv.gz"'}
+                    "schema": {"example": 'attachment; filename=""'}
                 }
             },
         },
@@ -445,14 +444,13 @@ async def get_delay_analytics_data(
     """
     Get delay analytics data.
     """
-    default_oday = get_previous_day_oday()
-
-    # TODO: use optional params 
+    default_from_oday = get_previous_day_oday()
+    default_to_oday = get_previous_day_oday()
     if (from_oday is None):
-        from_oday = default_oday
+        from_oday = default_from_oday
 
     if (to_oday is None):
-        to_oday = from_oday
+        to_oday = default_to_oday
 
 
     await recluster_analysis(route_id, from_oday, to_oday)
@@ -460,17 +458,30 @@ async def get_delay_analytics_data(
     routecluster_geojson = await load_compressed_cluster("recluster_routes", route_id, from_oday, to_oday)
     modecluster_geojson = await load_compressed_cluster("recluster_modes", route_id, from_oday, to_oday)
 
+    def geojson_to_csv_bytes(geojson_bytes: bytes) -> bytes:
+        geojson_bytes_io = io.BytesIO(geojson_bytes)
+        gdf = gpd.read_file(geojson_bytes_io)
+        csv_buffer = io.BytesIO()
+        gdf.to_csv(csv_buffer, index=False)
+        csv_buffer.seek(0)
+        return csv_buffer.getvalue()
+
+    routecluster_csv = geojson_to_csv_bytes(routecluster_geojson)
+    modecluster_csv = geojson_to_csv_bytes(modecluster_geojson)
+
     if routecluster_geojson is None:
         return Response(
-            content=f"No routecluster data found with route_id: {route_id}, from_oday: {from_oday}, to_oday: {to_oday}",
+            content=f"No routecluster data found for route_id: {route_id}, from_oday: {from_oday}, to_oday: {to_oday}",
             media_type="application/json",
+            status_code=204,
             headers={}
         )
 
     if modecluster_geojson is None:
         return Response(
-            content=f"No modecluster data found with route_id: {route_id}, from_oday: {from_oday}, to_oday: {to_oday}",
+            content=f"No modecluster data found for route_id: {route_id}, from_oday: {from_oday}, to_oday: {to_oday}",
             media_type="application/json",
+            status_code=204,
             headers={}
         )
 
@@ -480,6 +491,7 @@ async def get_delay_analytics_data(
         route_buffer = io.BytesIO()
         with zipfile.ZipFile(route_buffer, "w") as route_zip:
             route_zip.writestr("routecluster.geojson", routecluster_geojson)
+            route_zip.writestr("routecluster.csv", routecluster_csv)
         route_buffer.seek(0)
 
         parent_zip.writestr("routecluster.zip", route_buffer.getvalue())
@@ -487,6 +499,7 @@ async def get_delay_analytics_data(
         mode_buffer = io.BytesIO()
         with zipfile.ZipFile(mode_buffer, "w") as mode_zip:
             mode_zip.writestr("modecluster.geojson", modecluster_geojson)
+            mode_zip.writestr("modecluster.csv", modecluster_csv)
         mode_buffer.seek(0)
 
         parent_zip.writestr("modecluster.zip", mode_buffer.getvalue())
