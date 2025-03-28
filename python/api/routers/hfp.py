@@ -454,7 +454,8 @@ async def get_delay_analytics_data(
 
     logger.debug(f"Fetching hfp delay data. route_id: {route_id}, from_oday: {from_oday}, to_oday: {to_oday}")
 
-    await recluster_analysis(route_id, from_oday, to_oday)
+    if (route_id is not None):
+        await recluster_analysis(route_id, from_oday, to_oday)
 
     routecluster_geojson = await load_compressed_cluster("recluster_routes", route_id, from_oday, to_oday)
     modecluster_geojson = await load_compressed_cluster("recluster_modes", route_id, from_oday, to_oday)
