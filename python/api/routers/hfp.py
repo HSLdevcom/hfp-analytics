@@ -452,15 +452,19 @@ async def get_delay_analytics_data(
     if (to_oday is None):
         to_oday = default_to_oday
 
+    logger.debug(f"Fetching hfp delay data. route_id: {route_id}, from_oday: {from_oday}, to_oday: {to_oday}")
 
     await recluster_analysis(route_id, from_oday, to_oday)
 
     routecluster_geojson = await load_compressed_cluster("recluster_routes", route_id, from_oday, to_oday)
     modecluster_geojson = await load_compressed_cluster("recluster_modes", route_id, from_oday, to_oday)
 
+    if routecluster_geojson is None or modecluster_geojson is None:
+        return Response(status_code=204)
+
     def geojson_to_csv_bytes(geojson_bytes: bytes) -> bytes:
         geojson_bytes_io = io.BytesIO(geojson_bytes)
-        gdf = gpd.read_file(geojson_bytes_io)
+        gdf = gpd.read_file(geojson_bytes_io, driver="GeoJSON")
         csv_buffer = io.BytesIO()
         gdf.to_csv(csv_buffer, index=False)
         csv_buffer.seek(0)
@@ -468,22 +472,6 @@ async def get_delay_analytics_data(
 
     routecluster_csv = geojson_to_csv_bytes(routecluster_geojson)
     modecluster_csv = geojson_to_csv_bytes(modecluster_geojson)
-
-    if routecluster_geojson is None:
-        return Response(
-            content=f"No routecluster data found for route_id: {route_id}, from_oday: {from_oday}, to_oday: {to_oday}",
-            media_type="application/json",
-            status_code=204,
-            headers={}
-        )
-
-    if modecluster_geojson is None:
-        return Response(
-            content=f"No modecluster data found for route_id: {route_id}, from_oday: {from_oday}, to_oday: {to_oday}",
-            media_type="application/json",
-            status_code=204,
-            headers={}
-        )
 
     parent_file_buffer = io.BytesIO()
     with zipfile.ZipFile(parent_file_buffer, "w") as parent_zip:

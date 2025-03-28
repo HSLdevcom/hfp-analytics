@@ -59,8 +59,6 @@ async def load_compressed_cluster_csv(route_id: str, from_oday: str, to_oday: st
     base_query = "SELECT zst FROM delay.preprocess_clusters"
     conditions = []
     params = {}
-    print("******")
-    print(from_oday, to_oday)
     conditions.append("oday >= %(from_oday)s::date")
     conditions.append("oday <= %(to_oday)s::date")
     params["from_oday"] = from_oday
