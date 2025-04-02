@@ -236,6 +236,7 @@ async def run_delay_analysis():
                 to_oday = get_previous_day_oday()
                 logger.debug(f"Running reclustering for all routes from {from_oday} to {to_oday}")
                 await recluster_analysis(None, from_oday, to_oday)
+                logger.debug(f"Recluster analysis done.")
 
     except Exception:
         logger.exception("Analysis failed.")
