@@ -432,14 +432,14 @@ async def get_speeding(
     },
 )
 async def get_delay_analytics_data(
-    route_id: str = Query(
+    route_id: Optional[str] = Query(
         default=None,
         title="Route ID",
         description="JORE ID of the route.",
         example="1057",
     ),
-    from_oday: date = Query(default=None, title="From Date (YYYY-MM-DD)", example="2025-02-10"),
-    to_oday: date = Query(default=None, title="To Date (YYYY-MM-DD)", example="2025-02-11")
+    from_oday: Optional[date] = Query(default=None, title="From Date (YYYY-MM-DD)", example="2025-02-10"),
+    to_oday: Optional[date] = Query(default=None, title="To Date (YYYY-MM-DD)", example="2025-02-11")
 ) -> Response:
     """
     Get delay analytics data.
@@ -452,13 +452,18 @@ async def get_delay_analytics_data(
     if (to_oday is None):
         to_oday = default_to_oday
 
-    logger.debug(f"Fetching hfp delay data. route_id: {route_id}, from_oday: {from_oday}, to_oday: {to_oday}")
+    route_ids = []
+    if route_id:
+        route_ids = [r.strip() for r in route_id.split(",") if r.strip()]
 
+    logger.debug(f"Fetching hfp delay data. route_id: {route_ids}, from_oday: {from_oday}, to_oday: {to_oday}")
+
+    # TODO: always check if analysis available in db
     if (route_id is not None):
-        await recluster_analysis(route_id, from_oday, to_oday)
+        await recluster_analysis(route_ids, from_oday, to_oday)
 
-    routecluster_geojson = await load_compressed_cluster("recluster_routes", route_id, from_oday, to_oday)
-    modecluster_geojson = await load_compressed_cluster("recluster_modes", route_id, from_oday, to_oday)
+    routecluster_geojson = await load_compressed_cluster("recluster_routes", route_ids, from_oday, to_oday)
+    modecluster_geojson = await load_compressed_cluster("recluster_modes", route_ids, from_oday, to_oday)
 
     if routecluster_geojson is None or modecluster_geojson is None:
         return Response(status_code=204)

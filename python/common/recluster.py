@@ -54,8 +54,18 @@ DCLASS_NAMES = {
 }
 
 
+def get_routes_condition(column: str, values: list[str]) -> tuple[str, dict]:
+    placeholders = []
+    params = {}
+    for i, val in enumerate(values):
+        key = f"{column}{i}"
+        placeholders.append(f"%({key})s")
+        params[key] = val
+    condition = f"{column} IN ({', '.join(placeholders)})"
+    return condition, params
+
 # Refactor with load_compressed_departures_csv
-async def load_compressed_cluster_csv(route_id: str, from_oday: str, to_oday: str) -> bytes:
+async def load_compressed_cluster_csv(route_ids: [str], from_oday: str, to_oday: str) -> bytes:
     base_query = "SELECT zst FROM delay.preprocess_clusters"
     conditions = []
     params = {}
@@ -64,14 +74,14 @@ async def load_compressed_cluster_csv(route_id: str, from_oday: str, to_oday: st
     params["from_oday"] = from_oday
     params["to_oday"] = to_oday
 
-    excluded_odays = ["2025-03-24", "2025-03-20"] 
+    if route_ids:
+        in_condition, in_params = get_routes_condition("route_id", route_ids)
+        conditions.append(in_condition)
+        params.update(in_params)
 
-    if route_id is not None:
-        conditions.append("route_id = %(route_id)s")
-        params["route_id"] = route_id
-
+    query = base_query
     if conditions:
-        query = f"{base_query} WHERE " + " AND ".join(conditions)
+        query += " WHERE " + " AND ".join(conditions)
 
     async with pool.connection() as conn:
         row = await conn.execute(query, params)
@@ -92,15 +102,17 @@ async def load_compressed_cluster_csv(route_id: str, from_oday: str, to_oday: st
 
     combined_df = pd.concat(dfs, ignore_index=True)
 
-    if excluded_odays:
-        combined_df = combined_df[~combined_df["oday"].isin(excluded_odays)]
+    #Undecided how to provide the excluded days
+    #excluded_odays = ["2025-03-24", "2025-03-20"] 
+    #if excluded_odays:
+        #combined_df = combined_df[~combined_df["oday"].isin(excluded_odays)]
 
     buffer = io.BytesIO()
     combined_df.to_csv(buffer, sep=";", index=False)
     buffer.seek(0)
     return buffer.getvalue()
 
-async def load_compressed_departures_csv(route_id: str, from_oday: str, to_oday: str) -> bytes:
+async def load_compressed_departures_csv(route_ids: [str], from_oday: str, to_oday: str) -> bytes:
     base_query = "SELECT zst FROM delay.preprocess_departures"
     conditions = []
     params = {}
@@ -109,12 +121,14 @@ async def load_compressed_departures_csv(route_id: str, from_oday: str, to_oday:
     params["from_oday"] = from_oday
     params["to_oday"] = to_oday
 
-    if route_id is not None:
-        conditions.append("route_id = %(route_id)s")
-        params["route_id"] = route_id
+    if route_ids:
+        in_condition, in_params = get_routes_condition("route_id", route_ids)
+        conditions.append(in_condition)
+        params.update(in_params)
 
+    query = base_query
     if conditions:
-        query = f"{base_query} WHERE " + " AND ".join(conditions)
+        query += " WHERE " + " AND ".join(conditions)
 
     async with pool.connection() as conn:
         row = await conn.execute(query, params)
@@ -304,20 +318,20 @@ def ui_related_var_modifications(df):
     return df
 
 
-async def get_preprocessed_departures(route_id: str, from_oday: str, to_oday: str):
-    departures_data = await load_compressed_departures_csv(route_id, from_oday, to_oday)
+async def get_preprocessed_departures(route_ids: [str], from_oday: str, to_oday: str):
+    departures_data = await load_compressed_departures_csv(route_ids, from_oday, to_oday)
     if not departures_data:
-        print(f"No departures ZST found for route_id={route_id}")
+        print(f"No departures ZST found for route_id={route_ids}")
         return None
 
     preprocessed_departures = pd.read_csv(io.BytesIO(departures_data), sep=';')
 
     return preprocessed_departures
 
-async def get_preprocessed_clusters(route_id: str, from_oday: str, to_oday: str):
-    cluster_data = await load_compressed_cluster_csv(route_id, from_oday, to_oday)
+async def get_preprocessed_clusters(route_ids: [str], from_oday: str, to_oday: str):
+    cluster_data = await load_compressed_cluster_csv(route_ids, from_oday, to_oday)
     if not cluster_data:
-        print(f"No cluster ZST found for route_id={route_id}")
+        print(f"No cluster ZST found for route_id={route_ids}")
         return None
 
     clusters = pd.read_csv(io.BytesIO(cluster_data), sep=";")
@@ -331,9 +345,9 @@ async def get_preprocessed_clusters(route_id: str, from_oday: str, to_oday: str)
     return clusters
 
 
-async def recluster_analysis(route_id: str, from_oday: str, to_oday: str):
-    clusters = await get_preprocessed_clusters(route_id, from_oday, to_oday)
-    preprocessed_departures = await get_preprocessed_departures(route_id, from_oday, to_oday)
+async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
+    clusters = await get_preprocessed_clusters(route_ids, from_oday, to_oday)
+    preprocessed_departures = await get_preprocessed_departures(route_ids, from_oday, to_oday)
 
     if clusters is None or preprocessed_departures is None:
         return
@@ -369,10 +383,9 @@ async def recluster_analysis(route_id: str, from_oday: str, to_oday: str):
 
     route_clusters = make_geo_df_WGS84(route_clusters, lat_col="lat_median", lon_col="long_median", crs="EPSG:4326")  # .drop(['lat_median', 'long_median'], axis=1)
     
-    db_route_id = route_id
-    if (db_route_id is None):
+    db_route_id = route_ids
+    if not db_route_id:
         db_route_id = 'ALL'
-
 
     # Is there a reason to store this in db and not just return it as response?
     await store_compressed_geojson("recluster_routes", db_route_id, from_oday, to_oday, route_clusters)
