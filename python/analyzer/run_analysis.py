@@ -174,15 +174,14 @@ def run_analysis():
         conn.cursor().execute("SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,))
         conn.close()
 
-def create_route_query():
-    query = '''
-    {
-        routes(name: "") {
-          gtfsId
-        }
-    }
-    '''
-    return query
+def create_route_query(mode: str) -> str:
+    return f"""
+    {{
+        routes(transportModes: [{mode}]) {{
+            gtfsId
+        }}
+    }}
+    """
 
 
 async def get_query_async(query):
@@ -217,20 +216,28 @@ async def run_delay_analysis():
 
                 cur.execute("SELECT pg_advisory_lock(%s)", (constants.IMPORTER_LOCK_ID,))
 
-                query = create_route_query()
-                routes_res = await get_query_async(query)
-                route_ids = [route["gtfsId"].split(":")[1] for route in routes_res["data"]["routes"]]
-                for i, route_id in enumerate(route_ids, start=1):
+                bus_query = create_route_query("BUS")
+                tram_query = create_route_query("TRAM")
+                bus_routes_res = await get_query_async(bus_query)
+                tram_routes_res = await get_query_async(tram_query)
+                
+                bus_route_ids = [route["gtfsId"].split(":")[1] for route in bus_routes_res["data"]["routes"]]
+                tram_route_ids = [route["gtfsId"].split(":")[1] for route in tram_routes_res["data"]["routes"]]
+
+                route_ids = bus_route_ids + tram_route_ids
+                filtered_route_ids = [r for r in route_ids if not (r.endswith("N") or r.endswith("H"))].sort()
+ 
+                for i, route_id in enumerate(filtered_route_ids, start=1):
                     df, oday = await load_delay_hfp_data(route_id)
-                    logger.debug(f"[{i}/{len(route_ids)}] Data fetched from oday {oday} for route_id={route_id}. Running preprocess.")
+                    logger.debug(f"[{i}/{len(filtered_route_ids)}] Data fetched from oday {oday} for route_id={route_id}. Running preprocess.")
 
                     try:
                         await preprocess(df, route_id, oday)
                     except ValueError as e:
-                        logger.debug(f"[{i}/{len(route_ids)}] Preprocessing failed for route_id={route_id}, skipping. Error: {e}")
+                        logger.debug(f"[{i}/{len(filtered_route_ids)}] Preprocessing failed for route_id={route_id}, skipping. Error: {e}")
                         continue
                     
-                    logger.debug(f"[{i}/{len(route_ids)}] Preprocessed {route_id}.")
+                    logger.debug(f"[{i}/{len(filtered_route_ids)}] Preprocessed {route_id}.")
                 
                 from_oday = get_previous_day_oday()
                 to_oday = get_previous_day_oday()

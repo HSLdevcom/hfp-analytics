@@ -18,6 +18,7 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from common.database import pool
 from common.utils import get_season
+from common.config import DAYS_TO_EXCLUDE
 from sklearn.cluster import DBSCAN
 
 logger = logging.getLogger("api")
@@ -102,10 +103,14 @@ async def load_compressed_cluster_csv(route_ids: [str], from_oday: str, to_oday:
 
     combined_df = pd.concat(dfs, ignore_index=True)
 
-    #Undecided how to provide the excluded days
-    #excluded_odays = ["2025-03-24", "2025-03-20"] 
-    #if excluded_odays:
-        #combined_df = combined_df[~combined_df["oday"].isin(excluded_odays)]
+    # TODO: If recluster analysis has excluded days how to handle it in db
+    # Currently if analysis exists but excluding removes all rows the existing analysis is returned
+    excluded_odays = DAYS_TO_EXCLUDE
+    if excluded_odays:
+        combined_df = combined_df[~combined_df["oday"].isin(excluded_odays)]
+
+    if combined_df.empty:
+        return None
 
     buffer = io.BytesIO()
     combined_df.to_csv(buffer, sep=";", index=False)
@@ -148,6 +153,13 @@ async def load_compressed_departures_csv(route_ids: [str], from_oday: str, to_od
         return None
 
     combined_df = pd.concat(dfs, ignore_index=True)
+
+    excluded_odays = DAYS_TO_EXCLUDE
+    if excluded_odays:
+        combined_df = combined_df[~combined_df["oday"].isin(excluded_odays)]
+
+    if combined_df.empty:
+        return None
 
     buffer = io.BytesIO()
     combined_df.to_csv(buffer, sep=";", index=False)
