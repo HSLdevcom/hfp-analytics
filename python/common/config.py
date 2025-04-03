@@ -73,7 +73,10 @@ POSTGRES_CONNECTION_STRING: str = get_env("POSTGRES_CONNECTION_STRING")
 
 # Envs related to importing blob
 HFP_EVENTS_TO_IMPORT: list[str] = get_env("HFP_EVENTS_TO_IMPORT", modifier=env_as_upper_str_list)
-IMPORT_COVERAGE_DAYS: int = get_env("IMPORT_COVERAGE_DAYS", "14", modifier=env_as_int)
+IMPORT_COVERAGE_DAYS: int = get_env("IMPORT_COVERAGE_DAYS", "2", modifier=env_as_int)
+
+# Days to exclude from delay analysis
+DAYS_TO_EXCLUDE: list[str] = get_env("DAYS_TO_EXCLUDE","",modifier=env_as_upper_str_list)
 
 # Authentication str for docs.
 DEFAULT_AUTH_CODE: str = get_env("DEFAULT_AUTH_CODE", "")
