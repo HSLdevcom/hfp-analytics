@@ -455,6 +455,8 @@ async def get_delay_analytics_data(
     route_ids = []
     if route_id:
         route_ids = [r.strip() for r in route_id.split(",") if r.strip()]
+    else:
+        route_ids = 'ALL'
 
     logger.debug(f"Fetching hfp delay data. route_id: {route_ids}, from_oday: {from_oday}, to_oday: {to_oday}")
 

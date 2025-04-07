@@ -168,9 +168,6 @@ async def load_compressed_departures_csv(route_ids: [str], from_oday: str, to_od
 
 
 async def load_compressed_cluster(table: str, route_id: str, from_oday: str, to_oday: str) -> bytes:
-    if (route_id is None):
-        route_id = 'ALL'
-    
     table_name = f"delay.{table}"
     query = f"""
         SELECT zst
