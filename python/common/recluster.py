@@ -13,13 +13,14 @@ import zstandard as zstd
 import logging
 import time
 
-from datetime import datetime, timedelta
 
+from datetime import date, datetime, timedelta
 from dotenv import load_dotenv
 from common.database import pool
 from common.utils import get_season
 from common.config import DAYS_TO_EXCLUDE
 from sklearn.cluster import DBSCAN
+from typing import Union, Optional
 
 logger = logging.getLogger("api")
 
@@ -192,6 +193,24 @@ async def load_compressed_cluster(table: str, route_id: str, from_oday: str, to_
     dctx = zstd.ZstdDecompressor()
     decompressed_csv = dctx.decompress(compressed_data)
     return decompressed_csv 
+
+async def prep_cluster_data(
+    routes_table: str,
+    modes_table: str,
+    route_ids: Union[str, list[str]],
+    from_oday: date,
+    to_oday: date
+) -> tuple[Optional[bytes], Optional[bytes]]:
+
+    routecluster_geojson = await load_compressed_cluster(routes_table, route_ids, from_oday, to_oday)
+    modecluster_geojson  = await load_compressed_cluster(modes_table,  route_ids, from_oday, to_oday)
+
+    if route_ids != "ALL" and (routecluster_geojson is None or modecluster_geojson is None):
+        await recluster_analysis(route_ids, from_oday, to_oday)
+        routecluster_geojson = await load_compressed_cluster(routes_table, route_ids, from_oday, to_oday)
+        modecluster_geojson  = await load_compressed_cluster(modes_table,  route_ids, from_oday, to_oday)
+
+    return routecluster_geojson, modecluster_geojson
 
 async def store_compressed_geojson(
     table: str,

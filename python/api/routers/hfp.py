@@ -7,6 +7,7 @@ import pandas as pd
 import geopandas as gpd
 import pytz
 import numpy as np
+import re
 
 from sklearn.cluster import DBSCAN
 from collections import Counter
@@ -23,7 +24,7 @@ from fastapi.encoders import jsonable_encoder
 
 from api.services.hfp import get_hfp_data, get_speeding_data
 from api.services.tlp import get_tlp_data, get_tlp_data_as_json
-from common.recluster import recluster_analysis, load_compressed_cluster
+from common.recluster import  prep_cluster_data, load_compressed_cluster
 from common.utils import get_previous_day_oday, create_filename, set_timezone
 
 logger = logging.getLogger("api")
@@ -31,7 +32,7 @@ logger = logging.getLogger("api")
 router = APIRouter(prefix="/hfp", tags=["HFP data"])
 
 CHUNK_SIZE = 10000 # Adjust to optimize if needed
-
+route_id_pattern = re.compile(r"^[A-Za-z0-9]+$")
 
 class GzippedFileResponse(Response):
     media_type = "application/gzip"
@@ -415,94 +416,124 @@ async def get_speeding(
 
 @router.get(
     "/delay_analytics",
-    summary="Get HFP raw data",
-    description="Returns raw HFP data in a gzip compressed csv file.",
-    response_class=GzippedFileResponse,
+    summary="Get delay analytics data.",
+    description="Returns delay analytics as packaged zip file.",
     responses={
         200: {
             "description": "Successful query. The data is returned as an attachment in the response. ",
-            "content": {"application/gzip": {"schema": None, "example": None}},
-            "headers": {
-                "Content-Disposition": {
-                    "schema": {"example": 'attachment; filename=""'}
-                }
-            },
+            "content": {"application/gzip": {"schema": None, "example": None}}
         },
         204: {"description": "Query returned no data with the given parameters."},
+        422: {"description": "Query had invalid parameters."}
     },
+    response_class=GzippedFileResponse,
 )
 async def get_delay_analytics_data(
     route_id: Optional[str] = Query(
         default=None,
-        title="Route ID",
-        description="JORE ID of the route.",
-        example="1057",
+        title="Route ID or Route IDs",
+        description="Routes to be used in analysis. Single or multiple route ids can be used. If multiple given, then ids should be separated by a comma.",
+        example="1057,1070",
     ),
-    from_oday: Optional[date] = Query(default=None, title="From Date (YYYY-MM-DD)", example="2025-02-10"),
-    to_oday: Optional[date] = Query(default=None, title="To Date (YYYY-MM-DD)", example="2025-02-11")
+    from_oday: Optional[date] = Query(
+        default=None,
+        title="From oday (YYYY-MM-DD)",
+        description=(
+            "The oday from which the preprocessed clusters and departures will be used.",
+            "If same oday is used for from_oday and to_oday the analysis for that day will be returned.",
+            "If no date given the default value will be used (five days prior)."
+        ),
+        example="2025-02-10"
+    ),
+    to_oday: Optional[date] = Query(
+        default=None,
+        title="To oday (YYYY-MM-DD)",
+        description=(
+            "The oday to which the preprocessed clusters and departures will be used.",
+            "If same oday is used for from_oday and to_oday the analysis for that day will be returned.",
+            "If no date given the default value will be used (yesterday)."
+        ),
+        example="2025-02-10"
+    ),
 ) -> Response:
     """
     Get delay analytics data.
     """
-    default_from_oday = get_previous_day_oday()
-    default_to_oday = get_previous_day_oday()
-    if (from_oday is None):
-        from_oday = default_from_oday
+    with CustomDbLogHandler("api"):
+        default_from_oday = get_previous_day_oday(5)
+        default_to_oday = get_previous_day_oday()
+        if (from_oday is None):
+            from_oday = default_from_oday
 
-    if (to_oday is None):
-        to_oday = default_to_oday
+        if (to_oday is None):
+            to_oday = default_to_oday
 
-    if route_id is None or not route_id.strip():
-        route_ids = "ALL"
-    else:
-        route_ids = [r.strip() for r in route_id.split(",") if r.strip()]
+        if route_id is None or not route_id.strip():
+            route_ids = "ALL"
+        else:
+            route_ids = [r.strip() for r in route_id.split(",") if r.strip()]
+            route_ids.sort()
 
-    logger.debug(f"Fetching hfp delay data. route_id: {route_ids}, from_oday: {from_oday}, to_oday: {to_oday}")
+            for rid in route_ids:
+                if not route_id_pattern.match(rid):
+                    raise HTTPException(
+                        status_code=422,
+                        detail=[
+                            {
+                                "loc": ["query", "route_id"],
+                                "msg": f"Invalid route ID: {rid}. Only letters and digits allowed.",
+                                "input": rid,
+                            }
+                        ]
+                    )
 
-    # TODO: always check if analysis available in db
-    if (route_ids != "ALL"):
-        await recluster_analysis(route_ids, from_oday, to_oday)
+        logger.debug(f"Fetching hfp delay data. route_id: {route_ids}, from_oday: {from_oday}, to_oday: {to_oday}")
 
-    routecluster_geojson = await load_compressed_cluster("recluster_routes", route_ids, from_oday, to_oday)
-    modecluster_geojson = await load_compressed_cluster("recluster_modes", route_ids, from_oday, to_oday)
+        routecluster_geojson, modecluster_geojson = await prep_cluster_data(
+            routes_table="recluster_routes",
+            modes_table="recluster_modes",
+            route_ids=route_ids,
+            from_oday=from_oday,
+            to_oday=to_oday,
+        )
 
-    if routecluster_geojson is None or modecluster_geojson is None:
-        return Response(status_code=204)
+        if routecluster_geojson is None or modecluster_geojson is None:
+            return Response(status_code=204)
 
-    def geojson_to_csv_bytes(geojson_bytes: bytes) -> bytes:
-        geojson_bytes_io = io.BytesIO(geojson_bytes)
-        gdf = gpd.read_file(geojson_bytes_io, driver="GeoJSON")
-        csv_buffer = io.BytesIO()
-        gdf.to_csv(csv_buffer, index=False)
-        csv_buffer.seek(0)
-        return csv_buffer.getvalue()
+        def geojson_to_csv_bytes(geojson_bytes: bytes) -> bytes:
+            geojson_bytes_io = io.BytesIO(geojson_bytes)
+            gdf = gpd.read_file(geojson_bytes_io, driver="GeoJSON")
+            csv_buffer = io.BytesIO()
+            gdf.to_csv(csv_buffer, index=False)
+            csv_buffer.seek(0)
+            return csv_buffer.getvalue()
 
-    routecluster_csv = geojson_to_csv_bytes(routecluster_geojson)
-    modecluster_csv = geojson_to_csv_bytes(modecluster_geojson)
+        routecluster_csv = geojson_to_csv_bytes(routecluster_geojson)
+        modecluster_csv = geojson_to_csv_bytes(modecluster_geojson)
 
-    parent_file_buffer = io.BytesIO()
-    with zipfile.ZipFile(parent_file_buffer, "w") as parent_zip:
+        parent_file_buffer = io.BytesIO()
+        with zipfile.ZipFile(parent_file_buffer, "w") as parent_zip:
 
-        route_buffer = io.BytesIO()
-        with zipfile.ZipFile(route_buffer, "w") as route_zip:
-            route_zip.writestr("routecluster.geojson", routecluster_geojson)
-            route_zip.writestr("routecluster.csv", routecluster_csv)
-        route_buffer.seek(0)
+            route_buffer = io.BytesIO()
+            with zipfile.ZipFile(route_buffer, "w") as route_zip:
+                route_zip.writestr("routecluster.geojson", routecluster_geojson)
+                route_zip.writestr("routecluster.csv", routecluster_csv)
+            route_buffer.seek(0)
 
-        parent_zip.writestr("routecluster.zip", route_buffer.getvalue())
+            parent_zip.writestr("routecluster.zip", route_buffer.getvalue())
 
-        mode_buffer = io.BytesIO()
-        with zipfile.ZipFile(mode_buffer, "w") as mode_zip:
-            mode_zip.writestr("modecluster.geojson", modecluster_geojson)
-            mode_zip.writestr("modecluster.csv", modecluster_csv)
-        mode_buffer.seek(0)
+            mode_buffer = io.BytesIO()
+            with zipfile.ZipFile(mode_buffer, "w") as mode_zip:
+                mode_zip.writestr("modecluster.geojson", modecluster_geojson)
+                mode_zip.writestr("modecluster.csv", modecluster_csv)
+            mode_buffer.seek(0)
 
-        parent_zip.writestr("modecluster.zip", mode_buffer.getvalue())
+            parent_zip.writestr("modecluster.zip", mode_buffer.getvalue())
 
 
-    parent_file_buffer.seek(0)
-    return Response(
-        content=parent_file_buffer.getvalue(),
-        media_type="application/zip",
-        headers={"Content-Disposition": 'attachment; filename="clusters.zip"'}
-    )
+        parent_file_buffer.seek(0)
+        return Response(
+            content=parent_file_buffer.getvalue(),
+            media_type="application/zip",
+            headers={"Content-Disposition": 'attachment; filename="clusters.zip"'}
+        )

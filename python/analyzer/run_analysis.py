@@ -223,23 +223,30 @@ async def run_delay_analysis():
                 
                 bus_route_ids = [route["gtfsId"].split(":")[1] for route in bus_routes_res["data"]["routes"]]
                 tram_route_ids = [route["gtfsId"].split(":")[1] for route in tram_routes_res["data"]["routes"]]
-
                 route_ids = bus_route_ids + tram_route_ids
-                filtered_route_ids = [r for r in route_ids if not (r.endswith("N") or r.endswith("H"))].sort()
- 
+                
+                filtered_route_ids = [r for r in route_ids if not (r.endswith("N") or r.endswith("H"))]
+                filtered_route_ids.sort()
+                yesterday = get_previous_day_oday()
+
                 for i, route_id in enumerate(filtered_route_ids, start=1):
-                    df, oday = await load_delay_hfp_data(route_id)
-                    logger.debug(f"[{i}/{len(filtered_route_ids)}] Data fetched from oday {oday} for route_id={route_id}. Running preprocess.")
+                    #TODO: Check if preprocessed file exists and skip if it does
+                    #preprocessed_files_exist = check_preprocessed_files(route_id, yesterday)
+                    #if preprocessed_files_exist:
+                    #    continue
+                    df = await load_delay_hfp_data(route_id, yesterday)
+                    logger.debug(f"[{i}/{len(filtered_route_ids)}] Data fetched from oday {yesterday} for route_id={route_id}. Running preprocess.")
 
                     try:
-                        await preprocess(df, route_id, oday)
+                        await preprocess(df, route_id, yesterday)
                     except ValueError as e:
                         logger.debug(f"[{i}/{len(filtered_route_ids)}] Preprocessing failed for route_id={route_id}, skipping. Error: {e}")
                         continue
                     
                     logger.debug(f"[{i}/{len(filtered_route_ids)}] Preprocessed {route_id}.")
                 
-                from_oday = get_previous_day_oday()
+                # TODO: Default analysis coverage offset should be set in configs
+                from_oday = get_previous_day_oday(5)
                 to_oday = get_previous_day_oday()
                 logger.debug(f"Running reclustering for all routes from {from_oday} to {to_oday}")
                 await recluster_analysis(None, from_oday, to_oday)
