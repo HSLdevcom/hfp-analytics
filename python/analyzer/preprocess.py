@@ -51,23 +51,23 @@ TIME_GROUP_D = {
     }
 }
 
-async def load_delay_hfp_data(route_id: Optional[str]) -> pd.DataFrame:
+async def load_delay_hfp_data(route_id: Optional[str], oday: date) -> pd.DataFrame:
     csv_buffer = io.BytesIO()
-    row_count, oday = await get_delay_hfp_data(route_id, csv_buffer)
+    row_count = await get_delay_hfp_data(route_id, oday, csv_buffer)
 
     csv_buffer.seek(0)
 
     df = pd.read_csv(csv_buffer)
-    return df, oday
+    return df
 
 async def get_delay_hfp_data(
     route_id: Optional[str],
+    oday: date,
     stream: BytesIO,
 ) -> int:
     """
     Query delay hfp data.
     """
-    oday = get_previous_day_oday()
     oday_datetime = datetime.strptime(oday, "%Y-%m-%d").date()
 
     from_datetime = datetime.combine(oday_datetime, time(0, 0, 0))
@@ -103,7 +103,7 @@ async def get_delay_hfp_data(
             async for row in copy:
                 row_count += 1
                 stream.write(row)
-        return row_count, oday
+        return row_count
 
 def tst_seconds_from_midnight(df):
     """
