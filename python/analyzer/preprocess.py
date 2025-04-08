@@ -201,6 +201,21 @@ async def store_compressed_csv(
             },
         )
 
+async def check_preprocessed_files(route_id: str, oday: date, table: str) -> bool:
+    """
+    Return true of preprocessed file is found with given params.
+    """
+    table_name = f"delay.{table}"
+    query = f"""
+        SELECT count(*)
+        FROM {table_name}
+        WHERE oday = %(oday)s
+          AND route_id = %(route_id)s
+    """
+    async with pool.connection() as conn:
+        result_cursor = await conn.execute(query, {"route_id": route_id, "oday": oday})
+        row = await result_cursor.fetchone()
+        return row and row[0] > 0
 
 async def preprocess(
     df: pd.DataFrame,

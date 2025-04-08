@@ -9,7 +9,7 @@ import httpx
 from io import BytesIO
 from datetime import date, timedelta, datetime
 from itertools import chain
-from .preprocess import preprocess, load_delay_hfp_data
+from .preprocess import preprocess, load_delay_hfp_data, check_preprocessed_files
 from common.utils import get_previous_day_oday
 from common.recluster import recluster_analysis
 from common.vehicle_analysis_utils import (
@@ -224,16 +224,19 @@ async def run_delay_analysis():
                 bus_route_ids = [route["gtfsId"].split(":")[1] for route in bus_routes_res["data"]["routes"]]
                 tram_route_ids = [route["gtfsId"].split(":")[1] for route in tram_routes_res["data"]["routes"]]
                 route_ids = bus_route_ids + tram_route_ids
-                
+
                 filtered_route_ids = [r for r in route_ids if not (r.endswith("N") or r.endswith("H"))]
                 filtered_route_ids.sort()
                 yesterday = get_previous_day_oday()
 
                 for i, route_id in enumerate(filtered_route_ids, start=1):
-                    #TODO: Check if preprocessed file exists and skip if it does
-                    #preprocessed_files_exist = check_preprocessed_files(route_id, yesterday)
-                    #if preprocessed_files_exist:
-                    #    continue
+                    preprocessed_routes_exist = await check_preprocessed_files(route_id, yesterday, "preprocess_clusters")
+                    preprocessed_modes_exist = await check_preprocessed_files(route_id, yesterday, "preprocess_departures")
+
+                    if preprocessed_routes_exist and preprocessed_modes_exist:
+                        logger.debug(f"[{i}/{len(filtered_route_ids)}] Preprocessed files for {yesterday} for route_id={route_id} exists. Skipping.")
+                        continue
+
                     df = await load_delay_hfp_data(route_id, yesterday)
                     logger.debug(f"[{i}/{len(filtered_route_ids)}] Data fetched from oday {yesterday} for route_id={route_id}. Running preprocess.")
 
@@ -246,7 +249,7 @@ async def run_delay_analysis():
                     logger.debug(f"[{i}/{len(filtered_route_ids)}] Preprocessed {route_id}.")
                 
                 # TODO: Default analysis coverage offset should be set in configs
-                from_oday = get_previous_day_oday(5)
+                from_oday = get_previous_day_oday(10)
                 to_oday = get_previous_day_oday()
                 logger.debug(f"Running reclustering for all routes from {from_oday} to {to_oday}")
                 await recluster_analysis(None, from_oday, to_oday)
