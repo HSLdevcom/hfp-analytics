@@ -38,7 +38,7 @@ from common.config import (
 )
 
 start_time = 0
-GRAPHQL_URL = 'https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql'
+GRAPHQL_URL = 'https://api.digitransit.fi/routing/v2/hsl/gtfs/v1'
 logger = logging.getLogger('importer')
 
 
