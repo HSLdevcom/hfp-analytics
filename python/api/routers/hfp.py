@@ -460,7 +460,8 @@ async def get_delay_analytics_data(
     Get delay analytics data.
     """
     with CustomDbLogHandler("api"):
-        default_from_oday = get_previous_day_oday(5)
+        #TODO: get default oday offsets from configs
+        default_from_oday = get_previous_day_oday(10)
         default_to_oday = get_previous_day_oday()
         if (from_oday is None):
             from_oday = default_from_oday
