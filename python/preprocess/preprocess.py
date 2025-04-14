@@ -78,7 +78,7 @@ async def get_delay_hfp_data(
     oday_datetime = datetime.strptime(oday, "%Y-%m-%d").date()
 
     from_datetime = datetime.combine(oday_datetime, time(0, 0, 0))
-    to_datetime = from_datetime + timedelta(days=1, hours=4)
+    to_datetime = from_datetime + timedelta(days=1, hours=1)
 
     from_tst = from_datetime.isoformat()
     to_tst = to_datetime.isoformat()
