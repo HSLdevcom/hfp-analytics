@@ -7,7 +7,7 @@
         "direction": "in",
         "name": "preprocess",
         "runOnStartup": false,
-        "schedule": "0 0 * * * *"
+        "schedule": "0 45 * * * *"
       }
     ]
   }
