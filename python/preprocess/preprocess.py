@@ -17,11 +17,18 @@ from common.utils import get_previous_day_oday
 
 logger = logging.getLogger("analyzer")
 
+# TODO: Move to configs
 EARHT_RADIUS_KM = 6371
 EPS_DISTANCE_1 = 0.01
 MIN_DELAY_EVENTS = 5
 HDG_DIFF_LOWER_LIMIT = 170
 HDG_DIFF_UPPER_LIMIT = 190
+HDG_DIFF_LOWER_LIMIT = 170
+HDG_DIFF_UPPER_LIMIT = 190
+HDG_SPEED_LIMIT = 2.0
+MAX_TIME_GAP = 60
+
+
 SPEEDS_IN_DELAY = ['DELAY', 'SLOW']
 SPEED_CLASSES = {
     "DELAY": {
@@ -261,23 +268,24 @@ async def preprocess(
     for key, sub_df in g:
         # print(key),
         sub_df = sub_df.reset_index(drop=True)
-        # sub_df.tst = pd.to_datetime(sub_df.tst, format="ISO8601").dt.tz_convert(timezone),
         
-        sub_df = sub_df[sub_df["loc"].isin(["GPS"])].reset_index(drop=True)  # Suodatus: IV VP-tapahtumat GPS-lähtöisiä (MAN ja ODO voivat olla vääristyneitä),
+        sub_df = sub_df[sub_df["loc"].isin(["GPS"])].reset_index(drop=True) 
         if sub_df.empty:
-            sub_df['ERR_all_loc_no_GPS'] = True
-        # Different event types are processed differently. Only VP-events are used in this analysis.,
-        # stop_event_df = sub_df[sub_df["event_type"isin(["ARR", "ARS", "DEP", "PDE"])],
+            continue
+
         vp_event_df = sub_df[(sub_df["event_type"] == "VP")]
-        vp_event_df = vp_event_df.drop_duplicates().sort_values(by="tst").reset_index(drop=True)  # Suodatus: X VP-tapahtumien duplikaatit poistettu (tst-tiedon perusteella),
+        if vp_event_df.empty:
+            continue
+
+        vp_event_df = vp_event_df.drop_duplicates().sort_values(by="tst").reset_index(drop=True)
         # Helper variables,
         vp_event_df = tst_seconds_from_midnight(vp_event_df)
-        vp_event_df["diff_btwn_tsts"] = np.append([0], np.diff(vp_event_df["tst_seconds_from_midnight"]))  # juuri keskiyön kohdalla tästä syntyy virheitä ja ero on -86 399 sekuntia...,
-        vp_event_df["diff_btwn_tsts"] = np.where(vp_event_df["diff_btwn_tsts"] == -60 * 60 * 24 + 1, 1, vp_event_df["diff_btwn_tsts"])  # ... joten ne korjataan tässä,
+        vp_event_df["diff_btwn_tsts"] = np.append([0], np.diff(vp_event_df["tst_seconds_from_midnight"]))
+        vp_event_df["diff_btwn_tsts"] = np.where(vp_event_df["diff_btwn_tsts"] == -60 * 60 * 24 + 1, 1, vp_event_df["diff_btwn_tsts"])
+        vp_event_df["hdg"] = vp_event_df["hdg"].ffill().bfill()
         vp_event_df["diff_btwn_hdg"] = np.append([0], np.diff(vp_event_df["hdg"]))
         vp_event_df = vp_event_df.reset_index(drop=True)
 
-        # Laatuvaatimukset datalle. Oletuksena, että lähdön koko data täyttää laatuvaatimukset.,
         if (vp_event_df["drst"] == 0.0).all():
             vp_event_df['ERR_all_door_status_closed'] = True
         if (vp_event_df["drst"] == 1.0).all():
@@ -287,9 +295,7 @@ async def preprocess(
         if len(vp_event_df) <= 5:
             vp_event_df['ERR_too_few_VP'] = True
         if vp_event_df['stop'].isna().all():
-            vp_event_df['ERR_all_stops_NA'] = True
-        # if len(stop_event_df) == 0:
-        #     vp_event_df['ERR_ARR_ARS_DEP_PDE'] = True
+            vp_event_df['ERR_no_route_stops'] = True
         if pd.isna(vp_event_df["odo"]).all():
             vp_event_df['ERR_all_odo_NA'] = True
         if pd.isna(vp_event_df["lat"]).all():
@@ -300,14 +306,10 @@ async def preprocess(
             vp_event_df['ERR_all_lat_0'] = True
         if (vp_event_df["long"] == 0.0).all():
             vp_event_df['ERR_all_long_0'] = True
-        # Inertia korjaa datan, jossa syntyisi GPS-katko katvealueen kuten tunnelin vuoksi. Vastaava sääntö tarvitaan kuitenkin,
-        # inertiaa hyödyntävässä sijaintien tunnistuksessa mukaan, jotta klustereita ei muodostu peräkkäisistä eventeistä,,
-        # joiden välissä on liian suuri ajallinen katkos jostain muusta syystä kuin GPS-katveesta.,
-        if any(vp_event_df.diff_btwn_tsts > 60):
+        if any(vp_event_df.diff_btwn_tsts > MAX_TIME_GAP):
             vp_event_df['ERR_too_long_time_gap'] = True
-        # Ajallisesti peräkkäisten tapahtumien headingin ero ei saa olla absoluuttisen 180 asteen tietämillä. Auto ei vain käänny näin nopeasti normaalioloissa!,
-        if any(np.abs(vp_event_df.diff_btwn_hdg).between(HDG_DIFF_LOWER_LIMIT, HDG_DIFF_UPPER_LIMIT, inclusive='both')):
-            vp_event_df['ERR_heading_diff_about_180'] = True
+        if any((np.abs(vp_event_df.diff_btwn_hdg).between(HDG_DIFF_LOWER_LIMIT, HDG_DIFF_UPPER_LIMIT, inclusive='both')) & (vp_event_df.spd > HDG_SPEED_LIMIT)):
+            vp_event_df['ERR_heading_diff_error'] = True
         if [x for x in vp_event_df.columns if x.startswith('ERR')]:
             failed_in_quality.append(vp_event_df)
             continue
@@ -345,12 +347,11 @@ async def preprocess(
             else:
                 doors_closed.loc[doors_closed["mean_spd"] > v["FAST_MIN"], "sclass"] = k
 
-
         doors_opened = vp_event_df[vp_event_df["drst"] != 0]
         doors_opened.loc[doors_opened["drst"] == 2, "sclass"] = "DRS_ERR"
         doors_opened.loc[doors_opened["mean_spd"] < 1, "sclass"] = "STOP"
         doors_opened.loc[doors_opened["mean_spd"] >= 1, "sclass"] = "SPD_ERR"
-
+        
         # Delay classes
         vp_event_df = pd.concat([doors_closed, doors_opened], axis=0).sort_values(by="tst").reset_index(drop=True)
         vp_event_df['stop'] = vp_event_df['stop'].fillna(0)
@@ -361,43 +362,42 @@ async def preprocess(
                 res['dclass'] = 'on_route'
             elif set(res.drst) == {1, 0}:
                 idx_doors_open_first_time = res[res.drst == 1].sort_values(by='tst').head(1).index.values[0]
-                # NOTE ajantasauksissa seisotaan paikoillaan ovet kiinni, niiden käsittely olisi oma hommansa, jota ei ole nyt huomioitu koodissa,
+                # NOTE ajantasauksissa seisotaan paikoillaan ovet kiinni, niiden käsittely olisi oma hommansa, jota ei ole nyt huomioitu koodissa
                 res['dclass'] = np.where((res.index < idx_doors_open_first_time) & (pd.notna(res.stop)), "arr", "stop")
                 idx_doors_close_last_time = res[res.drst == 1].sort_values(by='tst').tail(1).index.values[0]
                 res['dclass'] = np.where((res.index > idx_doors_close_last_time) & (pd.notna(res.stop)), "dep", res['dclass'])
-            else:  # Pysäkiltä ajetaan ohi ovet kiinni,
+            else:
                 res['dclass'] = np.where(pd.notna(res.stop), "pass", "")
-            
-            res['s_and_d_change'] = ((res['sclass'] != res['sclass'].shift()) | (res['dclass'] != res['dclass'].shift())).cumsum()
             dfs.append(res)
 
         dfs = pd.concat(dfs)
+        # NOTE: pysäkillä seisominen käsitetään matkustajapalveluksi tai pysäkkiajaksi, ei viiveeksi
         dfs = dfs[dfs.dclass != "stop"]
         vp_event_df = dfs.sort_values(by='tst').reset_index(drop=True)
+        # speed_in_location.append(vp_event_df)
+        delay_df = vp_event_df[vp_event_df['sclass'].isin(['DELAY', 'SLOW'])].copy()
 
-        speed_in_location.append(vp_event_df)
-        delay_df = vp_event_df[vp_event_df['sclass'].isin(SPEEDS_IN_DELAY)].copy()
-
+        # aggregation level 1
         if not delay_df.empty:
             groups = delay_df.groupby('dclass')
             for _, delay_class_df in groups:
-                vp_events_in_clusters.append(delay_class_df)
+                # vp_events_in_clusters.append(delay_class_df)
                 EPSILON = EPS_DISTANCE_1 / EARHT_RADIUS_KM
                 X = np.radians(delay_class_df[['lat', 'long']])
                 dbscan = DBSCAN(eps=EPSILON, min_samples=MIN_DELAY_EVENTS, metric='haversine')
-                # NOTE Tämä toimii kun GPS-viesteissä ei ole isoa ajallista katkoa! (Eli menee rikki jos HFP:tä ottaisikin vain joka toisen sekunnin tms. keventämistä...)
                 delay_class_df['cluster'] = dbscan.fit_predict(X)
                 delay_class_df = delay_class_df[delay_class_df['cluster'] != -1]
-
+            
                 if not delay_class_df.empty:
-                    my_vars = ['route_id', 'direction_id', 'dclass', 'oday', 'start', 'cluster', 'time_group']
-                    cluster_counts = delay_class_df.groupby(my_vars).size().reset_index(name='weight')  # Klusterin painoarvo == siihen klusteroituneiden  pisteiden (sekunteja) lkm
+                    my_vars = ['route_id', 'direction_id', 'dclass', 'oday', 'start', 'time_group', 'cluster']
+                    cluster_counts = delay_class_df.groupby(my_vars).size().reset_index(name='weight')
                     median_vars = delay_class_df.groupby(my_vars)[['lat', 'long', 'tst', 'hdg']].median().reset_index()
                     cluster_df = median_vars.merge(cluster_counts, on=my_vars, how='outer')
                     cluster_df = cluster_df[['route_id', 'direction_id', 'hdg', 'dclass', 'oday', 'start', 'tst', 'weight', 'time_group', 'lat', 'long']].rename(
                         columns={'tst': 'tst_median', 'hdg': 'hdg_median', 'lat': 'lat_median', 'long': 'long_median'}
                     )
                     clusters.append(cluster_df)
+    
 
 
     if clusters:

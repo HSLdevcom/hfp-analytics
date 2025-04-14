@@ -34,7 +34,7 @@ def main(function: str, environment: str) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Helper script to trigger a backend function")
-    parser.add_argument("function", help="function to be triggered", choices=["analyzer", "importer"])
+    parser.add_argument("function", help="function to be triggered", choices=["analyzer", "importer", "preprocess"])
     parser.add_argument("--env", help="environment to send the trigger", choices=["local", "dev", "prod"], default="local")
     args = parser.parse_args()
 

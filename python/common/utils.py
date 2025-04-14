@@ -52,13 +52,6 @@ def get_previous_day_oday(offset=1):
     from_oday = yesterday.strftime("%Y-%m-%d")
     return from_oday
 
-def get_season(timestamp):
-    month = timestamp.month
-    if month in [12, 1, 2]:
-        return "winter"
-    elif month in [3, 4, 5]:
-        return "spring"
-    elif month in [6, 7, 8]:
-        return "summer"
-    elif month in [9, 10, 11]:
-        return "autumn"
+def get_season(month, seasons_and_months):
+    key = [key for key, val in seasons_and_months.items() if month in val][0]
+    return key.lower()
