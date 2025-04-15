@@ -1,5 +1,3 @@
-# Call analysis functions in the db.
-
 import psycopg2
 import logging
 import time
