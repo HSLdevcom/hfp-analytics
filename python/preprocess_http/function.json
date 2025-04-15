@@ -1,0 +1,20 @@
+{
+  "scriptFile": "main.py",
+  "entryPoint": "main",
+  "bindings": [
+    {
+      "type": "httpTrigger",
+      "direction": "in",
+      "name": "req",
+      "methods": [ "post" ],
+      "authLevel": "function",
+      "route": "preprocess-http",
+      "runOnStartup": false
+    },
+    {
+      "type": "http",
+      "direction": "out",
+      "name": "$return"
+    }
+  ]
+}

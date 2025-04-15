@@ -30,7 +30,6 @@ def create_route_query(mode: str) -> str:
     }}
     """
 
-
 async def get_query_async(query):
     async with httpx.AsyncClient() as client:
         req = await client.post(
@@ -46,8 +45,14 @@ async def get_query_async(query):
     else:
         raise Exception(f'{req} failed with status code {req.status_code}')
 
-async def run_delay_analysis():
+async def run_recluster_analysis(days: int):
+    from_oday = get_previous_day_oday(days)
+    to_oday = get_previous_day_oday()
+    logger.debug(f"Running reclustering for all routes from {from_oday} to {to_oday}")
+    await recluster_analysis(None, from_oday, to_oday)
+    logger.debug(f"Recluster analysis done.")
 
+async def run_delay_analysis(requested_oday: str = None):
     conn = psycopg2.connect(POSTGRES_CONNECTION_STRING)
     try:
         with conn:
@@ -70,30 +75,36 @@ async def run_delay_analysis():
                 
                 bus_route_ids = [route["gtfsId"].split(":")[1] for route in bus_routes_res["data"]["routes"]]
                 tram_route_ids = [route["gtfsId"].split(":")[1] for route in tram_routes_res["data"]["routes"]]
+
                 route_ids = bus_route_ids + tram_route_ids
 
                 filtered_route_ids = [r for r in route_ids if not (r.endswith("N") or r.endswith("H"))]
                 filtered_route_ids.sort()
-                yesterday = get_previous_day_oday()
+                oday = requested_oday
+                if requested_oday is None:
+                    oday = get_previous_day_oday()
 
                 for i, route_id in enumerate(filtered_route_ids, start=1):
-                    preprocessed_routes_exist = await check_preprocessed_files(route_id, yesterday, "preprocess_clusters")
-                    preprocessed_modes_exist = await check_preprocessed_files(route_id, yesterday, "preprocess_departures")
+                    preprocessed_routes_exist = await check_preprocessed_files(route_id, oday, "preprocess_clusters")
+                    preprocessed_modes_exist = await check_preprocessed_files(route_id, oday, "preprocess_departures")
 
                     if preprocessed_routes_exist and preprocessed_modes_exist:
-                        logger.debug(f"[{i}/{len(filtered_route_ids)}] Preprocessed files for {yesterday} for route_id={route_id} exists. Skipping.")
+                        logger.debug(f"[{i}/{len(filtered_route_ids)}] Preprocessed files for {oday} for route_id={route_id} exists. Skipping.")
                         continue
 
-                    df = await load_delay_hfp_data(route_id, yesterday)
-                    logger.debug(f"[{i}/{len(filtered_route_ids)}] Data fetched from oday {yesterday} for route_id={route_id}. Running preprocess.")
+                    df = await load_delay_hfp_data(route_id, oday)
+                    logger.debug(f"[{i}/{len(filtered_route_ids)}] Data fetched from oday {oday} for route_id={route_id}. Running preprocess.")
 
                     try:
-                        await preprocess(df, route_id, yesterday)
+                        await preprocess(df, route_id, oday)
                     except ValueError as e:
                         logger.debug(f"[{i}/{len(filtered_route_ids)}] Preprocessing failed for route_id={route_id}, skipping. Error: {e}")
                         continue
                     
                     logger.debug(f"[{i}/{len(filtered_route_ids)}] Preprocessed {route_id}.")
+                
+                logger.debug(f"Http triggered preprocessing done for {len(filtered_route_ids)} routes for oday {oday}.")
+
 
     except Exception:
         logger.exception("Analysis failed.")
