@@ -16,4 +16,6 @@ RUN pip install -r ${WORK_DIR}/requirements.txt
 COPY ./python/importer ${WORK_DIR}/importer/
 COPY ./python/analyzer ${WORK_DIR}/analyzer/
 COPY ./python/common ${WORK_DIR}/common/
+COPY ./python/preprocess ${WORK_DIR}/preprocess/
+COPY ./python/preprocess_http ${WORK_DIR}/preprocess_http/
 COPY ./python/host.json ${WORK_DIR}/host.json
