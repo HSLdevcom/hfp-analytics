@@ -24,7 +24,7 @@ from fastapi.encoders import jsonable_encoder
 
 from api.services.hfp import get_hfp_data, get_speeding_data
 from api.services.tlp import get_tlp_data, get_tlp_data_as_json
-from common.recluster import  prep_cluster_data, load_compressed_cluster
+from common.recluster import  prep_recluster_data
 from common.utils import get_previous_day_oday, create_filename, set_timezone
 
 logger = logging.getLogger("api")
@@ -490,7 +490,7 @@ async def get_delay_analytics_data(
 
         logger.debug(f"Fetching hfp delay data. route_id: {route_ids}, from_oday: {from_oday}, to_oday: {to_oday}")
 
-        routecluster_geojson, modecluster_geojson = await prep_cluster_data(
+        routecluster_geojson, modecluster_geojson = await prep_recluster_data(
             routes_table="recluster_routes",
             modes_table="recluster_modes",
             route_ids=route_ids,

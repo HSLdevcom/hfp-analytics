@@ -13,14 +13,13 @@ import zstandard as zstd
 import logging
 import time
 
-
 from datetime import date, datetime, timedelta
 from dotenv import load_dotenv
 from common.database import pool
 from common.utils import get_season
 from common.config import DAYS_TO_EXCLUDE
 from sklearn.cluster import DBSCAN
-from typing import Union, Optional
+from typing import Union, Optional, List
 
 logger = logging.getLogger("api")
 
@@ -49,11 +48,11 @@ SPEED_CLASSES = {
 }
 
 DCLASS_NAMES = {
-    "on_route": "0_on_route",
-    "pass": "1_passing_stop",
-    "arr": "2_arriving_to_stop",
-    "dep": "3_departing_from_stop",
-    "stop": "4_at_stop"
+    "on_route": "Ajo",
+    "pass": "Ohitus",
+    "arr": "Saapuminen",
+    "dep": "Poistuminen",
+    "stop": "Pysakki"
 }
 
 SEASON_MONTHS = {
@@ -74,8 +73,13 @@ def get_routes_condition(column: str, values: list[str]) -> tuple[str, dict]:
     return condition, params
 
 # Refactor with load_compressed_departures_csv
-async def load_compressed_cluster_csv(route_ids: [str], from_oday: str, to_oday: str) -> bytes:
-    base_query = "SELECT zst FROM delay.preprocess_clusters"
+async def load_preprocess_files(
+    route_ids: Optional[List[str]],
+    from_oday: str,
+    to_oday: str,
+    table: str
+) -> bytes:
+    base_query = f"SELECT zst FROM delay.{table}"
     conditions = []
     params = {}
     conditions.append("oday >= %(from_oday)s::date")
@@ -83,7 +87,7 @@ async def load_compressed_cluster_csv(route_ids: [str], from_oday: str, to_oday:
     params["from_oday"] = from_oday
     params["to_oday"] = to_oday
 
-    if route_ids:
+    if route_ids and route_ids != "ALL":
         in_condition, in_params = get_routes_condition("route_id", route_ids)
         conditions.append(in_condition)
         params.update(in_params)
@@ -95,8 +99,9 @@ async def load_compressed_cluster_csv(route_ids: [str], from_oday: str, to_oday:
     async with pool.connection() as conn:
         row = await conn.execute(query, params)
         results = await row.fetchall()
-        if not results:
-            return None 
+
+    if not results:
+        return None 
 
     dfs = []
     decompressor = zstd.ZstdDecompressor()
@@ -125,62 +130,13 @@ async def load_compressed_cluster_csv(route_ids: [str], from_oday: str, to_oday:
     buffer.seek(0)
     return buffer.getvalue()
 
-async def load_compressed_departures_csv(route_ids: [str], from_oday: str, to_oday: str) -> bytes:
-    base_query = "SELECT zst FROM delay.preprocess_departures"
-    conditions = []
-    params = {}
-    conditions.append("oday >= %(from_oday)s::date")
-    conditions.append("oday <= %(to_oday)s::date")
-    params["from_oday"] = from_oday
-    params["to_oday"] = to_oday
 
-    if route_ids:
-        in_condition, in_params = get_routes_condition("route_id", route_ids)
-        conditions.append(in_condition)
-        params.update(in_params)
-
-    query = base_query
-    if conditions:
-        query += " WHERE " + " AND ".join(conditions)
-
-    async with pool.connection() as conn:
-        row = await conn.execute(query, params)
-        results = await row.fetchall()
-        if not results:
-            return None 
-
-    dfs = []
-    decompressor = zstd.ZstdDecompressor()
-    for r in results:
-        compressed_data = r[0]  
-        decompressed_csv = decompressor.decompress(compressed_data)
-        df = pd.read_csv(io.BytesIO(decompressed_csv), sep=";")
-        dfs.append(df)
-
-    if not dfs:
-        return None
-
-    combined_df = pd.concat(dfs, ignore_index=True)
-
-    excluded_odays = DAYS_TO_EXCLUDE
-    if excluded_odays:
-        combined_df = combined_df[~combined_df["oday"].isin(excluded_odays)]
-
-    if combined_df.empty:
-        return None
-
-    buffer = io.BytesIO()
-    combined_df.to_csv(buffer, sep=";", index=False)
-    buffer.seek(0)
-    return buffer.getvalue()
-
-
-async def load_compressed_cluster(table: str, route_id: str, from_oday: str, to_oday: str) -> bytes:
+async def load_recluster_files(table: str, from_oday: str, to_oday: str, route_id: str = "ALL",) -> bytes:
     table_name = f"delay.{table}"
     query = f"""
         SELECT zst
         FROM {table_name}
-        WHERE route_id = %(route_id)s AND from_oday >= %(from_oday)s AND to_oday <= %(to_oday)s
+        WHERE route_id = %(route_id)s AND from_oday = %(from_oday)s AND to_oday = %(to_oday)s
     """
     async with pool.connection() as conn:
         row = await conn.execute(
@@ -201,21 +157,21 @@ async def load_compressed_cluster(table: str, route_id: str, from_oday: str, to_
     decompressed_csv = dctx.decompress(compressed_data)
     return decompressed_csv 
 
-async def prep_cluster_data(
+async def prep_recluster_data(
     routes_table: str,
     modes_table: str,
     route_ids: Union[str, list[str]],
     from_oday: date,
     to_oday: date
 ) -> tuple[Optional[bytes], Optional[bytes]]:
-
-    routecluster_geojson = await load_compressed_cluster(routes_table, route_ids, from_oday, to_oday)
-    modecluster_geojson  = await load_compressed_cluster(modes_table,  route_ids, from_oday, to_oday)
-
-    if route_ids != "ALL" and (routecluster_geojson is None or modecluster_geojson is None):
+    routecluster_geojson = await load_recluster_files(routes_table, from_oday, to_oday, route_ids)
+    modecluster_geojson  = await load_recluster_files(modes_table, from_oday, to_oday, route_ids)
+    
+    if routecluster_geojson is None or modecluster_geojson is None:
+        logger.debug(f"No recluster analysis found. Start recluster analysis for route_ids: {route_ids}, from_oday: {from_oday}, to_oday: {to_oday}")
         await recluster_analysis(route_ids, from_oday, to_oday)
-        routecluster_geojson = await load_compressed_cluster(routes_table, route_ids, from_oday, to_oday)
-        modecluster_geojson  = await load_compressed_cluster(modes_table,  route_ids, from_oday, to_oday)
+        routecluster_geojson = await load_recluster_files(routes_table, from_oday, to_oday, route_ids)
+        modecluster_geojson  = await load_recluster_files(modes_table, from_oday, to_oday, route_ids)
 
     return routecluster_geojson, modecluster_geojson
 
@@ -382,14 +338,15 @@ def ui_related_var_modifications(df: pd.DataFrame, seasons_and_months: dict, DEP
 
     # lähtömäärien luokat avoimella ylärajalla
     df["n_departures_category"] = np.where(df["n_departures"] <= DEPARTURE_THRESHOLD, "<=" + str(DEPARTURE_THRESHOLD), ">" + str(DEPARTURE_THRESHOLD))
+    df = df.rename(columns={"lat_median": "latitude", "long_median": "longitude"})
 
     return df
 
 
 async def get_preprocessed_departures(route_ids: [str], from_oday: str, to_oday: str):
-    departures_data = await load_compressed_departures_csv(route_ids, from_oday, to_oday)
+    departures_data = await load_preprocess_files(route_ids, from_oday, to_oday, "preprocess_departures")
     if not departures_data:
-        print(f"No departures ZST found for route_id={route_ids}")
+        logger.debug(f"No preprocessed departures ZST found for route_id={route_ids}")
         return None
 
     preprocessed_departures = pd.read_csv(io.BytesIO(departures_data), sep=';')
@@ -397,9 +354,9 @@ async def get_preprocessed_departures(route_ids: [str], from_oday: str, to_oday:
     return preprocessed_departures
 
 async def get_preprocessed_clusters(route_ids: [str], from_oday: str, to_oday: str):
-    cluster_data = await load_compressed_cluster_csv(route_ids, from_oday, to_oday)
+    cluster_data = await load_preprocess_files(route_ids, from_oday, to_oday, "preprocess_clusters")
     if not cluster_data:
-        print(f"No cluster ZST found for route_id={route_ids}")
+        logger.debug(f"No preprocessed cluster ZST found for route_id={route_ids}")
         return None
 
     clusters = pd.read_csv(io.BytesIO(cluster_data), sep=";")
@@ -455,8 +412,8 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
     )
     route_clusters["share_of_departures"] = round(route_clusters["share_of_departures"], 1)
     route_clusters = route_clusters.drop("cluster_on_reclustered_level", axis=1)
-   
-    route_clusters = make_geo_df_WGS84(route_clusters, lat_col="lat_median", lon_col="long_median", crs="EPSG:4326")
+
+    route_clusters = make_geo_df_WGS84(route_clusters, lat_col="latitude", lon_col="longitude", crs="EPSG:4326")
     
     db_route_id = route_ids
     if not db_route_id:
@@ -467,7 +424,6 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
     
     #assert route_clusters['share_of_departures'].max() <= 100
     #assert route_clusters[route_clusters.duplicated()].empty
-
     clusters = clusters.merge(preprocessed_departures[['route_id', 'direction_id', 'oday', 'start', 'transport_mode']], how="left", on=['route_id', 'direction_id', 'oday', 'start'])
     n_departures_analyzed = clusters.groupby(["transport_mode", "time_group"]).size().to_frame().reset_index().rename(columns={0: 'n_departures_analyzed'})
 
@@ -509,7 +465,6 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
     mode_clusters['transport_mode'] = mode_clusters['transport_mode'].replace('bus', 'Bussi').replace('tram', 'Raitiovaunu')
     # mode_clusters['share_of_departures'] = mode_clusters['departures'] / mode_clusters['num_of_deps_analyzed'] * 100 # NOTE: This var is redundant ATM
     mode_clusters = mode_clusters.drop('cluster_on_reclustered_level', axis=1)
-    mode_clusters = make_geo_df_WGS84(mode_clusters, lat_col="lat_median", lon_col="long_median", crs="EPSG:4326")  # .drop(['lat_median', 'long_median'], axis=1)
-
+    mode_clusters = make_geo_df_WGS84(mode_clusters, lat_col="latitude", lon_col="longitude", crs="EPSG:4326")
     # Is there a reason to store this in db and not just return it as response?
     await store_compressed_geojson("recluster_modes", db_route_id, from_oday, to_oday, mode_clusters)
