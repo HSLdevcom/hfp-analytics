@@ -266,10 +266,9 @@ async def preprocess(
         ]
     )  # veh number should not s_and_d_s_and_d_s_and_d_change during a departure but just to be careful keep it in!,
     for key, sub_df in g:
-        # print(key),
         sub_df = sub_df.reset_index(drop=True)
         
-        sub_df = sub_df[sub_df["loc"].isin(["GPS"])].reset_index(drop=True) 
+        sub_df = sub_df[sub_df["loc"].isin(["GPS", "DR"])].reset_index(drop=True)
         if sub_df.empty:
             continue
 
@@ -278,7 +277,7 @@ async def preprocess(
             continue
 
         vp_event_df = vp_event_df.drop_duplicates().sort_values(by="tst").reset_index(drop=True)
-        # Helper variables,
+        # Helper variables
         vp_event_df = tst_seconds_from_midnight(vp_event_df)
         vp_event_df["diff_btwn_tsts"] = np.append([0], np.diff(vp_event_df["tst_seconds_from_midnight"]))
         vp_event_df["diff_btwn_tsts"] = np.where(vp_event_df["diff_btwn_tsts"] == -60 * 60 * 24 + 1, 1, vp_event_df["diff_btwn_tsts"])
