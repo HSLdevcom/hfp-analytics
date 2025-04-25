@@ -55,6 +55,8 @@ services:
     volumes:
       - ./python/analyzer:/home/site/wwwroot/analyzer:ro
       - ./python/importer:/home/site/wwwroot/importer:ro
+      - ./python/preprocess:/home/site/wwwroot/preprocess:ro
+      - ./python/preprocess_http:/home/site/wwwroot/preprocess_http:ro
       - ./python/common:/home/site/wwwroot/common:ro
       - ./python/host.json:/home/site/wwwroot/host.json:ro
       - ./python/requirements.txt:/home/site/wwwroot/requirements.txt:ro
