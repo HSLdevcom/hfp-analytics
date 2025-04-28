@@ -21,7 +21,7 @@ from common.config import DAYS_TO_EXCLUDE
 from sklearn.cluster import DBSCAN
 from typing import Union, Optional, List
 
-logger = logging.getLogger("api")
+logger = logging.getLogger("importer")
 
 # TODO: Move to configs
 EPS_DISTANCE_1 = 0.01
@@ -371,11 +371,18 @@ async def get_preprocessed_clusters(route_ids: [str], from_oday: str, to_oday: s
 
 
 async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
+    start_time = datetime.now()
     clusters = await get_preprocessed_clusters(route_ids, from_oday, to_oday)
     preprocessed_departures = await get_preprocessed_departures(route_ids, from_oday, to_oday)
 
+    removal_end = datetime.now()
+    logger.debug(f"Data fetched for recluster in {removal_end - start_time}")
+
     if clusters is None or preprocessed_departures is None:
         return
+
+    start_time = datetime.now()
+    logger.debug(f"Start recluster for routes")
 
     route_clusters, departure_clusters = recluster(
         clusters,
@@ -419,8 +426,12 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
     if not db_route_id:
         db_route_id = 'ALL'
 
-    # Is there a reason to store this in db and not just return it as response?
+    removal_end = datetime.now()
+    logger.debug(f"Recluster analysis for routes done in  {removal_end - start_time}")
     await store_compressed_geojson("recluster_routes", db_route_id, from_oday, to_oday, route_clusters)
+    
+    logger.debug(f"Recluster routes stored to db. Starting recluster for modes.")
+    start_time = datetime.now()
     
     #assert route_clusters['share_of_departures'].max() <= 100
     #assert route_clusters[route_clusters.duplicated()].empty
@@ -467,4 +478,7 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
     mode_clusters = mode_clusters.drop('cluster_on_reclustered_level', axis=1)
     mode_clusters = make_geo_df_WGS84(mode_clusters, lat_col="latitude", lon_col="longitude", crs="EPSG:4326")
     # Is there a reason to store this in db and not just return it as response?
+    removal_end = datetime.now()
+    logger.debug(f"Recluster analysis for modes done in  {removal_end - start_time}")
     await store_compressed_geojson("recluster_modes", db_route_id, from_oday, to_oday, mode_clusters)
+    logger.debug(f"Recluster modes stored to db.")
