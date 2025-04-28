@@ -46,7 +46,7 @@ async def get_query_async(query):
 async def run_recluster_analysis(days: int):
     from_oday = get_previous_day_oday(days)
     to_oday = get_previous_day_oday()
-    logger.debug(f"Running reclustering for all routes from {from_oday} to {to_oday}")
+    logger.debug(f"Running recluster for all routes from {from_oday} to {to_oday}")
     await recluster_analysis(None, from_oday, to_oday)
     logger.debug(f"Recluster analysis done.")
 
