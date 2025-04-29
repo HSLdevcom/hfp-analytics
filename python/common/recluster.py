@@ -468,3 +468,4 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
     mode_clusters = make_geo_df_WGS84(mode_clusters, lat_col="latitude", lon_col="longitude", crs="EPSG:4326")
     # Is there a reason to store this in db and not just return it as response?
     await store_compressed_geojson("recluster_modes", db_route_id, from_oday, to_oday, mode_clusters)
+ 
