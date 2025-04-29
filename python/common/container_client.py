@@ -32,7 +32,7 @@ class FlowAnalyticsContainerClient:
         to_oday: str,
         route_id: str,
     ) -> None:
-        metadata = {"from_oday": from_oday, "to_odday": to_oday, "route_id": route_id}
+        metadata = {"from_oday": from_oday, "to_oday": to_oday, "route_id": route_id}
 
         path = f"recluster/{recluster_type}/{from_oday}_{to_oday}/{from_oday}_{to_oday}_{route_id}"
 
