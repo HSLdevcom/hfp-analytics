@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 from common.database import pool
 from common.utils import get_season
 from common.config import DAYS_TO_EXCLUDE
+from common.container_client import FlowAnalyticsContainerClient
 from sklearn.cluster import DBSCAN
 from typing import Union, Optional, List
 
@@ -180,10 +181,12 @@ async def store_compressed_geojson(
     route_id: str,
     from_oday: str,
     to_oday: str,
-    gdf: gpd.GeoDataFrame
+    gdf: gpd.GeoDataFrame,
+    flow_analytics_container_client: FlowAnalyticsContainerClient,
 ):
     """
-    Convert the GeoDataFrame to GeoJSON and compress with zstd
+    Convert the GeoDataFrame to GeoJSON and compress with zstd.
+    Saves compressed data to database and to blob storage
     """
 
     for col in gdf.columns:
@@ -215,6 +218,17 @@ async def store_compressed_geojson(
                 "zst": compressed_data
             }
         )
+    
+    recluster_type = table.split("_")[1]
+
+    await flow_analytics_container_client.save_cluster_data(
+        recluster_type=recluster_type,
+        compressed_data=compressed_data,
+        from_oday=from_oday,
+        to_oday=to_oday,
+        route_id=route_id,
+    )   
+
 
 def make_geo_df_WGS84(df: pd.DataFrame, lat_col: str, lon_col: str, crs: str = "EPSG:4326") -> gpd.GeoDataFrame:
     """Make a geodf from df. Note thet the function does not convert CRS but your input df needs to be WGS84,
@@ -419,8 +433,17 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
     if not db_route_id:
         db_route_id = 'ALL'
 
+    flow_analytics_container_client = FlowAnalyticsContainerClient()
+    
     # Is there a reason to store this in db and not just return it as response?
-    await store_compressed_geojson("recluster_routes", db_route_id, from_oday, to_oday, route_clusters)
+    await store_compressed_geojson(
+        "recluster_routes",
+        db_route_id,
+        from_oday,
+        to_oday,
+        route_clusters,
+        flow_analytics_container_client=flow_analytics_container_client,
+    )
     
     #assert route_clusters['share_of_departures'].max() <= 100
     #assert route_clusters[route_clusters.duplicated()].empty
@@ -467,5 +490,12 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
     mode_clusters = mode_clusters.drop('cluster_on_reclustered_level', axis=1)
     mode_clusters = make_geo_df_WGS84(mode_clusters, lat_col="latitude", lon_col="longitude", crs="EPSG:4326")
     # Is there a reason to store this in db and not just return it as response?
-    await store_compressed_geojson("recluster_modes", db_route_id, from_oday, to_oday, mode_clusters)
+    await store_compressed_geojson(
+        "recluster_modes",
+        db_route_id,
+        from_oday,
+        to_oday,
+        mode_clusters,
+        flow_analytics_container_client=flow_analytics_container_client,
+    )
  
