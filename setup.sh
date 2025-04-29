@@ -32,5 +32,5 @@ conditional_mkdir qgis/out
 conditional_mkdir results
 conditional_mkdir analytics-data
 
-# for mac use 'docker-compose' instead of 'docker compose'
-docker compose build
+# for mac use 'docker compose' instead of 'docker-compose'
+docker-compose build
