@@ -4,10 +4,6 @@ from common.config import FLOW_ANALYTICS_SAS_CONNECTION_STRING
 
 
 class FlowAnalyticsContainerClient:
-    def __init__(self) -> None:
-        self.client = ContainerClient.from_container_url(
-            FLOW_ANALYTICS_SAS_CONNECTION_STRING
-        )
 
     async def save_preprocess_data(
         self,
@@ -21,9 +17,10 @@ class FlowAnalyticsContainerClient:
 
         path = f"preprocess/{preprocess_type}/{oday}/{oday}_{route_id}_{mode}"
 
-        await self.client.upload_blob(
-            name=path, data=compressed_csv, overwrite=True, metadata=metadata
-        )
+        async with self._get_client() as client:
+            await client.upload_blob(
+                name=path, data=compressed_csv, overwrite=True, metadata=metadata
+            )
 
     async def save_cluster_data(
         self,
@@ -37,6 +34,13 @@ class FlowAnalyticsContainerClient:
 
         path = f"recluster/{recluster_type}/{from_oday}_{to_oday}/{from_oday}_{to_oday}_{route_id}"
 
-        await self.client.upload_blob(
-            name=path, data=compressed_data, overwrite=True, metadata=metadata
+        async with self._get_client() as client:
+            await client.upload_blob(
+                name=path, data=compressed_data, overwrite=True, metadata=metadata
+            )
+            
+    def _get_client(self) -> ContainerClient:
+        return ContainerClient.from_container_url(
+            FLOW_ANALYTICS_SAS_CONNECTION_STRING
         )
+        
