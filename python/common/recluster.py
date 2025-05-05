@@ -247,10 +247,10 @@ def recluster(
     departure_clusters = []
     reclustered_clusters = []
     EPSILON = distance / radius
-    
+    logger.debug(f"Rows to be processed with recluster: {clusters.shape[0]}")
+    logger.debug(f"Groups to be processed with recluster: {g.ngroups}")
     for k, sub in g:
         sub = sub.rename(columns={"cluster": "cluster_on_departure_level"})
-        EPSILON = distance / radius
         X = np.radians(sub[["lat_median", "long_median"]])
 
         clusterer = DBSCAN(
@@ -429,10 +429,10 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
             db_route_id = 'ALL'
 
         removal_end = datetime.now()
-        logger.debug(f"Recluster analysis for routes done in  {removal_end - start_time}")
+        logger.debug(f"Recluster analysis for routes done in {removal_end - start_time}")
         await store_compressed_geojson("recluster_routes", db_route_id, from_oday, to_oday, route_clusters)
         
-        logger.debug(f"Recluster routes stored to db. Starting recluster for modes.")
+        logger.debug(f"Recluster routes stored to db. Starting recluster for departures.")
         start_time = datetime.now()
         
         #assert route_clusters['share_of_departures'].max() <= 100
@@ -449,6 +449,9 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
             cluster_id_vars_on_2nd_level=["transport_mode", 'time_group', 'dclass', 'cluster_on_reclustered_level']
         )
 
+        removal_end = datetime.now()
+        logger.debug(f"Recluster analysis for departures done in {removal_end - start_time}")
+        start_time = datetime.now()
 
         mode_clusters = mode_clusters[mode_clusters["q_50"] >= MIN_MEDIAN_DELAY_IN_CLUSTER]
         mode_clusters = mode_clusters.merge(n_departures_analyzed, how='left', on=['transport_mode', 'time_group'])
@@ -479,8 +482,7 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
         # mode_clusters['share_of_departures'] = mode_clusters['departures'] / mode_clusters['num_of_deps_analyzed'] * 100 # NOTE: This var is redundant ATM
         mode_clusters = mode_clusters.drop('cluster_on_reclustered_level', axis=1)
         mode_clusters = make_geo_df_WGS84(mode_clusters, lat_col="latitude", lon_col="longitude", crs="EPSG:4326")
-        # Is there a reason to store this in db and not just return it as response?
-        removal_end = datetime.now()
-        logger.debug(f"Recluster analysis for modes done in  {removal_end - start_time}")
+        
         await store_compressed_geojson("recluster_modes", db_route_id, from_oday, to_oday, mode_clusters)
-        logger.debug(f"Recluster modes stored to db.")
+        removal_end = datetime.now()
+        logger.debug(f"Recluster modes stored to db {removal_end - start_time}.")
