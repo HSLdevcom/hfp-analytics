@@ -490,16 +490,18 @@ async def get_delay_analytics_data(
 
         logger.debug(f"Fetching hfp delay data. route_id: {route_ids}, from_oday: {from_oday}, to_oday: {to_oday}")
 
-        routecluster_geojson, modecluster_geojson = await prep_recluster_data(
+        routecluster_geojson = await prep_recluster_data(
             routes_table="recluster_routes",
             modes_table="recluster_modes",
             route_ids=route_ids,
             from_oday=from_oday,
             to_oday=to_oday,
         )
-        logger.debug(f"Data fetched from db. Compressing response.")
-        if routecluster_geojson is None or modecluster_geojson is None:
+        
+        if routecluster_geojson is None:
             return Response(status_code=204)
+
+        logger.debug(f"Data fetched from db. Compressing response.")
 
         def geojson_to_csv_bytes(geojson_bytes: bytes) -> bytes:
             geojson_bytes_io = io.BytesIO(geojson_bytes)
@@ -509,26 +511,17 @@ async def get_delay_analytics_data(
             csv_buffer.seek(0)
             return csv_buffer.getvalue()
 
-        #routecluster_csv = geojson_to_csv_bytes(routecluster_geojson)
-        #modecluster_csv = geojson_to_csv_bytes(modecluster_geojson)
+        routecluster_csv = geojson_to_csv_bytes(routecluster_geojson)
         parent_file_buffer = io.BytesIO()
-        with zipfile.ZipFile(parent_file_buffer, "w") as parent_zip:
 
+        with zipfile.ZipFile(parent_file_buffer, "w") as parent_zip:
             route_buffer = io.BytesIO()
             with zipfile.ZipFile(route_buffer, "w") as route_zip:
                 route_zip.writestr("routecluster.geojson", routecluster_geojson)
-                #route_zip.writestr("routecluster.csv", routecluster_csv)
+                route_zip.writestr("routecluster.csv", routecluster_csv)
             route_buffer.seek(0)
-
             parent_zip.writestr("routecluster.zip", route_buffer.getvalue())
 
-            mode_buffer = io.BytesIO()
-            with zipfile.ZipFile(mode_buffer, "w") as mode_zip:
-                mode_zip.writestr("modecluster.geojson", modecluster_geojson)
-                #mode_zip.writestr("modecluster.csv", modecluster_csv)
-            mode_buffer.seek(0)
-
-            parent_zip.writestr("modecluster.zip", mode_buffer.getvalue())
 
         logger.debug("Compressed data. Sending response.")
         parent_file_buffer.seek(0)
