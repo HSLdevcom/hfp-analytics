@@ -511,14 +511,14 @@ async def get_delay_analytics_data(
             csv_buffer.seek(0)
             return csv_buffer.getvalue()
 
-        routecluster_csv = geojson_to_csv_bytes(routecluster_geojson)
+        #routecluster_csv = geojson_to_csv_bytes(routecluster_geojson)
         parent_file_buffer = io.BytesIO()
 
         with zipfile.ZipFile(parent_file_buffer, "w") as parent_zip:
             route_buffer = io.BytesIO()
             with zipfile.ZipFile(route_buffer, "w") as route_zip:
                 route_zip.writestr("routecluster.geojson", routecluster_geojson)
-                route_zip.writestr("routecluster.csv", routecluster_csv)
+                #route_zip.writestr("routecluster.csv", routecluster_csv)
             route_buffer.seek(0)
             parent_zip.writestr("routecluster.zip", route_buffer.getvalue())
 
