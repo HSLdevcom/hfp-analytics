@@ -156,8 +156,8 @@ async def load_recluster_files(table: str, from_oday: str, to_oday: str, route_i
         compressed_data = result[0]
 
     dctx = zstd.ZstdDecompressor()
-    decompressed_csv = dctx.decompress(compressed_data)
-    return decompressed_csv 
+    decompressed_geojson = dctx.decompress(compressed_data)
+    return decompressed_geojson
 
 async def prep_recluster_data(
     routes_table: str,
@@ -269,7 +269,7 @@ def recluster(
         if i % 1000 == 0:
             del sub
             gc.collect()
-            logger.info(f"DBSCAN processed {i}/{g.ngroups} groups, last key={group_key}")
+            logger.debug(f"DBSCAN processed {i}/{g.ngroups} groups, last key={group_key}")
 
     departure_clusters = pd.concat(departure_clusters)
     reclustered_clusters = pd.concat(reclustered_clusters)
