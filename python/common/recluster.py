@@ -12,6 +12,7 @@ import warnings
 import zstandard as zstd
 import logging
 import time
+import gc
 
 from datetime import date, datetime, timedelta
 from dotenv import load_dotenv
@@ -164,17 +165,15 @@ async def prep_recluster_data(
     route_ids: Union[str, list[str]],
     from_oday: date,
     to_oday: date
-) -> tuple[Optional[bytes], Optional[bytes]]:
+) -> Optional[bytes]:
     routecluster_geojson = await load_recluster_files(routes_table, from_oday, to_oday, route_ids)
-    modecluster_geojson  = await load_recluster_files(modes_table, from_oday, to_oday, route_ids)
     
-    if routecluster_geojson is None or modecluster_geojson is None:
+    if routecluster_geojson is None:
         logger.debug(f"No recluster analysis found. Start recluster analysis for route_ids: {route_ids}, from_oday: {from_oday}, to_oday: {to_oday}")
         await recluster_analysis(route_ids, from_oday, to_oday)
         routecluster_geojson = await load_recluster_files(routes_table, from_oday, to_oday, route_ids)
-        modecluster_geojson  = await load_recluster_files(modes_table, from_oday, to_oday, route_ids)
 
-    return routecluster_geojson, modecluster_geojson
+    return routecluster_geojson
 
 async def store_compressed_geojson(
     table: str,
@@ -239,7 +238,7 @@ def recluster(
     radius: int,
     min_weighted_samples: int,
     vars_to_group_level_one_clusters_by=['route_id', 'direction_cluster_id', 'time_group', 'dclass'],
-    cluster_id_vars_on_2nd_level=['route_id', 'direction_id', 'time_group', 'dclass', 'cluster_on_reclustered_level'],
+    cluster_id_vars_on_2nd_level=['route_id', 'direction_id', 'time_group', 'dclass', 'cluster_on_reclustered_level']
 ) -> pd.DataFrame:
 
     g = clusters.groupby(vars_to_group_level_one_clusters_by)
@@ -247,9 +246,8 @@ def recluster(
     departure_clusters = []
     reclustered_clusters = []
     EPSILON = distance / radius
-    logger.debug(f"Rows to be processed with recluster: {clusters.shape[0]}")
-    logger.debug(f"Groups to be processed with recluster: {g.ngroups}")
-    for k, sub in g:
+    logger.debug(f"Data to be procecesed with DBSCAN. Rows: {clusters.shape[0]}, groups: {g.ngroups}")
+    for i, (group_key, sub) in enumerate(g, start=1):
         sub = sub.rename(columns={"cluster": "cluster_on_departure_level"})
         X = np.radians(sub[["lat_median", "long_median"]])
 
@@ -267,6 +265,11 @@ def recluster(
         departure_clusters.append(sub)
         sub = calculate_cluster_features(sub, cluster_id_vars_on_2nd_level)
         reclustered_clusters.append(sub)
+
+        if i % 1000 == 0:
+            del sub
+            gc.collect()
+            logger.info(f"DBSCAN processed {i}/{g.ngroups} groups, last key={group_key}")
 
     departure_clusters = pd.concat(departure_clusters)
     reclustered_clusters = pd.concat(reclustered_clusters)
@@ -432,7 +435,8 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
         logger.debug(f"Recluster analysis for routes done in {removal_end - start_time}")
         await store_compressed_geojson("recluster_routes", db_route_id, from_oday, to_oday, route_clusters)
         
-        logger.debug(f"Recluster routes stored to db. Starting recluster for departures.")
+        # Modes cluster disabled for now
+        """logger.debug(f"Recluster routes stored to db. Starting recluster for departures.")
         start_time = datetime.now()
         
         #assert route_clusters['share_of_departures'].max() <= 100
@@ -483,6 +487,6 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
         mode_clusters = mode_clusters.drop('cluster_on_reclustered_level', axis=1)
         mode_clusters = make_geo_df_WGS84(mode_clusters, lat_col="latitude", lon_col="longitude", crs="EPSG:4326")
         
-        await store_compressed_geojson("recluster_modes", db_route_id, from_oday, to_oday, mode_clusters)
+        #await store_compressed_geojson("recluster_modes", db_route_id, from_oday, to_oday, mode_clusters)
         removal_end = datetime.now()
-        logger.debug(f"Recluster modes stored to db {removal_end - start_time}.")
+        logger.debug(f"Recluster modes stored to db {removal_end - start_time}.")"""
