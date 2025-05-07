@@ -445,21 +445,21 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
         if not db_route_id:
             db_route_id = 'ALL'
 
-    flow_analytics_container_client = FlowAnalyticsContainerClient()
-    
-    removal_end = datetime.now()
-    logger.debug(f"Recluster analysis for routes done in {removal_end - start_time}")
-    
-    # Is there a reason to store this in db and not just return it as response?
-    
-    await store_compressed_geojson(
-        "recluster_routes",
-        db_route_id,
-        from_oday,
-        to_oday,
-        route_clusters,
-        flow_analytics_container_client=flow_analytics_container_client,
-    )
+        flow_analytics_container_client = FlowAnalyticsContainerClient()
+        
+        removal_end = datetime.now()
+        logger.debug(f"Recluster analysis for routes done in {removal_end - start_time}")
+        
+        # Is there a reason to store this in db and not just return it as response?
+        
+        await store_compressed_geojson(
+            "recluster_routes",
+            db_route_id,
+            from_oday,
+            to_oday,
+            route_clusters,
+            flow_analytics_container_client=flow_analytics_container_client,
+        )
     
     
     
