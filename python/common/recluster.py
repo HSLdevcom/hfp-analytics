@@ -481,9 +481,9 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
                 cluster_id_vars_on_2nd_level=["transport_mode", 'time_group', 'dclass', 'cluster_on_reclustered_level']
             )
 
-            removal_end = datetime.now()
-            logger.debug(f"Recluster analysis for departures done in {removal_end - start_time}")
-            start_time = datetime.now()
+        removal_end = datetime.now()
+        logger.debug(f"Recluster analysis for departures done in {removal_end - start_time}")
+        start_time = datetime.now()
 
         mode_clusters = mode_clusters[mode_clusters["q_50"] >= MIN_MEDIAN_DELAY_IN_CLUSTER]
         mode_clusters = mode_clusters.merge(n_departures_analyzed, how='left', on=['transport_mode', 'time_group'])
