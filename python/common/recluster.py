@@ -12,17 +12,19 @@ import warnings
 import zstandard as zstd
 import logging
 import time
+import gc
 
 from datetime import date, datetime, timedelta
 from dotenv import load_dotenv
 from common.database import pool
+from common.logger_util import CustomDbLogHandler
 from common.utils import get_season
 from common.config import DAYS_TO_EXCLUDE
 from common.container_client import FlowAnalyticsContainerClient
 from sklearn.cluster import DBSCAN
 from typing import Union, Optional, List
 
-logger = logging.getLogger("api")
+logger = logging.getLogger("importer")
 
 # TODO: Move to configs
 EPS_DISTANCE_1 = 0.01
@@ -155,8 +157,8 @@ async def load_recluster_files(table: str, from_oday: str, to_oday: str, route_i
         compressed_data = result[0]
 
     dctx = zstd.ZstdDecompressor()
-    decompressed_csv = dctx.decompress(compressed_data)
-    return decompressed_csv 
+    decompressed_geojson = dctx.decompress(compressed_data)
+    return decompressed_geojson
 
 async def prep_recluster_data(
     routes_table: str,
@@ -164,17 +166,15 @@ async def prep_recluster_data(
     route_ids: Union[str, list[str]],
     from_oday: date,
     to_oday: date
-) -> tuple[Optional[bytes], Optional[bytes]]:
+) -> Optional[bytes]:
     routecluster_geojson = await load_recluster_files(routes_table, from_oday, to_oday, route_ids)
-    modecluster_geojson  = await load_recluster_files(modes_table, from_oday, to_oday, route_ids)
     
-    if routecluster_geojson is None or modecluster_geojson is None:
+    if routecluster_geojson is None:
         logger.debug(f"No recluster analysis found. Start recluster analysis for route_ids: {route_ids}, from_oday: {from_oday}, to_oday: {to_oday}")
         await recluster_analysis(route_ids, from_oday, to_oday)
         routecluster_geojson = await load_recluster_files(routes_table, from_oday, to_oday, route_ids)
-        modecluster_geojson  = await load_recluster_files(modes_table, from_oday, to_oday, route_ids)
 
-    return routecluster_geojson, modecluster_geojson
+    return routecluster_geojson
 
 async def store_compressed_geojson(
     table: str,
@@ -252,7 +252,7 @@ def recluster(
     radius: int,
     min_weighted_samples: int,
     vars_to_group_level_one_clusters_by=['route_id', 'direction_cluster_id', 'time_group', 'dclass'],
-    cluster_id_vars_on_2nd_level=['route_id', 'direction_id', 'time_group', 'dclass', 'cluster_on_reclustered_level'],
+    cluster_id_vars_on_2nd_level=['route_id', 'direction_id', 'time_group', 'dclass', 'cluster_on_reclustered_level']
 ) -> pd.DataFrame:
 
     g = clusters.groupby(vars_to_group_level_one_clusters_by)
@@ -260,10 +260,9 @@ def recluster(
     departure_clusters = []
     reclustered_clusters = []
     EPSILON = distance / radius
-    
-    for k, sub in g:
+    logger.debug(f"Data to be procecesed with DBSCAN. Rows: {clusters.shape[0]}, groups: {g.ngroups}")
+    for i, (group_key, sub) in enumerate(g, start=1):
         sub = sub.rename(columns={"cluster": "cluster_on_departure_level"})
-        EPSILON = distance / radius
         X = np.radians(sub[["lat_median", "long_median"]])
 
         clusterer = DBSCAN(
@@ -280,6 +279,11 @@ def recluster(
         departure_clusters.append(sub)
         sub = calculate_cluster_features(sub, cluster_id_vars_on_2nd_level)
         reclustered_clusters.append(sub)
+
+        if i % 1000 == 0:
+            del sub
+            gc.collect()
+            logger.debug(f"DBSCAN processed {i}/{g.ngroups} groups, last key={group_key}")
 
     departure_clusters = pd.concat(departure_clusters)
     reclustered_clusters = pd.concat(reclustered_clusters)
@@ -385,47 +389,55 @@ async def get_preprocessed_clusters(route_ids: [str], from_oday: str, to_oday: s
 
 
 async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
-    clusters = await get_preprocessed_clusters(route_ids, from_oday, to_oday)
-    preprocessed_departures = await get_preprocessed_departures(route_ids, from_oday, to_oday)
+    with CustomDbLogHandler("importer"):
+        start_time = datetime.now()
+        clusters = await get_preprocessed_clusters(route_ids, from_oday, to_oday)
+        preprocessed_departures = await get_preprocessed_departures(route_ids, from_oday, to_oday)
 
-    if clusters is None or preprocessed_departures is None:
-        return
+        removal_end = datetime.now()
+        logger.debug(f"Data fetched for recluster in {removal_end - start_time}")
 
-    route_clusters, departure_clusters = recluster(
-        clusters,
-        distance=EPS_DISTANCE_2,
-        radius=EARHT_RADIUS_KM,
-        min_weighted_samples=MIN_WEIGHTED_SAMPLES,
-        vars_to_group_level_one_clusters_by=['route_id', 'direction_id', 'time_group', 'dclass'],
-        cluster_id_vars_on_2nd_level=['route_id', 'direction_id', 'time_group', 'dclass', 'cluster_on_reclustered_level']
-    )
+        if clusters is None or preprocessed_departures is None:
+            return
 
-    n_departures_analyzed = preprocessed_departures.groupby(["route_id", "direction_id", "time_group"]).size().to_frame().reset_index().rename(columns={0: "n_departures_analyzed"})
-    route_clusters = route_clusters[route_clusters["q_50"] >= MIN_MEDIAN_DELAY_IN_CLUSTER]
-    route_clusters = route_clusters.merge(n_departures_analyzed, how="left", on=["route_id", "direction_id", "time_group"])
-    route_clusters["share_of_departures"] = route_clusters["n_departures"] / route_clusters["n_departures_analyzed"] * 100
+        start_time = datetime.now()
+        logger.debug(f"Start recluster for routes")
 
-    departure_clusters = route_clusters[["route_id", "direction_id", "time_group", "dclass", "cluster_on_reclustered_level"]].merge(
-        departure_clusters, on=["route_id", "direction_id", "time_group", "dclass", "cluster_on_reclustered_level"], how="inner"
-    )
+        route_clusters, departure_clusters = recluster(
+            clusters,
+            distance=EPS_DISTANCE_2,
+            radius=EARHT_RADIUS_KM,
+            min_weighted_samples=MIN_WEIGHTED_SAMPLES,
+            vars_to_group_level_one_clusters_by=['route_id', 'direction_id', 'time_group', 'dclass'],
+            cluster_id_vars_on_2nd_level=['route_id', 'direction_id', 'time_group', 'dclass', 'cluster_on_reclustered_level']
+        )
 
-    route_clusters = ui_related_var_modifications(route_clusters, SEASON_MONTHS, DEPARTURE_THRESHOLD)
+        n_departures_analyzed = preprocessed_departures.groupby(["route_id", "direction_id", "time_group"]).size().to_frame().reset_index().rename(columns={0: "n_departures_analyzed"})
+        route_clusters = route_clusters[route_clusters["q_50"] >= MIN_MEDIAN_DELAY_IN_CLUSTER]
+        route_clusters = route_clusters.merge(n_departures_analyzed, how="left", on=["route_id", "direction_id", "time_group"])
+        route_clusters["share_of_departures"] = route_clusters["n_departures"] / route_clusters["n_departures_analyzed"] * 100
 
-    route_clusters["route_dir"] = route_clusters["route_id"].astype(str) + " S" + route_clusters["direction_id"].astype(str)
-    bins = list(range(0, 101, 20))
-    labs = []
-    for i in range(len(bins) - 1):
-        label = str(bins[i]) + "_" + str(bins[i + 1])
-        labs.append(label)
-    
-    route_clusters["shares_category"] = pd.cut(
-        route_clusters["share_of_departures"],
-        bins=bins,
-        labels=labs,
-        include_lowest=True,
-    )
-    route_clusters["share_of_departures"] = round(route_clusters["share_of_departures"], 1)
-    route_clusters = route_clusters.drop("cluster_on_reclustered_level", axis=1)
+        departure_clusters = route_clusters[["route_id", "direction_id", "time_group", "dclass", "cluster_on_reclustered_level"]].merge(
+            departure_clusters, on=["route_id", "direction_id", "time_group", "dclass", "cluster_on_reclustered_level"], how="inner"
+        )
+
+        route_clusters = ui_related_var_modifications(route_clusters, SEASON_MONTHS, DEPARTURE_THRESHOLD)
+
+        route_clusters["route_dir"] = route_clusters["route_id"].astype(str) + " S" + route_clusters["direction_id"].astype(str)
+        bins = list(range(0, 101, 20))
+        labs = []
+        for i in range(len(bins) - 1):
+            label = str(bins[i]) + "_" + str(bins[i + 1])
+            labs.append(label)
+        
+        route_clusters["shares_category"] = pd.cut(
+            route_clusters["share_of_departures"],
+            bins=bins,
+            labels=labs,
+            include_lowest=True,
+        )
+        route_clusters["share_of_departures"] = round(route_clusters["share_of_departures"], 1)
+        route_clusters = route_clusters.drop("cluster_on_reclustered_level", axis=1)
 
     route_clusters = make_geo_df_WGS84(route_clusters, lat_col="latitude", lon_col="longitude", crs="EPSG:4326")
     
@@ -435,7 +447,11 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
 
     flow_analytics_container_client = FlowAnalyticsContainerClient()
     
+    removal_end = datetime.now()
+    logger.debug(f"Recluster analysis for routes done in {removal_end - start_time}")
+    
     # Is there a reason to store this in db and not just return it as response?
+    
     await store_compressed_geojson(
         "recluster_routes",
         db_route_id,
@@ -445,45 +461,54 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
         flow_analytics_container_client=flow_analytics_container_client,
     )
     
+    
+    
+    # Modes cluster disabled for now
+    """logger.debug(f"Recluster routes stored to db. Starting recluster for departures.")
+    start_time = datetime.now()
+
     #assert route_clusters['share_of_departures'].max() <= 100
     #assert route_clusters[route_clusters.duplicated()].empty
     clusters = clusters.merge(preprocessed_departures[['route_id', 'direction_id', 'oday', 'start', 'transport_mode']], how="left", on=['route_id', 'direction_id', 'oday', 'start'])
     n_departures_analyzed = clusters.groupby(["transport_mode", "time_group"]).size().to_frame().reset_index().rename(columns={0: 'n_departures_analyzed'})
 
-    mode_clusters, departure_clusters = recluster(
-        clusters,
-        distance=EPS_DISTANCE_2,
-        radius=EARHT_RADIUS_KM,
-        min_weighted_samples=MIN_WEIGHTED_SAMPLES,
-        vars_to_group_level_one_clusters_by=["transport_mode", 'time_group', 'dclass'],
-        cluster_id_vars_on_2nd_level=["transport_mode", 'time_group', 'dclass', 'cluster_on_reclustered_level']
-    )
+        mode_clusters, departure_clusters = recluster(
+            clusters,
+            distance=EPS_DISTANCE_2,
+            radius=EARHT_RADIUS_KM,
+            min_weighted_samples=MIN_WEIGHTED_SAMPLES,
+            vars_to_group_level_one_clusters_by=["transport_mode", 'time_group', 'dclass'],
+            cluster_id_vars_on_2nd_level=["transport_mode", 'time_group', 'dclass', 'cluster_on_reclustered_level']
+        )
 
+        removal_end = datetime.now()
+        logger.debug(f"Recluster analysis for departures done in {removal_end - start_time}")
+        start_time = datetime.now()
 
-    mode_clusters = mode_clusters[mode_clusters["q_50"] >= MIN_MEDIAN_DELAY_IN_CLUSTER]
-    mode_clusters = mode_clusters.merge(n_departures_analyzed, how='left', on=['transport_mode', 'time_group'])
+        mode_clusters = mode_clusters[mode_clusters["q_50"] >= MIN_MEDIAN_DELAY_IN_CLUSTER]
+        mode_clusters = mode_clusters.merge(n_departures_analyzed, how='left', on=['transport_mode', 'time_group'])
 
-    # Keep only departures that contribute to mode level clusters
-    departure_clusters = mode_clusters[["transport_mode", "time_group", "dclass", "cluster_on_reclustered_level"]].merge(
-        departure_clusters, on=["transport_mode", "time_group", "dclass", "cluster_on_reclustered_level"], how="left"
-    )
-    departure_clusters = departure_clusters.drop_duplicates(subset=['route_id', 'direction_id', 'oday', 'start', 'tst_median', 'time_group', 'cluster_on_reclustered_level']).reset_index(drop=True)
+        # Keep only departures that contribute to mode level clusters
+        departure_clusters = mode_clusters[["transport_mode", "time_group", "dclass", "cluster_on_reclustered_level"]].merge(
+            departure_clusters, on=["transport_mode", "time_group", "dclass", "cluster_on_reclustered_level"], how="left"
+        )
+        departure_clusters = departure_clusters.drop_duplicates(subset=['route_id', 'direction_id', 'oday', 'start', 'tst_median', 'time_group', 'cluster_on_reclustered_level']).reset_index(drop=True)
 
-    departure_clusters["cluster_id"] = (
-        departure_clusters['dclass'] + departure_clusters['cluster_on_reclustered_level'].astype(str) + departure_clusters['time_group'] + departure_clusters['transport_mode']
-    )
-    mode_clusters["cluster_id"] = mode_clusters['dclass'] + mode_clusters['cluster_on_reclustered_level'].astype(str) + mode_clusters['time_group'] + mode_clusters['transport_mode']
+        departure_clusters["cluster_id"] = (
+            departure_clusters['dclass'] + departure_clusters['cluster_on_reclustered_level'].astype(str) + departure_clusters['time_group'] + departure_clusters['transport_mode']
+        )
+        mode_clusters["cluster_id"] = mode_clusters['dclass'] + mode_clusters['cluster_on_reclustered_level'].astype(str) + mode_clusters['time_group'] + mode_clusters['transport_mode']
+            
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            departure_clusters["m_norm_hdg_median"] = departure_clusters.groupby(["dclass", "cluster_on_reclustered_level", "time_group", "transport_mode"])["hdg_median"].transform(
+                lambda x: (x - x.median()) / (x.quantile(0.75) - x.quantile(0.25))
+            )  # May be NA if median == iqr. Ignore RuntimeWarning in these cases
         
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=RuntimeWarning)
-        departure_clusters["m_norm_hdg_median"] = departure_clusters.groupby(["dclass", "cluster_on_reclustered_level", "time_group", "transport_mode"])["hdg_median"].transform(
-            lambda x: (x - x.median()) / (x.quantile(0.75) - x.quantile(0.25))
-        )  # May be NA if median == iqr. Ignore RuntimeWarning in these cases
+        mode_clusters = mode_clusters.merge(departure_clusters[["cluster_id", "m_norm_hdg_median"]], how="left", on="cluster_id")
     
-    mode_clusters = mode_clusters.merge(departure_clusters[["cluster_id", "m_norm_hdg_median"]], how="left", on="cluster_id")
-   
-    # var reprocessing
-    mode_clusters = ui_related_var_modifications(mode_clusters, SEASON_MONTHS, DEPARTURE_THRESHOLD)
+        # var reprocessing
+        mode_clusters = ui_related_var_modifications(mode_clusters, SEASON_MONTHS, DEPARTURE_THRESHOLD)
 
     mode_clusters['transport_mode'] = mode_clusters['transport_mode'].replace('bus', 'Bussi').replace('tram', 'Raitiovaunu')
     # mode_clusters['share_of_departures'] = mode_clusters['departures'] / mode_clusters['num_of_deps_analyzed'] * 100 # NOTE: This var is redundant ATM
@@ -498,4 +523,5 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
         mode_clusters,
         flow_analytics_container_client=flow_analytics_container_client,
     )
- 
+    removal_end = datetime.now()
+    logger.debug(f"Recluster modes stored to db {removal_end - start_time}.")"""
