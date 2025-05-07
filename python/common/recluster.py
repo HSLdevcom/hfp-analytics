@@ -472,14 +472,14 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
         clusters = clusters.merge(preprocessed_departures[['route_id', 'direction_id', 'oday', 'start', 'transport_mode']], how="left", on=['route_id', 'direction_id', 'oday', 'start'])
         n_departures_analyzed = clusters.groupby(["transport_mode", "time_group"]).size().to_frame().reset_index().rename(columns={0: 'n_departures_analyzed'})
 
-            mode_clusters, departure_clusters = recluster(
-                clusters,
-                distance=EPS_DISTANCE_2,
-                radius=EARHT_RADIUS_KM,
-                min_weighted_samples=MIN_WEIGHTED_SAMPLES,
-                vars_to_group_level_one_clusters_by=["transport_mode", 'time_group', 'dclass'],
-                cluster_id_vars_on_2nd_level=["transport_mode", 'time_group', 'dclass', 'cluster_on_reclustered_level']
-            )
+        mode_clusters, departure_clusters = recluster(
+            clusters,
+            distance=EPS_DISTANCE_2,
+            radius=EARHT_RADIUS_KM,
+            min_weighted_samples=MIN_WEIGHTED_SAMPLES,
+            vars_to_group_level_one_clusters_by=["transport_mode", 'time_group', 'dclass'],
+            cluster_id_vars_on_2nd_level=["transport_mode", 'time_group', 'dclass', 'cluster_on_reclustered_level']
+        )
 
         removal_end = datetime.now()
         logger.debug(f"Recluster analysis for departures done in {removal_end - start_time}")
@@ -499,16 +499,16 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
         )
         mode_clusters["cluster_id"] = mode_clusters['dclass'] + mode_clusters['cluster_on_reclustered_level'].astype(str) + mode_clusters['time_group'] + mode_clusters['transport_mode']
                 
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", category=RuntimeWarning)
-                departure_clusters["m_norm_hdg_median"] = departure_clusters.groupby(["dclass", "cluster_on_reclustered_level", "time_group", "transport_mode"])["hdg_median"].transform(
-                    lambda x: (x - x.median()) / (x.quantile(0.75) - x.quantile(0.25))
-                )  # May be NA if median == iqr. Ignore RuntimeWarning in these cases
-            
-            mode_clusters = mode_clusters.merge(departure_clusters[["cluster_id", "m_norm_hdg_median"]], how="left", on="cluster_id")
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            departure_clusters["m_norm_hdg_median"] = departure_clusters.groupby(["dclass", "cluster_on_reclustered_level", "time_group", "transport_mode"])["hdg_median"].transform(
+                lambda x: (x - x.median()) / (x.quantile(0.75) - x.quantile(0.25))
+            )  # May be NA if median == iqr. Ignore RuntimeWarning in these cases
         
-            # var reprocessing
-            mode_clusters = ui_related_var_modifications(mode_clusters, SEASON_MONTHS, DEPARTURE_THRESHOLD)
+        mode_clusters = mode_clusters.merge(departure_clusters[["cluster_id", "m_norm_hdg_median"]], how="left", on="cluster_id")
+    
+        # var reprocessing
+        mode_clusters = ui_related_var_modifications(mode_clusters, SEASON_MONTHS, DEPARTURE_THRESHOLD)
 
         mode_clusters['transport_mode'] = mode_clusters['transport_mode'].replace('bus', 'Bussi').replace('tram', 'Raitiovaunu')
         # mode_clusters['share_of_departures'] = mode_clusters['departures'] / mode_clusters['num_of_deps_analyzed'] * 100 # NOTE: This var is redundant ATM
