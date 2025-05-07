@@ -485,19 +485,19 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
             logger.debug(f"Recluster analysis for departures done in {removal_end - start_time}")
             start_time = datetime.now()
 
-            mode_clusters = mode_clusters[mode_clusters["q_50"] >= MIN_MEDIAN_DELAY_IN_CLUSTER]
-            mode_clusters = mode_clusters.merge(n_departures_analyzed, how='left', on=['transport_mode', 'time_group'])
+        mode_clusters = mode_clusters[mode_clusters["q_50"] >= MIN_MEDIAN_DELAY_IN_CLUSTER]
+        mode_clusters = mode_clusters.merge(n_departures_analyzed, how='left', on=['transport_mode', 'time_group'])
 
-            # Keep only departures that contribute to mode level clusters
-            departure_clusters = mode_clusters[["transport_mode", "time_group", "dclass", "cluster_on_reclustered_level"]].merge(
-                departure_clusters, on=["transport_mode", "time_group", "dclass", "cluster_on_reclustered_level"], how="left"
-            )
-            departure_clusters = departure_clusters.drop_duplicates(subset=['route_id', 'direction_id', 'oday', 'start', 'tst_median', 'time_group', 'cluster_on_reclustered_level']).reset_index(drop=True)
+        # Keep only departures that contribute to mode level clusters
+        departure_clusters = mode_clusters[["transport_mode", "time_group", "dclass", "cluster_on_reclustered_level"]].merge(
+            departure_clusters, on=["transport_mode", "time_group", "dclass", "cluster_on_reclustered_level"], how="left"
+        )
+        departure_clusters = departure_clusters.drop_duplicates(subset=['route_id', 'direction_id', 'oday', 'start', 'tst_median', 'time_group', 'cluster_on_reclustered_level']).reset_index(drop=True)
 
-            departure_clusters["cluster_id"] = (
-                departure_clusters['dclass'] + departure_clusters['cluster_on_reclustered_level'].astype(str) + departure_clusters['time_group'] + departure_clusters['transport_mode']
-            )
-            mode_clusters["cluster_id"] = mode_clusters['dclass'] + mode_clusters['cluster_on_reclustered_level'].astype(str) + mode_clusters['time_group'] + mode_clusters['transport_mode']
+        departure_clusters["cluster_id"] = (
+            departure_clusters['dclass'] + departure_clusters['cluster_on_reclustered_level'].astype(str) + departure_clusters['time_group'] + departure_clusters['transport_mode']
+        )
+        mode_clusters["cluster_id"] = mode_clusters['dclass'] + mode_clusters['cluster_on_reclustered_level'].astype(str) + mode_clusters['time_group'] + mode_clusters['transport_mode']
                 
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=RuntimeWarning)
