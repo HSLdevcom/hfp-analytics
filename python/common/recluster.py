@@ -439,11 +439,11 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
         route_clusters["share_of_departures"] = round(route_clusters["share_of_departures"], 1)
         route_clusters = route_clusters.drop("cluster_on_reclustered_level", axis=1)
 
-    route_clusters = make_geo_df_WGS84(route_clusters, lat_col="latitude", lon_col="longitude", crs="EPSG:4326")
-    
-    db_route_id = route_ids
-    if not db_route_id:
-        db_route_id = 'ALL'
+        route_clusters = make_geo_df_WGS84(route_clusters, lat_col="latitude", lon_col="longitude", crs="EPSG:4326")
+        
+        db_route_id = route_ids
+        if not db_route_id:
+            db_route_id = 'ALL'
 
     flow_analytics_container_client = FlowAnalyticsContainerClient()
     
