@@ -7,6 +7,7 @@ import zstandard as zstd
 import psycopg
 import logging
 from common.database import pool
+from common.container_client import FlowAnalyticsContainerClient
 from sklearn.cluster import DBSCAN
 from collections import Counter
 from typing import Optional
@@ -176,7 +177,8 @@ async def store_compressed_csv(
     route_id: str,
     mode: str,
     oday: str,
-    df: pd.DataFrame
+    df: pd.DataFrame,
+    flow_analytics_container_client: FlowAnalyticsContainerClient,
 ):
     """
     Store df as a compressed CSV into the database table "schema.table".
@@ -207,6 +209,16 @@ async def store_compressed_csv(
                 "zst": compressed_csv,
             },
         )
+    
+    preprocess_type = table.split('_')[1]
+    
+    await flow_analytics_container_client.save_preprocess_data(
+        preprocess_type= preprocess_type,
+        compressed_csv=compressed_csv, 
+        route_id=route_id, 
+        mode=mode, 
+        oday=oday
+    )
 
 async def check_preprocessed_files(route_id: str, oday: date, table: str) -> bool:
     """
@@ -398,13 +410,28 @@ async def preprocess(
                     clusters.append(cluster_df)
     
 
-
+    flow_analytics_container_client = FlowAnalyticsContainerClient()
+    
     if clusters:
         clusters_df = pd.concat(clusters)
-        await store_compressed_csv("preprocess_clusters", route_id, mode, oday, clusters_df)
+        await store_compressed_csv(
+            "preprocess_clusters",
+            route_id,
+            mode,
+            oday,
+            clusters_df,
+            flow_analytics_container_client=flow_analytics_container_client,
+        )
     if departures:
         departures_df = pd.concat(departures)
-        await store_compressed_csv("preprocess_departures", route_id, mode, oday, departures_df)
+        await store_compressed_csv(
+            "preprocess_departures",
+            route_id,
+            mode,
+            oday,
+            departures_df,
+            flow_analytics_container_client=flow_analytics_container_client,
+        )
     if vp_events_in_clusters:
         path = f"./HFP_vp_events_in_clusters_{str(key[0])}_{file_date}.csv"
         #pd.concat(vp_events_in_clusters).to_csv(path, sep=";", encoding="utf-8", index=False)
