@@ -21,7 +21,7 @@ import logging
 from common.logger_util import CustomDbLogHandler
 
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import Response, JSONResponse
+from fastapi.responses import Response, JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
 
 from api.services.hfp import get_hfp_data, get_speeding_data
@@ -427,8 +427,7 @@ async def get_speeding(
         },
         204: {"description": "Query returned no data with the given parameters."},
         422: {"description": "Query had invalid parameters."}
-    },
-    response_class=GzippedFileResponse,
+    }
 )
 async def get_delay_analytics_data(
     route_id: Optional[str] = Query(
@@ -543,8 +542,8 @@ async def get_delay_analytics_data(
         logger.debug("Compressed data. Sending response.")
         parent_file_buffer.seek(0)
         gc.collect()
-        return Response(
-            content=parent_file_buffer.getvalue(),
+        return StreamingResponse(
+            parent_file_buffer,
             media_type="application/zip",
             headers={"Content-Disposition": 'attachment; filename="clusters.zip"'}
         )
