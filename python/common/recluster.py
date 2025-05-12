@@ -23,6 +23,7 @@ from common.database import pool
 from common.logger_util import CustomDbLogHandler
 from common.utils import get_season
 from common.config import DAYS_TO_EXCLUDE
+from common.container_client import FlowAnalyticsContainerClient
 from sklearn.cluster import DBSCAN
 from typing import Dict, Any, Union, Optional, List, Literal
 
@@ -239,10 +240,12 @@ async def store_compressed_geojson(
     route_id: str,
     from_oday: str,
     to_oday: str,
-    gdf: gpd.GeoDataFrame
+    gdf: gpd.GeoDataFrame,
+    flow_analytics_container_client: FlowAnalyticsContainerClient,
 ):
     """
-    Convert the GeoDataFrame to GeoJSON and compress with zstd
+    Convert the GeoDataFrame to GeoJSON and compress with zstd.
+    Saves compressed data to database and to blob storage
     """
 
     for col in gdf.columns:
@@ -276,6 +279,17 @@ async def store_compressed_geojson(
                 "zst": compressed_data
             }
         )
+    
+    recluster_type = table.split("_")[1]
+
+    await flow_analytics_container_client.save_cluster_data(
+        recluster_type=recluster_type,
+        compressed_data=compressed_data,
+        from_oday=from_oday,
+        to_oday=to_oday,
+        route_id=route_id,
+    )   
+
 
 def make_geo_df_WGS84(df: pd.DataFrame, lat_col: str, lon_col: str, crs: str = "EPSG:4326") -> gpd.GeoDataFrame:
     """Make a geodf from df. Note thet the function does not convert CRS but your input df needs to be WGS84,
@@ -500,16 +514,27 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
         if not db_route_id:
             db_route_id = 'ALL'
 
+        flow_analytics_container_client = FlowAnalyticsContainerClient()
+        
         removal_end = datetime.now()
         logger.debug(f"Recluster analysis for routes done in {removal_end - start_time}")
-        await store_compressed_geojson("recluster_routes", db_route_id, from_oday, to_oday, route_clusters)
+
+        await store_compressed_geojson(
+            "recluster_routes",
+            db_route_id,
+            from_oday,
+            to_oday,
+            route_clusters,
+            flow_analytics_container_client=flow_analytics_container_client,
+        )
 
         del route_clusters, departure_clusters, clusters, preprocessed_departures
         gc.collect()
+
         # Modes cluster disabled for now
         """logger.debug(f"Recluster routes stored to db. Starting recluster for departures.")
         start_time = datetime.now()
-        
+
         #assert route_clusters['share_of_departures'].max() <= 100
         #assert route_clusters[route_clusters.duplicated()].empty
         clusters = clusters.merge(preprocessed_departures[['route_id', 'direction_id', 'oday', 'start', 'transport_mode']], how="left", on=['route_id', 'direction_id', 'oday', 'start'])
@@ -541,7 +566,7 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
             departure_clusters['dclass'] + departure_clusters['cluster_on_reclustered_level'].astype(str) + departure_clusters['time_group'] + departure_clusters['transport_mode']
         )
         mode_clusters["cluster_id"] = mode_clusters['dclass'] + mode_clusters['cluster_on_reclustered_level'].astype(str) + mode_clusters['time_group'] + mode_clusters['transport_mode']
-            
+                
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
             departure_clusters["m_norm_hdg_median"] = departure_clusters.groupby(["dclass", "cluster_on_reclustered_level", "time_group", "transport_mode"])["hdg_median"].transform(
@@ -557,7 +582,14 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
         # mode_clusters['share_of_departures'] = mode_clusters['departures'] / mode_clusters['num_of_deps_analyzed'] * 100 # NOTE: This var is redundant ATM
         mode_clusters = mode_clusters.drop('cluster_on_reclustered_level', axis=1)
         mode_clusters = make_geo_df_WGS84(mode_clusters, lat_col="latitude", lon_col="longitude", crs="EPSG:4326")
-        
-        #await store_compressed_geojson("recluster_modes", db_route_id, from_oday, to_oday, mode_clusters)
+        # Is there a reason to store this in db and not just return it as response?
+        await store_compressed_geojson(
+            "recluster_modes",
+            db_route_id,
+            from_oday,
+            to_oday,
+            mode_clusters,
+            flow_analytics_container_client=flow_analytics_container_client,
+        )
         removal_end = datetime.now()
         logger.debug(f"Recluster modes stored to db {removal_end - start_time}.")"""
