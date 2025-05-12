@@ -26,7 +26,7 @@ from fastapi.encoders import jsonable_encoder
 
 from api.services.hfp import get_hfp_data, get_speeding_data
 from api.services.tlp import get_tlp_data, get_tlp_data_as_json
-from common.recluster import get_recluster_status, run_analysis_and_set_status, load_recluster_files
+from common.recluster import get_recluster_status, run_analysis_and_set_status, load_recluster_files, set_recluster_status
 from common.utils import get_previous_day_oday, create_filename, set_timezone
 
 logger = logging.getLogger("api")
@@ -509,6 +509,8 @@ async def get_delay_analytics_data(
 
         # If it doesn't exist. Create, set to PENDING and start analysis
         if recluster_status["status"] is None:
+            logger.debug(f"Create row route_id: {route_ids}, from_oday: {from_oday}, to_oday: {to_oday}, status: PENDING")
+            await set_recluster_status("recluster_routes", from_oday, to_oday, route_ids, status="PENDING")
             asyncio.create_task(run_analysis_and_set_status("recluster_routes", route_ids, from_oday, to_oday))
             response_content["detail"] = "No analysis found. Creating.."
             return JSONResponse(
