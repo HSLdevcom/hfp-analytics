@@ -226,8 +226,6 @@ async def run_analysis_and_set_status(
 ):
     with CustomDbLogHandler("api"):
         try:
-            logger.debug(f"Create row route_id: {route_ids}, from_oday: {from_oday}, to_oday: {to_oday}, status: PENDING")
-            await set_recluster_status(table, from_oday, to_oday, route_ids, status="PENDING")
             logger.debug(f"Start asyncio task to run recluster analysis")
             await asyncio.to_thread(
                 functools.partial(run_asyncio_task, recluster_analysis, route_ids, from_oday, to_oday)
