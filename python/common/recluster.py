@@ -27,7 +27,7 @@ from common.container_client import FlowAnalyticsContainerClient
 from sklearn.cluster import DBSCAN
 from typing import Dict, Any, Union, Optional, List, Literal
 
-logger = logging.getLogger("importer")
+logger = logging.getLogger("api")
 
 # TODO: Move to configs
 EPS_DISTANCE_1 = 0.01
@@ -224,16 +224,20 @@ async def run_analysis_and_set_status(
     from_oday: date,
     to_oday: date,
 ):
-    try:
-        await set_recluster_status(table, from_oday, to_oday, route_ids, status="PENDING")
-        await asyncio.to_thread(
-            functools.partial(run_asyncio_task, recluster_analysis, route_ids, from_oday, to_oday)
-        )
-    except Exception:
-        await set_recluster_status(table, from_oday, to_oday, route_ids, status="FAILED")
-        raise
-    finally:
-        gc.collect()
+    with CustomDbLogHandler("api"):
+        try:
+            logger.debug(f"Create row route_id: {route_ids}, from_oday: {from_oday}, to_oday: {to_oday}, status: PENDING")
+            await set_recluster_status(table, from_oday, to_oday, route_ids, status="PENDING")
+            logger.debug(f"Start asyncio task to run recluster analysis")
+            await asyncio.to_thread(
+                functools.partial(run_asyncio_task, recluster_analysis, route_ids, from_oday, to_oday)
+            )
+        except Exception:
+            logger.debug(f"Something went wrong. Setting status as FAILED")
+            await set_recluster_status(table, from_oday, to_oday, route_ids, status="FAILED")
+            raise
+        finally:
+            gc.collect()
 
 async def store_compressed_geojson(
     table: str,
@@ -458,7 +462,7 @@ async def get_preprocessed_clusters(route_ids: [str], from_oday: str, to_oday: s
 
 
 async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
-    with CustomDbLogHandler("importer"):
+    with CustomDbLogHandler("api"):
         start_time = datetime.now()
         clusters = await get_preprocessed_clusters(route_ids, from_oday, to_oday)
         preprocessed_departures = await get_preprocessed_departures(route_ids, from_oday, to_oday)
