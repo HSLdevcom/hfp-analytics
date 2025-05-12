@@ -508,6 +508,29 @@ async def get_delay_analytics_data(
             },
         }
 
+        if recluster_status["status"] == "DONE":
+            routecluster_geojson = await load_recluster_files("recluster_routes", from_oday, to_oday, route_ids)
+            #routecluster_csv = geojson_to_csv_bytes(routecluster_geojson)
+            parent_file_buffer = io.BytesIO()
+
+            with zipfile.ZipFile(parent_file_buffer, "w") as parent_zip:
+                route_buffer = io.BytesIO()
+                with zipfile.ZipFile(route_buffer, "w") as route_zip:
+                    route_zip.writestr("routecluster.geojson", routecluster_geojson)
+                    #route_zip.writestr("routecluster.csv", routecluster_csv)
+                route_buffer.seek(0)
+                parent_zip.writestr("routecluster.zip", route_buffer.getvalue())
+
+
+            logger.debug("Compressed data. Sending response.")
+            parent_file_buffer.seek(0)
+            gc.collect()
+            return StreamingResponse(
+                parent_file_buffer,
+                media_type="application/zip",
+                headers={"Content-Disposition": 'attachment; filename="clusters.zip"'}
+            )
+
         # If it doesn't exist. Create, set to PENDING and start analysis
         if recluster_status["status"] is None:
             logger.debug(f"Create row route_id: {route_ids}, from_oday: {from_oday}, to_oday: {to_oday}, status: PENDING")
@@ -520,33 +543,10 @@ async def get_delay_analytics_data(
                 content=response_content,
             )
 
-        # PENDING or FAILED
-        if recluster_status["status"] != "DONE":
-            response_content["detail"] = f"Analysis found and is {recluster_status['status']}"
-            return JSONResponse(
-                status_code=202,
-                content=response_content,
-            )
-
-        # Has to be DONE. Package and return data.
-        routecluster_geojson = await load_recluster_files("recluster_routes", from_oday, to_oday, route_ids)
-        #routecluster_csv = geojson_to_csv_bytes(routecluster_geojson)
-        parent_file_buffer = io.BytesIO()
-
-        with zipfile.ZipFile(parent_file_buffer, "w") as parent_zip:
-            route_buffer = io.BytesIO()
-            with zipfile.ZipFile(route_buffer, "w") as route_zip:
-                route_zip.writestr("routecluster.geojson", routecluster_geojson)
-                #route_zip.writestr("routecluster.csv", routecluster_csv)
-            route_buffer.seek(0)
-            parent_zip.writestr("routecluster.zip", route_buffer.getvalue())
-
-
-        logger.debug("Compressed data. Sending response.")
-        parent_file_buffer.seek(0)
-        gc.collect()
-        return StreamingResponse(
-            parent_file_buffer,
-            media_type="application/zip",
-            headers={"Content-Disposition": 'attachment; filename="clusters.zip"'}
+        # Return status
+        response_content["detail"] = f"Analysis found and is {recluster_status['status']}"
+        return JSONResponse(
+            status_code=202,
+            content=response_content,
         )
+
