@@ -50,6 +50,7 @@ class GzippedFileResponse(Response):
     "/data",
     summary="Get HFP raw data",
     description="Returns raw HFP data in a gzip compressed csv file.",
+    response_class=GzippedFileResponse,
     responses={
         200: {
             "description": "Successful query. The data is returned as an attachment in the response. "
@@ -415,6 +416,7 @@ async def get_speeding(
 
         return response
 
+
 @router.get(
     "/delay_analytics",
     summary="Get delay analytics data.",
@@ -424,6 +426,7 @@ async def get_speeding(
             "description": "Successful query. The data is returned as an attachment in the response. ",
             "content": {"application/gzip": {"schema": None, "example": None}}
         },
+        202: {"description": "Analysis pending or created, check status later."},
         204: {"description": "Query returned no data with the given parameters."},
         422: {"description": "Query had invalid parameters."}
     }
@@ -511,6 +514,7 @@ async def get_delay_analytics_data(
             await set_recluster_status("recluster_routes", from_oday, to_oday, route_ids, status="PENDING")
             asyncio.create_task(run_analysis_and_set_status("recluster_routes", route_ids, from_oday, to_oday))
             response_content["detail"] = "No analysis found. Creating.."
+            logger.debug("Created and started analysis. Returning 202")
             return JSONResponse(
                 status_code=202,
                 content=response_content,
