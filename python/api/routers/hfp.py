@@ -477,6 +477,21 @@ async def get_delay_analytics_data(
             route_ids = [r.strip() for r in route_id.split(",") if r.strip()]
             route_ids.sort()
 
+            for rid in route_ids:
+                if not route_id_pattern.match(rid):
+                    raise HTTPException(
+                        status_code=422,
+                        detail=[
+                            {
+                                "loc": ["query", "route_id"],
+                                "msg": f"Invalid route ID: {rid}. Only letters and digits allowed.",
+                                "input": rid,
+                            }
+                        ]
+                    )
+
+        logger.debug(f"Fetching hfp delay data. route_id: {route_ids}, from_oday: {from_oday}, to_oday: {to_oday}")
+
         # Get recluster analysis status
         recluster_status = await get_recluster_status("recluster_routes", from_oday, to_oday, route_ids)
         created_at = recluster_status["createdAt"]
