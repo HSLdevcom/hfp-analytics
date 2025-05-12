@@ -1,5 +1,8 @@
 
+# TODO: clean up imports
 import io
+import asyncio
+import functools
 import pandas as pd
 import numpy as np
 import shutil
@@ -21,7 +24,7 @@ from common.logger_util import CustomDbLogHandler
 from common.utils import get_season
 from common.config import DAYS_TO_EXCLUDE
 from sklearn.cluster import DBSCAN
-from typing import Union, Optional, List
+from typing import Dict, Any, Union, Optional, List, Literal
 
 logger = logging.getLogger("importer")
 
@@ -133,6 +136,57 @@ async def load_preprocess_files(
     return buffer.getvalue()
 
 
+async def get_recluster_status(table: str, from_oday: str, to_oday: str, route_id: str = "ALL",) -> Dict[str, Optional[Any]]:
+    table_name = f"delay.{table}"
+    query = f"""
+        SELECT status, createdAt, modifiedAt
+        FROM {table_name}
+        WHERE route_id = %(route_id)s AND from_oday = %(from_oday)s AND to_oday = %(to_oday)s
+    """
+    async with pool.connection() as conn:
+        cur = await conn.execute(
+            query,
+            {
+                "route_id":   route_id,
+                "from_oday":  from_oday,
+                "to_oday":    to_oday,
+            }
+        )
+        row = await cur.fetchone()
+
+    if row is None:
+        return {"status": None, "createdAt": None, "modifiedAt": None}
+
+    status, created_at, modified_at = row 
+    return {"status": status, "createdAt": created_at, "modifiedAt": modified_at}
+
+async def set_recluster_status(
+    table: str,
+    from_oday: date,
+    to_oday:   date,
+    route_id: str,
+    status:    Literal["PENDING", "DONE", "FAILED"] = "PENDING",
+) -> None:
+    table_name = f"delay.{table}"
+    query = f"""
+        INSERT INTO {table_name} (route_id, from_oday, to_oday, status)
+        VALUES (%(route_id)s, %(from_oday)s, %(to_oday)s, %(status)s)
+        ON CONFLICT (route_id, from_oday, to_oday)
+        DO UPDATE
+          SET status    = EXCLUDED.status,
+              createdAt = now();
+    """
+    async with pool.connection() as conn:
+        await conn.execute(
+            query,
+            {
+                "route_id":  route_id,
+                "from_oday": from_oday,
+                "to_oday":   to_oday,
+                "status":    status,
+            }
+        )
+
 async def load_recluster_files(table: str, from_oday: str, to_oday: str, route_id: str = "ALL",) -> bytes:
     table_name = f"delay.{table}"
     query = f"""
@@ -159,21 +213,26 @@ async def load_recluster_files(table: str, from_oday: str, to_oday: str, route_i
     decompressed_geojson = dctx.decompress(compressed_data)
     return decompressed_geojson
 
-async def prep_recluster_data(
-    routes_table: str,
-    modes_table: str,
-    route_ids: Union[str, list[str]],
-    from_oday: date,
-    to_oday: date
-) -> Optional[bytes]:
-    routecluster_geojson = await load_recluster_files(routes_table, from_oday, to_oday, route_ids)
-    
-    if routecluster_geojson is None:
-        logger.debug(f"No recluster analysis found. Start recluster analysis for route_ids: {route_ids}, from_oday: {from_oday}, to_oday: {to_oday}")
-        await recluster_analysis(route_ids, from_oday, to_oday)
-        routecluster_geojson = await load_recluster_files(routes_table, from_oday, to_oday, route_ids)
+def run_asyncio_task(coro_fn, *args, **kwargs):
+    return asyncio.run(coro_fn(*args, **kwargs))
 
-    return routecluster_geojson
+
+async def run_analysis_and_set_status(
+    table: str,
+    route_ids: list[str],
+    from_oday: date,
+    to_oday: date,
+):
+    try:
+        await set_recluster_status(table, from_oday, to_oday, route_ids, status="PENDING")
+        await asyncio.to_thread(
+            functools.partial(run_asyncio_task, recluster_analysis, route_ids, from_oday, to_oday)
+        )
+    except Exception:
+        await set_recluster_status(table, from_oday, to_oday, route_ids, status="FAILED")
+        raise
+    finally:
+        gc.collect()
 
 async def store_compressed_geojson(
     table: str,
@@ -202,7 +261,9 @@ async def store_compressed_geojson(
         INSERT INTO {table_name} (route_id, from_oday, to_oday, zst)
         VALUES (%(route_id)s, %(from_oday)s, %(to_oday)s, %(zst)s)
         ON CONFLICT (route_id, from_oday, to_oday) DO UPDATE
-            SET zst = EXCLUDED.zst
+            SET zst = EXCLUDED.zst,
+                status = 'DONE',
+                modifiedAt = now();
     """
 
     async with pool.connection() as conn:
@@ -269,10 +330,11 @@ def recluster(
         if i % 1000 == 0:
             del sub
             gc.collect()
-            logger.debug(f"DBSCAN processed {i}/{g.ngroups} groups, last key={group_key}")
+            logger.debug(f"DBSCAN processed {i}/{g.ngroups} groups")
 
     departure_clusters = pd.concat(departure_clusters)
     reclustered_clusters = pd.concat(reclustered_clusters)
+    gc.collect()
 
     return reclustered_clusters, departure_clusters
 
@@ -355,6 +417,13 @@ async def get_preprocessed_departures(route_ids: [str], from_oday: str, to_oday:
 
     preprocessed_departures = pd.read_csv(io.BytesIO(departures_data), sep=';')
 
+    week_days_df = preprocessed_departures[
+        preprocessed_departures["time_group"].str.contains("weekday", case=False, na=False)
+    ].copy()
+    week_days_df["time_group"] = "0_weekday_all"
+
+    preprocessed_departures = pd.concat([preprocessed_departures, week_days_df], axis=0).reset_index(drop=True)
+
     return preprocessed_departures
 
 async def get_preprocessed_clusters(route_ids: [str], from_oday: str, to_oday: str):
@@ -434,7 +503,9 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
         removal_end = datetime.now()
         logger.debug(f"Recluster analysis for routes done in {removal_end - start_time}")
         await store_compressed_geojson("recluster_routes", db_route_id, from_oday, to_oday, route_clusters)
-        
+
+        del route_clusters, departure_clusters, clusters, preprocessed_departures
+        gc.collect()
         # Modes cluster disabled for now
         """logger.debug(f"Recluster routes stored to db. Starting recluster for departures.")
         start_time = datetime.now()

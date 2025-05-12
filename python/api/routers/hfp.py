@@ -1,6 +1,7 @@
 """ Routes for /hfp endpoint """
 
 import io
+import asyncio
 import gzip
 import zipfile
 import pandas as pd
@@ -8,6 +9,7 @@ import geopandas as gpd
 import pytz
 import numpy as np
 import re
+import gc
 
 from sklearn.cluster import DBSCAN
 from collections import Counter
@@ -24,7 +26,7 @@ from fastapi.encoders import jsonable_encoder
 
 from api.services.hfp import get_hfp_data, get_speeding_data
 from api.services.tlp import get_tlp_data, get_tlp_data_as_json
-from common.recluster import  prep_recluster_data
+from common.recluster import get_recluster_status, run_analysis_and_set_status, load_recluster_files
 from common.utils import get_previous_day_oday, create_filename, set_timezone
 
 logger = logging.getLogger("api")
@@ -475,42 +477,40 @@ async def get_delay_analytics_data(
             route_ids = [r.strip() for r in route_id.split(",") if r.strip()]
             route_ids.sort()
 
-            for rid in route_ids:
-                if not route_id_pattern.match(rid):
-                    raise HTTPException(
-                        status_code=422,
-                        detail=[
-                            {
-                                "loc": ["query", "route_id"],
-                                "msg": f"Invalid route ID: {rid}. Only letters and digits allowed.",
-                                "input": rid,
-                            }
-                        ]
-                    )
-
-        logger.debug(f"Fetching hfp delay data. route_id: {route_ids}, from_oday: {from_oday}, to_oday: {to_oday}")
-
-        routecluster_geojson = await prep_recluster_data(
-            routes_table="recluster_routes",
-            modes_table="recluster_modes",
-            route_ids=route_ids,
-            from_oday=from_oday,
-            to_oday=to_oday,
-        )
+        # Get recluster analysis status
+        recluster_status = await get_recluster_status("recluster_routes", from_oday, to_oday, route_ids)
+        created_at = recluster_status["createdAt"]
+        created_at_str = created_at.isoformat() if created_at is not None else None
         
-        if routecluster_geojson is None:
-            return Response(status_code=204)
+        response_content = {
+            "status": recluster_status['status'],
+            "createdAt": created_at_str,
+            "params": {
+                "route_ids": route_ids,
+                "from_oday": str(from_oday),
+                "to_oday":   str(to_oday),
+            },
+        }
 
-        logger.debug(f"Data fetched from db. Compressing response.")
+        # If it doesn't exist. Create, set to PENDING and start analysis
+        if recluster_status["status"] is None:
+            asyncio.create_task(run_analysis_and_set_status("recluster_routes", route_ids, from_oday, to_oday))
+            response_content["detail"] = "No analysis found. Creating.."
+            return JSONResponse(
+                status_code=202,
+                content=response_content,
+            )
 
-        def geojson_to_csv_bytes(geojson_bytes: bytes) -> bytes:
-            geojson_bytes_io = io.BytesIO(geojson_bytes)
-            gdf = gpd.read_file(geojson_bytes_io, driver="GeoJSON")
-            csv_buffer = io.BytesIO()
-            gdf.to_csv(csv_buffer, index=False)
-            csv_buffer.seek(0)
-            return csv_buffer.getvalue()
+        # PENDING or FAILED
+        if recluster_status["status"] != "DONE":
+            response_content["detail"] = f"Analysis found and is {recluster_status['status']}"
+            return JSONResponse(
+                status_code=202,
+                content=response_content,
+            )
 
+        # Has to be DONE. Package and return data.
+        routecluster_geojson = await load_recluster_files("recluster_routes", from_oday, to_oday, route_ids)
         #routecluster_csv = geojson_to_csv_bytes(routecluster_geojson)
         parent_file_buffer = io.BytesIO()
 
@@ -525,6 +525,7 @@ async def get_delay_analytics_data(
 
         logger.debug("Compressed data. Sending response.")
         parent_file_buffer.seek(0)
+        gc.collect()
         return Response(
             content=parent_file_buffer.getvalue(),
             media_type="application/zip",

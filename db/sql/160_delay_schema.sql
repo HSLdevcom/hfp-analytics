@@ -19,11 +19,14 @@ CREATE TABLE delay.preprocess_departures (
 );
 
 CREATE TABLE delay.recluster_routes(
-    route_id  text NOT NULL,
-    from_oday DATE NOT NULL,
-    to_oday   DATE NOT NULL,
-    mode      text,
-    zst       bytea,
+    route_id   text NOT NULL,
+    from_oday  DATE NOT NULL,
+    to_oday    DATE NOT NULL,
+    mode       text,
+    zst        bytea,
+    status     text,
+    createdAt  timestamptz NOT NULL DEFAULT now(),
+    modifiedAt timestamptz NULL,
     PRIMARY KEY (route_id, from_oday, to_oday)
 );
 
