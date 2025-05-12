@@ -50,7 +50,6 @@ class GzippedFileResponse(Response):
     "/data",
     summary="Get HFP raw data",
     description="Returns raw HFP data in a gzip compressed csv file.",
-    response_class=GzippedFileResponse,
     responses={
         200: {
             "description": "Successful query. The data is returned as an attachment in the response. "
