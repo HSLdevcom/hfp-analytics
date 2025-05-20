@@ -103,9 +103,8 @@ async def load_preprocess_files(
         query += " WHERE " + " AND ".join(conditions)
 
     async with pool.connection() as conn:
-        async with conn.transaction():
-            row = await conn.execute(query, params)
-            results = await row.fetchall()
+        cur = await conn.execute(query, params)
+        results = await cur.fetchall()
 
     if not results:
         return None 
@@ -484,10 +483,11 @@ async def run_analysis_and_set_status(
     with CustomDbLogHandler("api"):
         try:
             logger.debug(f"Fetch data for recluster")
-            
             start_time = datetime.now()
             clusters = await get_preprocessed_clusters(route_ids, from_oday, to_oday)
+            logger.debug(f"Fetched clusters")
             preprocessed_departures = await get_preprocessed_departures(route_ids, from_oday, to_oday)
+            logger.debug(f"Fetched preprocessed_departures")
             end_time = datetime.now()
             logger.debug(f"Data fetched for recluster in {end_time - start_time}")
 
