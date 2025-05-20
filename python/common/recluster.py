@@ -103,8 +103,9 @@ async def load_preprocess_files(
         query += " WHERE " + " AND ".join(conditions)
 
     async with pool.connection() as conn:
-        row = await conn.execute(query, params)
-        results = await row.fetchall()
+        async with conn.transaction():
+            row = await conn.execute(query, params)
+            results = await row.fetchall()
 
     if not results:
         return None 
