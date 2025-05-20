@@ -474,6 +474,9 @@ async def get_preprocessed_clusters(route_ids: [str], from_oday: str, to_oday: s
     return clusters
 
 
+def run_asyncio_task(coro_fn, *args, **kwargs):
+        return asyncio.run(coro_fn(*args, **kwargs))
+
 async def run_analysis_and_set_status(
     table: str,
     route_ids: list[str],
@@ -491,7 +494,8 @@ async def run_analysis_and_set_status(
             end_time = datetime.now()
             logger.debug(f"Data fetched for recluster in {end_time - start_time}")
 
-            await recluster_analysis(clusters, preprocessed_departures, route_ids, from_oday, to_oday)
+            await asyncio.to_thread(functools.partial(run_asyncio_task, recluster_analysis, clusters, preprocessed_departures, route_ids, from_oday, to_oday))
+
         except Exception:
             logger.debug(f"Something went wrong. Setting status as FAILED")
             await set_recluster_status(table, from_oday, to_oday, route_ids, status="FAILED")
