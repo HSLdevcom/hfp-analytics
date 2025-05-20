@@ -14,7 +14,7 @@ import gc
 from sklearn.cluster import DBSCAN
 from collections import Counter
 from typing import Optional
-from datetime import date, timedelta, datetime, time
+from datetime import date, timedelta, datetime, time, timezone
 from http import HTTPStatus
 
 import logging
@@ -26,7 +26,7 @@ from fastapi.encoders import jsonable_encoder
 
 from api.services.hfp import get_hfp_data, get_speeding_data
 from api.services.tlp import get_tlp_data, get_tlp_data_as_json
-from common.recluster import get_recluster_status, run_analysis_and_set_status, load_recluster_files, set_recluster_status
+from common.recluster import get_recluster_status, run_analysis_and_set_status, load_recluster_geojson, load_recluster_csv, set_recluster_status, get_preprocessed_clusters, get_preprocessed_departures
 from common.utils import get_previous_day_oday, create_filename, set_timezone
 
 logger = logging.getLogger("api")
@@ -509,15 +509,17 @@ async def get_delay_analytics_data(
         }
 
         if recluster_status["status"] == "DONE":
-            routecluster_geojson = await load_recluster_files("recluster_routes", from_oday, to_oday, route_ids)
-            #routecluster_csv = geojson_to_csv_bytes(routecluster_geojson)
+            routecluster_geojson = await load_recluster_geojson("recluster_routes", from_oday, to_oday, route_ids)
+            routecluster_csv = await load_recluster_csv("recluster_routes", from_oday, to_oday, route_ids)
             parent_file_buffer = io.BytesIO()
 
             with zipfile.ZipFile(parent_file_buffer, "w") as parent_zip:
                 route_buffer = io.BytesIO()
                 with zipfile.ZipFile(route_buffer, "w") as route_zip:
-                    route_zip.writestr("routecluster.geojson", routecluster_geojson)
-                    #route_zip.writestr("routecluster.csv", routecluster_csv)
+                    if routecluster_geojson is not None:
+                        route_zip.writestr("routecluster.geojson", routecluster_geojson)
+                    if routecluster_csv is not None:
+                        route_zip.writestr("routecluster.csv", routecluster_csv)
                 route_buffer.seek(0)
                 parent_zip.writestr("routecluster.zip", route_buffer.getvalue())
 
@@ -531,12 +533,24 @@ async def get_delay_analytics_data(
                 headers={"Content-Disposition": 'attachment; filename="clusters.zip"'}
             )
 
-        # If it doesn't exist. Create, set to PENDING and start analysis
-        if recluster_status["status"] is None:
+        is_stale = False
+        if recluster_status["createdAt"]:
+            created_at = recluster_status["createdAt"]
+            now = datetime.now(timezone.utc)
+            stale_cutoff = now - timedelta(hours=2)
+            is_stale = created_at < stale_cutoff
+
+        # If it doesn't exist, is failed or is stale. Create or rerun, set to PENDING and start analysis
+        if recluster_status["status"] is None or recluster_status["status"] == "FAILED" or is_stale:
             logger.debug(f"Create row route_id: {route_ids}, from_oday: {from_oday}, to_oday: {to_oday}, status: PENDING")
             await set_recluster_status("recluster_routes", from_oday, to_oday, route_ids, status="PENDING")
             asyncio.create_task(run_analysis_and_set_status("recluster_routes", route_ids, from_oday, to_oday))
-            response_content["detail"] = "No analysis found. Creating.."
+
+            if recluster_status["status"] == "FAILED":
+                response_content["detail"] = "Found analysis with status FAILED. Rerunning.."
+            else:
+                response_content["detail"] = "No analysis found. Creating.."
+
             logger.debug("Created and started analysis. Returning 202")
             return JSONResponse(
                 status_code=202,
