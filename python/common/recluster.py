@@ -485,17 +485,8 @@ async def run_analysis_and_set_status(
 ):
     with CustomDbLogHandler("api"):
         try:
-            logger.debug(f"Fetch data for recluster")
-            start_time = datetime.now()
-            clusters = await get_preprocessed_clusters(route_ids, from_oday, to_oday)
-            logger.debug(f"Fetched clusters")
-            preprocessed_departures = await get_preprocessed_departures(route_ids, from_oday, to_oday)
-            logger.debug(f"Fetched preprocessed_departures")
-            end_time = datetime.now()
-            logger.debug(f"Data fetched for recluster in {end_time - start_time}")
-
-            await asyncio.to_thread(functools.partial(run_asyncio_task, recluster_analysis, clusters, preprocessed_departures, route_ids, from_oday, to_oday))
-
+            logger.debug(f"Start asyncio task to run recluster analysis")    
+            await asyncio.to_thread(functools.partial(run_asyncio_task, recluster_analysis, route_ids, from_oday, to_oday))
         except Exception:
             logger.debug(f"Something went wrong. Setting status as FAILED")
             await set_recluster_status(table, from_oday, to_oday, route_ids, status="FAILED")
@@ -504,8 +495,17 @@ async def run_analysis_and_set_status(
             gc.collect()
 
 
-async def recluster_analysis(clusters: pd.DataFrame, preprocessed_departures: pd.DataFrame, route_ids: list[str], from_oday: date, to_oday: date):
+async def recluster_analysis(route_ids: list[str], from_oday: date, to_oday: date):
     with CustomDbLogHandler("api"):
+
+        logger.debug(f"Fetch data for recluster")
+        start_time = datetime.now()
+        clusters = await get_preprocessed_clusters(route_ids, from_oday, to_oday)
+        logger.debug(f"Fetched clusters")
+        preprocessed_departures = await get_preprocessed_departures(route_ids, from_oday, to_oday)
+        logger.debug(f"Fetched preprocessed_departures")
+        end_time = datetime.now()
+        logger.debug(f"Data fetched for recluster in {end_time - start_time}")
 
         if clusters is None or preprocessed_departures is None:
             return
