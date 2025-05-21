@@ -140,7 +140,7 @@ async def load_preprocess_files(
 async def get_recluster_status(table: str, from_oday: str, to_oday: str, route_id: str = "ALL",) -> Dict[str, Optional[Any]]:
     table_name = f"delay.{table}"
     query = f"""
-        SELECT status, createdAt, modifiedAt
+        SELECT status, createdAt, progress
         FROM {table_name}
         WHERE route_id = %(route_id)s AND from_oday = %(from_oday)s AND to_oday = %(to_oday)s
     """
@@ -156,10 +156,10 @@ async def get_recluster_status(table: str, from_oday: str, to_oday: str, route_i
         row = await cur.fetchone()
 
     if row is None:
-        return {"status": None, "createdAt": None, "modifiedAt": None}
+        return {"status": None, "createdAt": None, "progress": None}
 
-    status, created_at, modified_at = row 
-    return {"status": status, "createdAt": created_at, "modifiedAt": modified_at}
+    status, created_at, progress = row 
+    return {"status": status, "createdAt": created_at, "progress": progress}
 
 async def set_recluster_status(
     table: str,
@@ -185,6 +185,30 @@ async def set_recluster_status(
                 "from_oday": from_oday,
                 "to_oday":   to_oday,
                 "status":    status,
+            }
+        )
+
+async def update_recluster_progress(
+    route_id,
+    from_oday: date,
+    to_oday: date,
+    progress: str
+) -> None:
+    query = f"""
+        INSERT INTO delay.recluster_routes (route_id, from_oday, to_oday, progress)
+        VALUES (%(route_id)s, %(from_oday)s, %(to_oday)s, %(progress)s)
+        ON CONFLICT (route_id, from_oday, to_oday)
+        DO UPDATE
+          SET progress    = EXCLUDED.progress
+    """
+    async with pool.connection() as conn:
+        await conn.execute(
+            query,
+            {
+                "progress":  progress,
+                "route_id": route_id,
+                "from_oday": from_oday,
+                "to_oday": to_oday
             }
         )
 
@@ -324,6 +348,7 @@ def make_geo_df_WGS84(df: pd.DataFrame, lat_col: str, lon_col: str, crs: str = "
     gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df[lon_col], df[lat_col]), crs=crs)
     return gdf
 
+# Currently not used since only doing reclustering for routes
 def recluster(
     clusters: pd.DataFrame,
     distance: int,
@@ -338,7 +363,7 @@ def recluster(
     departure_clusters = []
     reclustered_clusters = []
     EPSILON = distance / radius
-    logger.debug(f"Data to be procecesed with DBSCAN. Rows: {clusters.shape[0]}, groups: {g.ngroups}")
+    logger.debug(f"Data to be processed with DBSCAN. Rows: {clusters.shape[0]}, groups: {g.ngroups}")
     for i, (group_key, sub) in enumerate(g, start=1):
         sub = sub.rename(columns={"cluster": "cluster_on_departure_level"})
         X = np.radians(sub[["lat_median", "long_median"]])
@@ -501,9 +526,7 @@ async def recluster_analysis(route_ids: list[str], from_oday: date, to_oday: dat
         logger.debug(f"Fetch data for recluster")
         start_time = datetime.now()
         clusters = await get_preprocessed_clusters(route_ids, from_oday, to_oday)
-        logger.debug(f"Fetched clusters")
         preprocessed_departures = await get_preprocessed_departures(route_ids, from_oday, to_oday)
-        logger.debug(f"Fetched preprocessed_departures")
         end_time = datetime.now()
         logger.debug(f"Data fetched for recluster in {end_time - start_time}")
 
@@ -513,15 +536,48 @@ async def recluster_analysis(route_ids: list[str], from_oday: date, to_oday: dat
         start_time = datetime.now()
         logger.debug(f"Start recluster for routes")
 
-        route_clusters, departure_clusters = await asyncio.to_thread(
-            recluster,
-            clusters,
-            EPS_DISTANCE_2,
-            EARHT_RADIUS_KM,
-            MIN_WEIGHTED_SAMPLES,
-            ['route_id', 'direction_id', 'time_group', 'dclass'],
-            ['route_id', 'direction_id', 'time_group', 'dclass', 'cluster_on_reclustered_level']
-        )
+        vars_to_group_level_one_clusters_by=['route_id', 'direction_id', 'time_group', 'dclass']
+        cluster_id_vars_on_2nd_level=['route_id', 'direction_id', 'time_group', 'dclass', 'cluster_on_reclustered_level']
+
+        # This section same as in recluster(). Consider removing recluster() if not used in future
+        # Start of recluster()
+        g = clusters.groupby(vars_to_group_level_one_clusters_by)
+
+        dep_clusters = []
+        reclustered_clusters = []
+        EPSILON = EPS_DISTANCE_2 / EARHT_RADIUS_KM
+        min_weighted_samples = MIN_WEIGHTED_SAMPLES
+        group_count = g.ngroups
+        logger.debug(f"Data to be processed with DBSCAN. Rows: {clusters.shape[0]}, groups: {group_count}")
+        for i, (group_key, sub) in enumerate(g, start=1):
+            sub = sub.rename(columns={"cluster": "cluster_on_departure_level"})
+            X = np.radians(sub[["lat_median", "long_median"]])
+
+            clusterer = DBSCAN(
+                eps=EPSILON,
+                min_samples=min_weighted_samples,  # The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.
+                metric="haversine",
+            )
+
+            sub["cluster_on_reclustered_level"] = clusterer.fit_predict(X, sample_weight=sub["weight"])
+            sub = sub[sub["cluster_on_reclustered_level"] != -1]
+            if sub.empty:
+                continue
+
+            dep_clusters.append(sub)
+            sub = calculate_cluster_features(sub, cluster_id_vars_on_2nd_level)
+            reclustered_clusters.append(sub)
+
+            if i % 1000 == 0:
+                del sub
+                gc.collect()
+                await update_recluster_progress(route_ids, from_oday, to_oday, f"{i}/{group_count}")
+                logger.debug(f"DBSCAN processed {i}/{group_count} groups")
+
+        await update_recluster_progress(route_ids, from_oday, to_oday, f"{group_count}/{group_count}")
+        departure_clusters = pd.concat(dep_clusters)
+        route_clusters = pd.concat(reclustered_clusters)
+        # End of recluster()
 
         n_departures_analyzed = preprocessed_departures.groupby(["route_id", "direction_id", "time_group"]).size().to_frame().reset_index().rename(columns={0: "n_departures_analyzed"})
         route_clusters = route_clusters[route_clusters["q_50"] >= MIN_MEDIAN_DELAY_IN_CLUSTER]

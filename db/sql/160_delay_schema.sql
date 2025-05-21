@@ -26,6 +26,7 @@ CREATE TABLE delay.recluster_routes(
     zst        bytea,
     csv_zst    bytea,
     status     text,
+    progress   text,
     createdAt  timestamptz NOT NULL DEFAULT now(),
     modifiedAt timestamptz NULL,
     PRIMARY KEY (route_id, from_oday, to_oday)
