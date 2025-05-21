@@ -539,6 +539,8 @@ async def recluster_analysis(route_ids: list[str], from_oday: date, to_oday: dat
         vars_to_group_level_one_clusters_by=['route_id', 'direction_id', 'time_group', 'dclass']
         cluster_id_vars_on_2nd_level=['route_id', 'direction_id', 'time_group', 'dclass', 'cluster_on_reclustered_level']
 
+        # This section same as in recluster(). Consider removing recluster() if not used in future
+        # Start of recluster()
         g = clusters.groupby(vars_to_group_level_one_clusters_by)
 
         dep_clusters = []
@@ -575,6 +577,7 @@ async def recluster_analysis(route_ids: list[str], from_oday: date, to_oday: dat
         await update_recluster_progress(route_ids, from_oday, to_oday, f"{group_count}/{group_count}")
         departure_clusters = pd.concat(dep_clusters)
         route_clusters = pd.concat(reclustered_clusters)
+        # End of recluster()
 
         n_departures_analyzed = preprocessed_departures.groupby(["route_id", "direction_id", "time_group"]).size().to_frame().reset_index().rename(columns={0: "n_departures_analyzed"})
         route_clusters = route_clusters[route_clusters["q_50"] >= MIN_MEDIAN_DELAY_IN_CLUSTER]
