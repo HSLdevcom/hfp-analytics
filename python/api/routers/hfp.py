@@ -558,7 +558,7 @@ async def get_delay_analytics_data(
             )
 
         # Return status
-        response_content["detail"] = f"Analysis found and is {recluster_status['status']}"
+        response_content["detail"] = f"Analysis found and is {recluster_status['status']}, processed: {recluster_status['progress']}"
         return JSONResponse(
             status_code=202,
             content=response_content,
