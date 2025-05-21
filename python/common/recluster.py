@@ -546,7 +546,7 @@ async def recluster_analysis(route_ids: list[str], from_oday: date, to_oday: dat
         EPSILON = EPS_DISTANCE_2 / EARHT_RADIUS_KM
         min_weighted_samples = MIN_WEIGHTED_SAMPLES
         group_count = g.ngroups
-        logger.debug(f"Data to be procecesed with DBSCAN. Rows: {clusters.shape[0]}, groups: {group_count}")
+        logger.debug(f"Data to be processed with DBSCAN. Rows: {clusters.shape[0]}, groups: {group_count}")
         for i, (group_key, sub) in enumerate(g, start=1):
             sub = sub.rename(columns={"cluster": "cluster_on_departure_level"})
             X = np.radians(sub[["lat_median", "long_median"]])
