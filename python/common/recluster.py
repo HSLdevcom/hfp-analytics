@@ -26,7 +26,6 @@ from common.config import DAYS_TO_EXCLUDE
 from common.container_client import FlowAnalyticsContainerClient
 from sklearn.cluster import DBSCAN
 from typing import Dict, Any, Union, Optional, List, Literal
-from common.executor import executor
 
 logger = logging.getLogger("api")
 
@@ -309,6 +308,7 @@ async def store_compressed_geojson(
                 status = 'DONE',
                 modifiedAt = now();
     """
+
     async with pool.connection() as conn:
         await conn.execute(
             query,
@@ -422,12 +422,12 @@ def calculate_cluster_features(df: pd.DataFrame, cluster_id_vars_on_2nd_level: l
             "cluster_on_reclustered_level",
         ]
     )
-    clust_counts = clust_counts.groupby(cluster_id_vars_on_2nd_level, observed=False).size().reset_index(name="n_departures")
+    clust_counts = clust_counts.groupby(cluster_id_vars_on_2nd_level).size().reset_index(name="n_departures")
 
-    clust_delay_feats = df.groupby(cluster_id_vars_on_2nd_level, observed=False)["weight"].quantile([0.10, 0.25, 0.5, 0.75, 0.90]).unstack()
+    clust_delay_feats = df.groupby(cluster_id_vars_on_2nd_level)["weight"].quantile([0.10, 0.25, 0.5, 0.75, 0.90]).unstack()
     clust_delay_feats.columns = [(int(x * 100)) for x in clust_delay_feats.columns]
     clust_delay_feats = clust_delay_feats.add_prefix("q_").reset_index()
-    median_vars = df.groupby(cluster_id_vars_on_2nd_level, observed=False)[["lat_median", "long_median", "tst_median", "hdg_median"]].median().reset_index()
+    median_vars = df.groupby(cluster_id_vars_on_2nd_level)[["lat_median", "long_median", "tst_median", "hdg_median"]].median().reset_index()
     res = median_vars.merge(clust_counts, on=cluster_id_vars_on_2nd_level, how="outer")
     res = res.merge(clust_delay_feats, on=cluster_id_vars_on_2nd_level, how="outer")
     res["oday_min"] = df.oday.min()
@@ -471,25 +471,7 @@ async def get_preprocessed_departures(route_ids: [str], from_oday: str, to_oday:
         logger.debug(f"No preprocessed departures ZST found for route_id={route_ids}")
         return None
 
-    departure_types = {
-        "event_type":      "category",
-        "route_id":        "object",
-        "direction_id":    "int8",      
-        "operator_id":     "int16",
-        "oper":            "int8",
-        "vehicle_number":  "int16",
-        "transport_mode":  "object",
-        "time_group":      "object",
-        "oday":            "object",
-        "start":           "object",
-        "tst":             "object"
-    }
-
-    preprocessed_departures = pd.read_csv(
-        io.BytesIO(departures_data),
-        sep=";",
-        dtype=departure_types
-    )
+    preprocessed_departures = pd.read_csv(io.BytesIO(departures_data), sep=';')
 
     week_days_df = preprocessed_departures[
         ~preprocessed_departures["time_group"].str.contains("weekend", case=False, na=False)
@@ -506,25 +488,8 @@ async def get_preprocessed_clusters(route_ids: [str], from_oday: str, to_oday: s
         logger.debug(f"No preprocessed cluster ZST found for route_id={route_ids}")
         return None
 
-    clusters_dtypes = {
-        "route_id":     "object",
-        "direction_id": "int8",
-        "hdg_median":   "float32",
-        "dclass":       "object",
-        "weight":       "int32",
-        "time_group":   "object",
-        "lat_median":   "float32",
-        "long_median":  "float32",
-        "oday":         "object",
-        "start":        "object",
-        "tst_median":   "object"
-    }
+    clusters = pd.read_csv(io.BytesIO(cluster_data), sep=";")
 
-    clusters = pd.read_csv(
-        io.BytesIO(cluster_data),
-        sep=";",
-        dtype=clusters_dtypes
-    )
     week_days_df = clusters[
         ~clusters["time_group"].str.contains("weekend", case=False, na=False)
     ].copy()
@@ -533,15 +498,6 @@ async def get_preprocessed_clusters(route_ids: [str], from_oday: str, to_oday: s
     clusters = pd.concat([clusters, week_days_df], axis=0).reset_index(drop=True)
     return clusters
 
-
-def recluster_analysis_sync(route_ids: list[str], from_oday: date, to_oday: date):
-    try:
-        asyncio.run(recluster_analysis(route_ids, from_oday, to_oday))
-    except Exception:
-        asyncio.run(set_recluster_status(
-            "recluster_routes", from_oday, to_oday, route_ids, status="FAILED"
-        ))
-        raise
 
 def run_asyncio_task(coro_fn, *args, **kwargs):
         return asyncio.run(coro_fn(*args, **kwargs))
@@ -552,17 +508,16 @@ async def run_analysis_and_set_status(
     from_oday: date,
     to_oday: date
 ):
-    loop = asyncio.get_running_loop()
-    task = loop.run_in_executor(
-        executor,
-        functools.partial(recluster_analysis_sync, route_ids, from_oday, to_oday),
-    )
-    try:
-        await task
-    except Exception:
-        logger.exception("Worker process failed")
-    finally:
-        import gc; gc.collect()
+    with CustomDbLogHandler("api"):
+        try:
+            logger.debug(f"Start asyncio task to run recluster analysis")    
+            await asyncio.to_thread(functools.partial(run_asyncio_task, recluster_analysis, route_ids, from_oday, to_oday))
+        except Exception:
+            logger.debug(f"Something went wrong. Setting status as FAILED")
+            await set_recluster_status(table, from_oday, to_oday, route_ids, status="FAILED")
+            raise
+        finally:
+            gc.collect()
 
 
 async def recluster_analysis(route_ids: list[str], from_oday: date, to_oday: date):
@@ -586,7 +541,7 @@ async def recluster_analysis(route_ids: list[str], from_oday: date, to_oday: dat
 
         # This section same as in recluster(). Consider removing recluster() if not used in future
         # Start of recluster()
-        g = clusters.groupby(vars_to_group_level_one_clusters_by, observed=False)
+        g = clusters.groupby(vars_to_group_level_one_clusters_by)
 
         dep_clusters = []
         reclustered_clusters = []
@@ -624,7 +579,7 @@ async def recluster_analysis(route_ids: list[str], from_oday: date, to_oday: dat
         route_clusters = pd.concat(reclustered_clusters)
         # End of recluster()
 
-        n_departures_analyzed = preprocessed_departures.groupby(["route_id", "direction_id", "time_group"], observed=False).size().to_frame().reset_index().rename(columns={0: "n_departures_analyzed"})
+        n_departures_analyzed = preprocessed_departures.groupby(["route_id", "direction_id", "time_group"]).size().to_frame().reset_index().rename(columns={0: "n_departures_analyzed"})
         route_clusters = route_clusters[route_clusters["q_50"] >= MIN_MEDIAN_DELAY_IN_CLUSTER]
         route_clusters = route_clusters.merge(n_departures_analyzed, how="left", on=["route_id", "direction_id", "time_group"])
         route_clusters["share_of_departures"] = route_clusters["n_departures"] / route_clusters["n_departures_analyzed"] * 100
