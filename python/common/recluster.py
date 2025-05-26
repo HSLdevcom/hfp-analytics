@@ -264,13 +264,6 @@ async def load_recluster_csv(table: str, from_oday: str, to_oday: str, route_id:
     decompressed_geojson = dctx.decompress(compressed_data)
     return decompressed_geojson
 
-def geojson_to_csv_bytes(geojson_bytes: bytes) -> bytes:
-    geojson_bytes_io = io.BytesIO(geojson_bytes)
-    gdf = gpd.read_file(geojson_bytes_io, driver="GeoJSON")
-    csv_buffer = io.BytesIO()
-    gdf.to_csv(csv_buffer, index=False)
-    csv_buffer.seek(0)
-    return csv_buffer.getvalue()
 
 async def store_compressed_geojson(
     table: str,
@@ -289,13 +282,17 @@ async def store_compressed_geojson(
         if pd.api.types.is_datetime64_any_dtype(gdf[col]):
             gdf[col] = gdf[col].dt.strftime("%Y-%m-%d %H:%M:%S")
 
-    geojson_str = gdf.to_json() 
-    
+    geojson_str = gdf.to_json()
     geojson_bytes = geojson_str.encode("utf-8")
-    csv_bytes = geojson_to_csv_bytes(geojson_bytes)
-    cctx = zstd.ZstdCompressor()
-    compressed_data = cctx.compress(geojson_bytes)
-    compressed_csv_data = cctx.compress(csv_bytes)
+    del geojson_str
+    compressed_data = zstd.ZstdCompressor().compress(geojson_bytes)
+    del geojson_bytes
+
+    csv_str = gdf.to_csv(index=False)
+    csv_bytes = csv_str.encode("utf-8")
+    del csv_str
+    compressed_csv_data = zstd.ZstdCompressor().compress(csv_bytes)
+    del csv_bytes
 
     table_name = f"delay.{table}"
 
@@ -331,6 +328,8 @@ async def store_compressed_geojson(
         route_id=route_id,
     )   
 
+    del compressed_data, compressed_csv_data
+    gc.collect()
 
 def make_geo_df_WGS84(df: pd.DataFrame, lat_col: str, lon_col: str, crs: str = "EPSG:4326") -> gpd.GeoDataFrame:
     """Make a geodf from df. Note thet the function does not convert CRS but your input df needs to be WGS84,
@@ -664,7 +663,7 @@ async def recluster_analysis(route_ids: list[str], from_oday: date, to_oday: dat
 
         del route_clusters, departure_clusters, clusters, preprocessed_departures
         gc.collect()
-
+        return
         # Modes cluster disabled for now
         """logger.debug(f"Recluster routes stored to db. Starting recluster for departures.")
         start_time = datetime.now()
