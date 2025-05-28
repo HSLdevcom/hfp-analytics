@@ -213,11 +213,11 @@ async def store_compressed_csv(
     preprocess_type = table.split('_')[1]
     
     await flow_analytics_container_client.save_preprocess_data(
-        preprocess_type= preprocess_type,
-        compressed_csv=compressed_csv, 
-        route_id=route_id, 
-        mode=mode, 
-        oday=oday
+        preprocess_type=preprocess_type,
+        compressed_csv=compressed_csv,
+        route_id=",".join(route_id) if type(route_id) == list else route_id,
+        mode=mode,
+        oday=oday.strftime("%Y-%m-%d"),
     )
 
 async def check_preprocessed_files(route_id: str, oday: date, table: str) -> bool:
