@@ -215,7 +215,7 @@ async def store_compressed_csv(
     await flow_analytics_container_client.save_preprocess_data(
         preprocess_type=preprocess_type,
         compressed_csv=compressed_csv,
-        route_id=",".join(route_id) if type(route_id) == list else route_id,
+        route_id=route_id,
         mode=mode,
         oday=oday.strftime("%Y-%m-%d"),
     )
