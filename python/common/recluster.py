@@ -287,9 +287,9 @@ async def store_compressed_geojson(
     await flow_analytics_container_client.save_cluster_data(
         recluster_type=recluster_type,
         compressed_data=compressed_data,
-        from_oday=from_oday,
-        to_oday=to_oday,
-        route_id=route_id,
+        from_oday=from_oday.strftime("%Y-%m-%d"),
+        to_oday=to_oday.strftime("%Y-%m-%d"),
+        route_id=','.join(route_id) if type(route_id) == list else route_id,
     )   
 
 
