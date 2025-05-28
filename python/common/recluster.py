@@ -103,8 +103,8 @@ async def load_preprocess_files(
         query += " WHERE " + " AND ".join(conditions)
 
     async with pool.connection() as conn:
-        row = await conn.execute(query, params)
-        results = await row.fetchall()
+        cur = await conn.execute(query, params)
+        results = await cur.fetchall()
 
     if not results:
         return None 
@@ -140,7 +140,7 @@ async def load_preprocess_files(
 async def get_recluster_status(table: str, from_oday: str, to_oday: str, route_id: str = "ALL",) -> Dict[str, Optional[Any]]:
     table_name = f"delay.{table}"
     query = f"""
-        SELECT status, createdAt, modifiedAt
+        SELECT status, createdAt, progress
         FROM {table_name}
         WHERE route_id = %(route_id)s AND from_oday = %(from_oday)s AND to_oday = %(to_oday)s
     """
@@ -156,10 +156,10 @@ async def get_recluster_status(table: str, from_oday: str, to_oday: str, route_i
         row = await cur.fetchone()
 
     if row is None:
-        return {"status": None, "createdAt": None, "modifiedAt": None}
+        return {"status": None, "createdAt": None, "progress": None}
 
-    status, created_at, modified_at = row 
-    return {"status": status, "createdAt": created_at, "modifiedAt": modified_at}
+    status, created_at, progress = row 
+    return {"status": status, "createdAt": created_at, "progress": progress}
 
 async def set_recluster_status(
     table: str,
@@ -188,7 +188,31 @@ async def set_recluster_status(
             }
         )
 
-async def load_recluster_files(table: str, from_oday: str, to_oday: str, route_id: str = "ALL",) -> bytes:
+async def update_recluster_progress(
+    route_id,
+    from_oday: date,
+    to_oday: date,
+    progress: str
+) -> None:
+    query = f"""
+        INSERT INTO delay.recluster_routes (route_id, from_oday, to_oday, progress)
+        VALUES (%(route_id)s, %(from_oday)s, %(to_oday)s, %(progress)s)
+        ON CONFLICT (route_id, from_oday, to_oday)
+        DO UPDATE
+          SET progress    = EXCLUDED.progress
+    """
+    async with pool.connection() as conn:
+        await conn.execute(
+            query,
+            {
+                "progress":  progress,
+                "route_id": route_id,
+                "from_oday": from_oday,
+                "to_oday": to_oday
+            }
+        )
+
+async def load_recluster_geojson(table: str, from_oday: str, to_oday: str, route_id: str = "ALL",) -> bytes:
     table_name = f"delay.{table}"
     query = f"""
         SELECT zst
@@ -214,28 +238,32 @@ async def load_recluster_files(table: str, from_oday: str, to_oday: str, route_i
     decompressed_geojson = dctx.decompress(compressed_data)
     return decompressed_geojson
 
-def run_asyncio_task(coro_fn, *args, **kwargs):
-    return asyncio.run(coro_fn(*args, **kwargs))
+async def load_recluster_csv(table: str, from_oday: str, to_oday: str, route_id: str = "ALL",) -> bytes:
+    table_name = f"delay.{table}"
+    query = f"""
+        SELECT csv_zst
+        FROM {table_name}
+        WHERE route_id = %(route_id)s AND from_oday = %(from_oday)s AND to_oday = %(to_oday)s
+    """
+    async with pool.connection() as conn:
+        row = await conn.execute(
+            query,
+            {
+                "route_id": route_id,
+                "from_oday": from_oday,
+                "to_oday": to_oday
+            }
+        )
+        result = await row.fetchone()
+        if not result or not result[0]:
+            return None 
 
+        compressed_data = result[0]
 
-async def run_analysis_and_set_status(
-    table: str,
-    route_ids: list[str],
-    from_oday: date,
-    to_oday: date,
-):
-    with CustomDbLogHandler("api"):
-        try:
-            logger.debug(f"Start asyncio task to run recluster analysis")
-            await asyncio.to_thread(
-                functools.partial(run_asyncio_task, recluster_analysis, route_ids, from_oday, to_oday)
-            )
-        except Exception:
-            logger.debug(f"Something went wrong. Setting status as FAILED")
-            await set_recluster_status(table, from_oday, to_oday, route_ids, status="FAILED")
-            raise
-        finally:
-            gc.collect()
+    dctx = zstd.ZstdDecompressor()
+    decompressed_geojson = dctx.decompress(compressed_data)
+    return decompressed_geojson
+
 
 async def store_compressed_geojson(
     table: str,
@@ -254,19 +282,26 @@ async def store_compressed_geojson(
         if pd.api.types.is_datetime64_any_dtype(gdf[col]):
             gdf[col] = gdf[col].dt.strftime("%Y-%m-%d %H:%M:%S")
 
-    geojson_str = gdf.to_json() 
-    
+    geojson_str = gdf.to_json()
     geojson_bytes = geojson_str.encode("utf-8")
-    cctx = zstd.ZstdCompressor()
-    compressed_data = cctx.compress(geojson_bytes)
+    del geojson_str
+    compressed_data = zstd.ZstdCompressor().compress(geojson_bytes)
+    del geojson_bytes
+
+    csv_str = gdf.to_csv(index=False)
+    csv_bytes = csv_str.encode("utf-8")
+    del csv_str
+    compressed_csv_data = zstd.ZstdCompressor().compress(csv_bytes)
+    del csv_bytes
 
     table_name = f"delay.{table}"
 
     query = f"""
-        INSERT INTO {table_name} (route_id, from_oday, to_oday, zst)
-        VALUES (%(route_id)s, %(from_oday)s, %(to_oday)s, %(zst)s)
+        INSERT INTO {table_name} (route_id, from_oday, to_oday, zst, csv_zst)
+        VALUES (%(route_id)s, %(from_oday)s, %(to_oday)s, %(zst)s, %(csv_zst)s)
         ON CONFLICT (route_id, from_oday, to_oday) DO UPDATE
             SET zst = EXCLUDED.zst,
+                csv_zst  = EXCLUDED.csv_zst,
                 status = 'DONE',
                 modifiedAt = now();
     """
@@ -278,7 +313,8 @@ async def store_compressed_geojson(
                 "route_id": route_id,
                 "from_oday": from_oday,
                 "to_oday": to_oday,
-                "zst": compressed_data
+                "zst": compressed_data,
+                "csv_zst": compressed_csv_data,
             }
         )
     
@@ -292,6 +328,8 @@ async def store_compressed_geojson(
         route_id=','.join(route_id) if type(route_id) == list else route_id,
     )   
 
+    del compressed_data, compressed_csv_data
+    gc.collect()
 
 def make_geo_df_WGS84(df: pd.DataFrame, lat_col: str, lon_col: str, crs: str = "EPSG:4326") -> gpd.GeoDataFrame:
     """Make a geodf from df. Note thet the function does not convert CRS but your input df needs to be WGS84,
@@ -309,6 +347,7 @@ def make_geo_df_WGS84(df: pd.DataFrame, lat_col: str, lon_col: str, crs: str = "
     gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df[lon_col], df[lat_col]), crs=crs)
     return gdf
 
+# Currently not used since only doing reclustering for routes
 def recluster(
     clusters: pd.DataFrame,
     distance: int,
@@ -323,7 +362,7 @@ def recluster(
     departure_clusters = []
     reclustered_clusters = []
     EPSILON = distance / radius
-    logger.debug(f"Data to be procecesed with DBSCAN. Rows: {clusters.shape[0]}, groups: {g.ngroups}")
+    logger.debug(f"Data to be processed with DBSCAN. Rows: {clusters.shape[0]}, groups: {g.ngroups}")
     for i, (group_key, sub) in enumerate(g, start=1):
         sub = sub.rename(columns={"cluster": "cluster_on_departure_level"})
         X = np.radians(sub[["lat_median", "long_median"]])
@@ -382,12 +421,12 @@ def calculate_cluster_features(df: pd.DataFrame, cluster_id_vars_on_2nd_level: l
             "cluster_on_reclustered_level",
         ]
     )
-    clust_counts = clust_counts.groupby(cluster_id_vars_on_2nd_level).size().reset_index(name="n_departures")
+    clust_counts = clust_counts.groupby(cluster_id_vars_on_2nd_level, observed=False).size().reset_index(name="n_departures")
 
-    clust_delay_feats = df.groupby(cluster_id_vars_on_2nd_level)["weight"].quantile([0.10, 0.25, 0.5, 0.75, 0.90]).unstack()
+    clust_delay_feats = df.groupby(cluster_id_vars_on_2nd_level, observed=False)["weight"].quantile([0.10, 0.25, 0.5, 0.75, 0.90]).unstack()
     clust_delay_feats.columns = [(int(x * 100)) for x in clust_delay_feats.columns]
     clust_delay_feats = clust_delay_feats.add_prefix("q_").reset_index()
-    median_vars = df.groupby(cluster_id_vars_on_2nd_level)[["lat_median", "long_median", "tst_median", "hdg_median"]].median().reset_index()
+    median_vars = df.groupby(cluster_id_vars_on_2nd_level, observed=False)[["lat_median", "long_median", "tst_median", "hdg_median"]].median().reset_index()
     res = median_vars.merge(clust_counts, on=cluster_id_vars_on_2nd_level, how="outer")
     res = res.merge(clust_delay_feats, on=cluster_id_vars_on_2nd_level, how="outer")
     res["oday_min"] = df.oday.min()
@@ -431,10 +470,28 @@ async def get_preprocessed_departures(route_ids: [str], from_oday: str, to_oday:
         logger.debug(f"No preprocessed departures ZST found for route_id={route_ids}")
         return None
 
-    preprocessed_departures = pd.read_csv(io.BytesIO(departures_data), sep=';')
+    departure_types = {
+        "event_type":      "category",
+        "route_id":        "object",
+        "direction_id":    "int8",      
+        "operator_id":     "int16",
+        "oper":            "int8",
+        "vehicle_number":  "int16",
+        "transport_mode":  "object",
+        "time_group":      "object",
+        "oday":            "object",
+        "start":           "object",
+        "tst":             "object"
+    }
+
+    preprocessed_departures = pd.read_csv(
+        io.BytesIO(departures_data),
+        sep=";",
+        dtype=departure_types
+    )
 
     week_days_df = preprocessed_departures[
-        preprocessed_departures["time_group"].str.contains("weekday", case=False, na=False)
+        ~preprocessed_departures["time_group"].str.contains("weekend", case=False, na=False)
     ].copy()
     week_days_df["time_group"] = "0_weekday_all"
 
@@ -448,10 +505,28 @@ async def get_preprocessed_clusters(route_ids: [str], from_oday: str, to_oday: s
         logger.debug(f"No preprocessed cluster ZST found for route_id={route_ids}")
         return None
 
-    clusters = pd.read_csv(io.BytesIO(cluster_data), sep=";")
+    clusters_dtypes = {
+        "route_id":     "object",
+        "direction_id": "int8",
+        "hdg_median":   "float32",
+        "dclass":       "object",
+        "weight":       "int32",
+        "time_group":   "object",
+        "lat_median":   "float32",
+        "long_median":  "float32",
+        "oday":         "object",
+        "start":        "object",
+        "tst_median":   "object"
+    }
+
+    clusters = pd.read_csv(
+        io.BytesIO(cluster_data),
+        sep=";",
+        dtype=clusters_dtypes
+    )
 
     week_days_df = clusters[
-        clusters["time_group"].str.contains("weekday", case=False, na=False)
+        ~clusters["time_group"].str.contains("weekend", case=False, na=False)
     ].copy()
     week_days_df["time_group"] = "0_weekday_all"
 
@@ -459,14 +534,36 @@ async def get_preprocessed_clusters(route_ids: [str], from_oday: str, to_oday: s
     return clusters
 
 
-async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
+def run_asyncio_task(coro_fn, *args, **kwargs):
+        return asyncio.run(coro_fn(*args, **kwargs))
+
+async def run_analysis_and_set_status(
+    table: str,
+    route_ids: list[str],
+    from_oday: date,
+    to_oday: date
+):
     with CustomDbLogHandler("api"):
+        try:
+            logger.debug(f"Start asyncio task to run recluster analysis")    
+            await asyncio.to_thread(functools.partial(run_asyncio_task, recluster_analysis, route_ids, from_oday, to_oday))
+        except Exception:
+            logger.debug(f"Something went wrong. Setting status as FAILED")
+            await set_recluster_status(table, from_oday, to_oday, route_ids, status="FAILED")
+            raise
+        finally:
+            gc.collect()
+
+
+async def recluster_analysis(route_ids: list[str], from_oday: date, to_oday: date):
+    with CustomDbLogHandler("api"):
+
+        logger.debug(f"Fetch data for recluster")
         start_time = datetime.now()
         clusters = await get_preprocessed_clusters(route_ids, from_oday, to_oday)
         preprocessed_departures = await get_preprocessed_departures(route_ids, from_oday, to_oday)
-
-        removal_end = datetime.now()
-        logger.debug(f"Data fetched for recluster in {removal_end - start_time}")
+        end_time = datetime.now()
+        logger.debug(f"Data fetched for recluster in {end_time - start_time}")
 
         if clusters is None or preprocessed_departures is None:
             return
@@ -474,16 +571,50 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
         start_time = datetime.now()
         logger.debug(f"Start recluster for routes")
 
-        route_clusters, departure_clusters = recluster(
-            clusters,
-            distance=EPS_DISTANCE_2,
-            radius=EARHT_RADIUS_KM,
-            min_weighted_samples=MIN_WEIGHTED_SAMPLES,
-            vars_to_group_level_one_clusters_by=['route_id', 'direction_id', 'time_group', 'dclass'],
-            cluster_id_vars_on_2nd_level=['route_id', 'direction_id', 'time_group', 'dclass', 'cluster_on_reclustered_level']
-        )
+        vars_to_group_level_one_clusters_by=['route_id', 'direction_id', 'time_group', 'dclass']
+        cluster_id_vars_on_2nd_level=['route_id', 'direction_id', 'time_group', 'dclass', 'cluster_on_reclustered_level']
 
-        n_departures_analyzed = preprocessed_departures.groupby(["route_id", "direction_id", "time_group"]).size().to_frame().reset_index().rename(columns={0: "n_departures_analyzed"})
+        # This section same as in recluster(). Consider removing recluster() if not used in future
+        # Start of recluster()
+        g = clusters.groupby(vars_to_group_level_one_clusters_by, observed=False)
+
+        dep_clusters = []
+        reclustered_clusters = []
+        EPSILON = EPS_DISTANCE_2 / EARHT_RADIUS_KM
+        min_weighted_samples = MIN_WEIGHTED_SAMPLES
+        group_count = g.ngroups
+        logger.debug(f"Data to be processed with DBSCAN. Rows: {clusters.shape[0]}, groups: {group_count}")
+        for i, (group_key, sub) in enumerate(g, start=1):
+            sub = sub.rename(columns={"cluster": "cluster_on_departure_level"})
+            X = np.radians(sub[["lat_median", "long_median"]])
+
+            clusterer = DBSCAN(
+                eps=EPSILON,
+                min_samples=min_weighted_samples,  # The number of samples (or total weight) in a neighborhood for a point to be considered as a core point.
+                metric="haversine",
+            )
+
+            sub["cluster_on_reclustered_level"] = clusterer.fit_predict(X, sample_weight=sub["weight"])
+            sub = sub[sub["cluster_on_reclustered_level"] != -1]
+            if sub.empty:
+                continue
+
+            dep_clusters.append(sub)
+            sub = calculate_cluster_features(sub, cluster_id_vars_on_2nd_level)
+            reclustered_clusters.append(sub)
+
+            if i % 1000 == 0:
+                del sub
+                gc.collect()
+                await update_recluster_progress(route_ids, from_oday, to_oday, f"{i}/{group_count}")
+                logger.debug(f"DBSCAN processed {i}/{group_count} groups")
+
+        await update_recluster_progress(route_ids, from_oday, to_oday, f"{group_count}/{group_count}")
+        departure_clusters = pd.concat(dep_clusters)
+        route_clusters = pd.concat(reclustered_clusters)
+        # End of recluster()
+
+        n_departures_analyzed = preprocessed_departures.groupby(["route_id", "direction_id", "time_group"], observed=False).size().to_frame().reset_index().rename(columns={0: "n_departures_analyzed"})
         route_clusters = route_clusters[route_clusters["q_50"] >= MIN_MEDIAN_DELAY_IN_CLUSTER]
         route_clusters = route_clusters.merge(n_departures_analyzed, how="left", on=["route_id", "direction_id", "time_group"])
         route_clusters["share_of_departures"] = route_clusters["n_departures"] / route_clusters["n_departures_analyzed"] * 100
@@ -518,8 +649,8 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
 
         flow_analytics_container_client = FlowAnalyticsContainerClient()
         
-        removal_end = datetime.now()
-        logger.debug(f"Recluster analysis for routes done in {removal_end - start_time}")
+        end_time = datetime.now()
+        logger.debug(f"Recluster analysis for routes done in {end_time - start_time}")
 
         await store_compressed_geojson(
             "recluster_routes",
@@ -532,7 +663,7 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
 
         del route_clusters, departure_clusters, clusters, preprocessed_departures
         gc.collect()
-
+        return
         # Modes cluster disabled for now
         """logger.debug(f"Recluster routes stored to db. Starting recluster for departures.")
         start_time = datetime.now()
@@ -551,8 +682,8 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
             cluster_id_vars_on_2nd_level=["transport_mode", 'time_group', 'dclass', 'cluster_on_reclustered_level']
         )
 
-        removal_end = datetime.now()
-        logger.debug(f"Recluster analysis for departures done in {removal_end - start_time}")
+        end_time = datetime.now()
+        logger.debug(f"Recluster analysis for departures done in {end_time - start_time}")
         start_time = datetime.now()
 
         mode_clusters = mode_clusters[mode_clusters["q_50"] >= MIN_MEDIAN_DELAY_IN_CLUSTER]
@@ -593,5 +724,5 @@ async def recluster_analysis(route_ids: [str], from_oday: str, to_oday: str):
             mode_clusters,
             flow_analytics_container_client=flow_analytics_container_client,
         )
-        removal_end = datetime.now()
-        logger.debug(f"Recluster modes stored to db {removal_end - start_time}.")"""
+        end_time = datetime.now()
+        logger.debug(f"Recluster modes stored to db {end_time - start_time}.")"""
