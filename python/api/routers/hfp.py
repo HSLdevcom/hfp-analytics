@@ -420,13 +420,13 @@ async def get_speeding(
 @router.get(
     "/delay_analytics",
     summary="Get delay analytics data.",
-    description="Returns delay analytics as packaged zip file. Initial request will start the analysis. Following requests will return the status of the analysis or the data.",
+    description="Returns delay analytics as packaged zip file.",
     responses={
         200: {
-            "description": "The data is returned as an attachment in the response.",
+            "description": "Successful query. The data is returned as an attachment in the response. ",
             "content": {"application/gzip": {"schema": None, "example": None}}
         },
-        202: {"description": "Status message returned. Analysis pending or created, check again later."},
+        202: {"description": "Analysis pending or created, check status later."},
         204: {"description": "Query returned no data with the given parameters."},
         422: {"description": "Query had invalid parameters."}
     }
@@ -458,15 +458,6 @@ async def get_delay_analytics_data(
         ),
         example="2025-02-10"
     ),
-    exclude_days: Optional[str] = Query(
-        default=None,
-        title="Days to exclude (YYYY-MM-DD)",
-        description=(
-            "The days to be excluded from the analysis."
-            "Provide valid dates separated with a comma."
-        ),
-        example="2025-02-10,2025-02-11"
-    ),
 ) -> Response:
     """
     Get delay analytics data.
@@ -486,6 +477,7 @@ async def get_delay_analytics_data(
         else:
             route_ids = [r.strip() for r in route_id.split(",") if r.strip()]
             route_ids.sort()
+
             for rid in route_ids:
                 if not route_id_pattern.match(rid):
                     raise HTTPException(
@@ -499,15 +491,10 @@ async def get_delay_analytics_data(
                         ]
                     )
 
-        days_to_exclude = exclude_days
-        if days_to_exclude is not None:
-            days_to_exclude = [r.strip() for r in days_to_exclude.split(",") if r.strip()]
-            days_to_exclude.sort()
-
         logger.debug(f"Fetching hfp delay data. route_id: {route_ids}, from_oday: {from_oday}, to_oday: {to_oday}")
 
         # Get recluster analysis status
-        recluster_status = await get_recluster_status("recluster_routes", from_oday, to_oday, route_ids, days_to_exclude)
+        recluster_status = await get_recluster_status("recluster_routes", from_oday, to_oday, route_ids)
         created_at = recluster_status["createdAt"]
         created_at_str = created_at.isoformat() if created_at is not None else None
         
@@ -518,13 +505,12 @@ async def get_delay_analytics_data(
                 "route_ids": route_ids,
                 "from_oday": str(from_oday),
                 "to_oday":   str(to_oday),
-                "exclude_days": str(days_to_exclude),
             },
         }
 
         if recluster_status["status"] == "DONE":
-            routecluster_geojson = await load_recluster_geojson("recluster_routes", from_oday, to_oday, days_to_exclude, route_ids)
-            routecluster_csv = await load_recluster_csv("recluster_routes", from_oday, to_oday, days_to_exclude, route_ids)
+            routecluster_geojson = await load_recluster_geojson("recluster_routes", from_oday, to_oday, route_ids)
+            routecluster_csv = await load_recluster_csv("recluster_routes", from_oday, to_oday, route_ids)
             parent_file_buffer = io.BytesIO()
 
             with zipfile.ZipFile(parent_file_buffer, "w") as parent_zip:
@@ -557,11 +543,8 @@ async def get_delay_analytics_data(
         # If it doesn't exist, is failed or is stale. Create or rerun, set to PENDING and start analysis
         if recluster_status["status"] is None or recluster_status["status"] == "FAILED" or is_stale:
             logger.debug(f"Create row route_id: {route_ids}, from_oday: {from_oday}, to_oday: {to_oday}, status: PENDING")
-            # This is getting messy. Better approach would be to create an id out of the params. Something like this:
-            # f"{route_ids}_{from_oday}_{to_oday}_{days_to_exclude}
-            # Then use it as an identifier for the analysis rather than using all the params separately
-            await set_recluster_status("recluster_routes", from_oday, to_oday, route_ids, days_to_exclude, status="PENDING")
-            asyncio.create_task(run_analysis_and_set_status("recluster_routes", route_ids, from_oday, to_oday, days_to_exclude))
+            await set_recluster_status("recluster_routes", from_oday, to_oday, route_ids, status="PENDING")
+            asyncio.create_task(run_analysis_and_set_status("recluster_routes", route_ids, from_oday, to_oday))
 
             if recluster_status["status"] == "FAILED":
                 response_content["detail"] = "Found analysis with status FAILED. Rerunning.."
