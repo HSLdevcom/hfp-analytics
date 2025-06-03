@@ -27,7 +27,7 @@ from fastapi.encoders import jsonable_encoder
 from api.services.hfp import get_hfp_data, get_speeding_data
 from api.services.tlp import get_tlp_data, get_tlp_data_as_json
 from common.recluster import get_recluster_status, run_analysis_and_set_status, load_recluster_geojson, load_recluster_csv, set_recluster_status, get_preprocessed_clusters, get_preprocessed_departures
-from common.utils import get_previous_day_oday, create_filename, set_timezone
+from common.utils import get_previous_day_oday, create_filename, set_timezone, is_date_range_valid
 
 logger = logging.getLogger("api")
 
@@ -471,6 +471,12 @@ async def get_delay_analytics_data(
 
         if (to_oday is None):
             to_oday = default_to_oday
+            
+        if not is_date_range_valid(start_date=from_oday, end_date=to_oday):
+            raise HTTPException(
+                status_code=422,
+                detail="Incorrect date range. Between 'from_oday' and 'to_oday' should be max 7 weeks (49 days). 'to_oday' is inclusive."
+            )
 
         if route_id is None or not route_id.strip():
             route_ids = "ALL"
