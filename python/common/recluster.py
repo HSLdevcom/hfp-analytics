@@ -5,16 +5,9 @@ import asyncio
 import functools
 import pandas as pd
 import numpy as np
-import shutil
-import glob
-import os
-import yaml
 import geopandas as gpd
-import psycopg
-import warnings
 import zstandard as zstd
 import logging
-import time
 import gc
 
 from datetime import date, datetime, timedelta
@@ -78,11 +71,12 @@ def get_routes_condition(column: str, values: list[str]) -> tuple[str, dict]:
     condition = f"{column} IN ({', '.join(placeholders)})"
     return condition, params
 
+# Refactor with load_compressed_departures_csv
 async def load_preprocess_files(
     route_ids: Optional[List[str]],
     from_oday: date,
     to_oday: date,
-    days_to_exclude: Optional[List[date]],
+    exclude_dates: Optional[List[date]],
     table: str
 ) -> bytes:
     base_query = f"SELECT zst FROM delay.{table}"
@@ -98,9 +92,9 @@ async def load_preprocess_files(
         conditions.append(in_condition)
         params.update(in_params)
 
-    if days_to_exclude:
-        conditions.append("oday <> ALL (%(days_to_exclude)s::date[])")
-        params["days_to_exclude"] = days_to_exclude
+    if exclude_dates:
+        conditions.append("oday <> ALL (%(exclude_dates)s::date[])")
+        params["exclude_dates"] = exclude_dates
 
     query = base_query
     if conditions:
@@ -135,21 +129,21 @@ async def load_preprocess_files(
     return buffer.getvalue()
 
 
-async def get_recluster_status(table: str, from_oday: date, to_oday: date, route_id: str = "ALL", days_to_exclude: list[date] = []) -> Dict[str, Optional[Any]]:
+async def get_recluster_status(table: str, from_oday: date, to_oday: date, route_id: str = "ALL", exclude_dates: list[date] = []) -> Dict[str, Optional[Any]]:
     table_name = f"delay.{table}"
     query = f"""
         SELECT status, createdAt, progress
         FROM {table_name}
-        WHERE route_id = %(route_id)s AND from_oday = %(from_oday)s AND to_oday = %(to_oday)s AND days_excluded = %(days_to_exclude)s
+        WHERE route_id = %(route_id)s AND from_oday = %(from_oday)s AND to_oday = %(to_oday)s AND days_excluded = %(exclude_dates)s
     """
     async with pool.connection() as conn:
         cur = await conn.execute(
             query,
             {
-                "route_id": route_id,
-                "from_oday": from_oday,
-                "to_oday": to_oday,
-                "days_to_exclude": days_to_exclude
+                "route_id":   route_id,
+                "from_oday":  from_oday,
+                "to_oday":    to_oday,
+                "exclude_dates": exclude_dates
             }
         )
         row = await cur.fetchone()
@@ -165,13 +159,13 @@ async def set_recluster_status(
     from_oday: date,
     to_oday: date,
     route_id: str,
-    days_to_exclude: list[date],
+    days_excluded: list[date],
     status: Literal["PENDING", "DONE", "FAILED"] = "PENDING",
 ) -> None:
     table_name = f"delay.{table}"
     query = f"""
         INSERT INTO {table_name} (route_id, from_oday, to_oday, days_excluded, status)
-        VALUES (%(route_id)s, %(from_oday)s, %(to_oday)s,  %(days_excluded)s, %(status)s)
+        VALUES (%(route_id)s, %(from_oday)s, %(to_oday)s, %(days_excluded)s, %(status)s)
         ON CONFLICT (route_id, from_oday, to_oday, days_excluded)
         DO UPDATE
           SET status    = EXCLUDED.status,
@@ -184,7 +178,7 @@ async def set_recluster_status(
                 "route_id": route_id,
                 "from_oday": from_oday,
                 "to_oday": to_oday,
-                "days_excluded": days_to_exclude,
+                "days_excluded": days_excluded,
                 "status": status,
             }
         )
@@ -552,15 +546,15 @@ async def run_analysis_and_set_status(
     route_ids: list[str],
     from_oday: date,
     to_oday: date,
-    days_to_exclude: list[date]
+    days_excluded: list[date]
 ):
     with CustomDbLogHandler("api"):
         try:
             logger.debug(f"Start asyncio task to run recluster analysis")    
-            await asyncio.to_thread(functools.partial(run_asyncio_task, recluster_analysis, route_ids, from_oday, to_oday, days_to_exclude))
+            await asyncio.to_thread(functools.partial(run_asyncio_task, recluster_analysis, route_ids, from_oday, to_oday, days_excluded))
         except Exception:
             logger.debug(f"Something went wrong. Setting status as FAILED")
-            await set_recluster_status(table, from_oday, to_oday, route_ids, days_to_exclude, status="FAILED")
+            await set_recluster_status(table, from_oday, to_oday, route_ids, days_excluded, status="FAILED")
             raise
         finally:
             gc.collect()

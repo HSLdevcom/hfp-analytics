@@ -53,3 +53,29 @@ def get_target_oday(offset=1):
 def get_season(month, seasons_and_months):
     key = [key for key, val in seasons_and_months.items() if month in val][0]
     return key.lower()
+
+
+def is_date_range_valid(
+    start_date: str | date, end_date: str | date, max_days: int = 49
+) -> bool:
+    """
+    Check if between start_date and end_date (end_date inclusive) there are less or equal days
+    than specified as max_days
+    Args:
+        start_date (str): start of date range as string
+        end_date (str): start of date range (inclusive) as string
+        max_days (int, optional): Defaults to 49 days (7 weeks).
+
+    Returns:
+        bool
+    """
+    if isinstance(start_date, str):
+        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+
+    if isinstance(end_date, str):
+        end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+
+    if end_date < start_date:
+        return False
+
+    return ((end_date - start_date).days + 1) <= max_days

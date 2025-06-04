@@ -27,7 +27,7 @@ from fastapi.encoders import jsonable_encoder
 from api.services.hfp import get_hfp_data, get_speeding_data
 from api.services.tlp import get_tlp_data, get_tlp_data_as_json
 from common.recluster import get_recluster_status, run_analysis_and_set_status, load_recluster_geojson, load_recluster_csv, set_recluster_status, get_preprocessed_clusters, get_preprocessed_departures
-from common.utils import get_target_oday, create_filename, set_timezone
+from common.utils import get_target_oday, create_filename, set_timezone, is_date_range_valid
 
 logger = logging.getLogger("api")
 
@@ -426,7 +426,7 @@ async def get_speeding(
             "description": "The data is returned as an attachment in the response.",
             "content": {"application/gzip": {"schema": None, "example": None}}
         },
-        202: {"description": "Status message returned. Analysis pending or created, check again later."},
+        202: {"description": "Status message returned. Analysis pending or created, check again later."},   
         204: {"description": "Query returned no data with the given parameters."},
         422: {"description": "Query had invalid parameters."}
     }
@@ -482,12 +482,19 @@ async def get_delay_analytics_data(
 
         if (to_oday is None):
             to_oday = default_to_oday
+            
+        if not is_date_range_valid(start_date=from_oday, end_date=to_oday):
+            raise HTTPException(
+                status_code=422,
+                detail="Incorrect date range. Between 'from_oday' and 'to_oday' should be max 7 weeks (49 days). 'to_oday' is inclusive."
+            )
 
         if route_id is None or not route_id.strip():
             route_ids = "ALL"
         else:
             route_ids = [r.strip() for r in route_id.split(",") if r.strip()]
             route_ids.sort()
+
             for rid in route_ids:
                 if not route_id_pattern.match(rid):
                     raise HTTPException(
