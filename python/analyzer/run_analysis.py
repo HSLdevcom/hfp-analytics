@@ -7,7 +7,7 @@ import common.constants as constants
 from io import BytesIO
 from datetime import date, timedelta, datetime
 from itertools import chain
-from common.utils import get_previous_day_oday
+from common.utils import get_target_oday
 from common.recluster import recluster_analysis
 from common.vehicle_analysis_utils import (
     analyze_vehicle_door_data,
@@ -38,8 +38,8 @@ logger = logging.getLogger('importer')
 
 
 async def run_recluster_analysis():
-    from_oday = get_previous_day_oday(15)
-    to_oday = get_previous_day_oday()
+    from_oday = get_target_oday(15)
+    to_oday = get_target_oday()
     logger.debug(f"Running reclustering for all routes from {from_oday} to {to_oday}")
     await recluster_analysis(None, from_oday, to_oday)
     logger.debug(f"Recluster analysis done.")

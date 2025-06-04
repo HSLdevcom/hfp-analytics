@@ -80,8 +80,8 @@ def get_routes_condition(column: str, values: list[str]) -> tuple[str, dict]:
 
 async def load_preprocess_files(
     route_ids: Optional[List[str]],
-    from_oday: str,
-    to_oday: str,
+    from_oday: date,
+    to_oday: date,
     days_to_exclude: Optional[List[date]],
     table: str
 ) -> bytes:
@@ -135,7 +135,7 @@ async def load_preprocess_files(
     return buffer.getvalue()
 
 
-async def get_recluster_status(table: str, from_oday: str, to_oday: str, route_id: str = "ALL", days_to_exclude: list[date] = []) -> Dict[str, Optional[Any]]:
+async def get_recluster_status(table: str, from_oday: date, to_oday: date, route_id: str = "ALL", days_to_exclude: list[date] = []) -> Dict[str, Optional[Any]]:
     table_name = f"delay.{table}"
     query = f"""
         SELECT status, createdAt, progress
@@ -163,10 +163,10 @@ async def get_recluster_status(table: str, from_oday: str, to_oday: str, route_i
 async def set_recluster_status(
     table: str,
     from_oday: date,
-    to_oday:   date,
+    to_oday: date,
     route_id: str,
     days_to_exclude: list[date],
-    status:    Literal["PENDING", "DONE", "FAILED"] = "PENDING",
+    status: Literal["PENDING", "DONE", "FAILED"] = "PENDING",
 ) -> None:
     table_name = f"delay.{table}"
     query = f"""
@@ -215,7 +215,7 @@ async def update_recluster_progress(
             }
         )
 
-async def load_recluster_geojson(table: str, from_oday: str, to_oday: str, days_excluded: list[date], route_id: str = "ALL",) -> bytes:
+async def load_recluster_geojson(table: str, from_oday: date, to_oday: date, days_excluded: list[date], route_id: str = "ALL",) -> bytes:
     table_name = f"delay.{table}"
     query = f"""
         SELECT zst
@@ -242,7 +242,7 @@ async def load_recluster_geojson(table: str, from_oday: str, to_oday: str, days_
     decompressed_geojson = dctx.decompress(compressed_data)
     return decompressed_geojson
 
-async def load_recluster_csv(table: str, from_oday: str, to_oday: str, days_excluded, route_id: str = "ALL",) -> bytes:
+async def load_recluster_csv(table: str, from_oday: date, to_oday: date, days_excluded, route_id: str = "ALL",) -> bytes:
     table_name = f"delay.{table}"
     query = f"""
         SELECT csv_zst
@@ -273,8 +273,8 @@ async def load_recluster_csv(table: str, from_oday: str, to_oday: str, days_excl
 async def store_compressed_geojson(
     table: str,
     route_id: str,
-    from_oday: str,
-    to_oday: str,
+    from_oday: date,
+    to_oday: date,
     gdf: gpd.GeoDataFrame,
     days_excluded: Optional[List[date]],
     flow_analytics_container_client: FlowAnalyticsContainerClient,
@@ -333,9 +333,9 @@ async def store_compressed_geojson(
     await flow_analytics_container_client.save_cluster_data(
         recluster_type=recluster_type,
         compressed_data=compressed_data,
-        from_oday=from_oday,
-        to_oday=to_oday,
-        route_id=route_id,
+        from_oday=from_oday.strftime("%Y-%m-%d"),
+        to_oday=to_oday.strftime("%Y-%m-%d"),
+        route_id=','.join(route_id) if type(route_id) == list else route_id,
     )   
 
     del compressed_data, compressed_csv_data
@@ -474,7 +474,7 @@ def ui_related_var_modifications(df: pd.DataFrame, seasons_and_months: dict, DEP
     return df
 
 
-async def get_preprocessed_departures(route_ids: [str], from_oday: str, to_oday: str, days_to_exclude: list[date]):
+async def get_preprocessed_departures(route_ids: [str], from_oday: date, to_oday: date, days_to_exclude: list[date]):
     departures_data = await load_preprocess_files(route_ids, from_oday, to_oday, days_to_exclude, "preprocess_departures")
     if not departures_data:
         logger.debug(f"No preprocessed departures ZST found for route_id={route_ids}")
@@ -509,7 +509,7 @@ async def get_preprocessed_departures(route_ids: [str], from_oday: str, to_oday:
 
     return preprocessed_departures
 
-async def get_preprocessed_clusters(route_ids: [str], from_oday: str, to_oday: str, days_to_exclude: list[date]):
+async def get_preprocessed_clusters(route_ids: [str], from_oday: date, to_oday: date, days_to_exclude: list[date]):
     cluster_data = await load_preprocess_files(route_ids, from_oday, to_oday, days_to_exclude, "preprocess_clusters")
     if not cluster_data:
         logger.debug(f"No preprocessed cluster ZST found for route_id={route_ids}")

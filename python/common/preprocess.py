@@ -1,11 +1,8 @@
-import io
-import gzip
-import pandas as pd
 import pytz
+import logging
+import pandas as pd
 import numpy as np
 import zstandard as zstd
-import psycopg
-import logging
 from common.database import pool
 from common.container_client import FlowAnalyticsContainerClient
 from sklearn.cluster import DBSCAN
@@ -14,7 +11,7 @@ from typing import Optional
 from datetime import date, timedelta, datetime, time
 from io import BytesIO
 
-from common.utils import get_previous_day_oday
+from common.utils import get_target_oday
 
 logger = logging.getLogger("analyzer")
 
@@ -60,9 +57,8 @@ TIME_GROUP_D = {
 }
 
 async def load_delay_hfp_data(route_id: Optional[str], oday: date) -> pd.DataFrame:
-    csv_buffer = io.BytesIO()
-    row_count = await get_delay_hfp_data(route_id, oday, csv_buffer)
-
+    csv_buffer = BytesIO()
+    await get_delay_hfp_data(route_id, oday, csv_buffer)
     csv_buffer.seek(0)
 
     df = pd.read_csv(csv_buffer)
@@ -76,9 +72,8 @@ async def get_delay_hfp_data(
     """
     Query delay hfp data.
     """
-    oday_datetime = datetime.strptime(oday, "%Y-%m-%d").date()
 
-    from_datetime = datetime.combine(oday_datetime, time(0, 0, 0))
+    from_datetime = datetime.combine(oday, time(0, 0, 0))
     to_datetime = from_datetime + timedelta(days=1, hours=1)
 
     from_tst = from_datetime.isoformat()
@@ -168,7 +163,6 @@ def make_time_groups(df, column_with_localized_date, column_with_localized_time,
 
 def compress_csv_bytes_to_zst(csv_bytes: bytes) -> bytes:
     """Compress raw CSV bytes to zstd."""
-    import zstandard as zstd
     cctx = zstd.ZstdCompressor()
     return cctx.compress(csv_bytes)
 
@@ -176,14 +170,14 @@ async def store_compressed_csv(
     table: str,
     route_id: str,
     mode: str,
-    oday: str,
+    oday: date,
     df: pd.DataFrame,
     flow_analytics_container_client: FlowAnalyticsContainerClient,
 ):
     """
     Store df as a compressed CSV into the database table "schema.table".
     """
-    csv_buffer = io.BytesIO()
+    csv_buffer = BytesIO()
     df.to_csv(csv_buffer, sep=";", encoding="utf-8", index=False)
     csv_buffer.seek(0)
     csv_bytes = csv_buffer.getvalue()
@@ -211,13 +205,12 @@ async def store_compressed_csv(
         )
     
     preprocess_type = table.split('_')[1]
-    
     await flow_analytics_container_client.save_preprocess_data(
-        preprocess_type= preprocess_type,
-        compressed_csv=compressed_csv, 
-        route_id=route_id, 
-        mode=mode, 
-        oday=oday
+        preprocess_type=preprocess_type,
+        compressed_csv=compressed_csv,
+        route_id=route_id,
+        mode=mode,
+        oday=oday.strftime("%Y-%m-%d"),
     )
 
 async def check_preprocessed_files(route_id: str, oday: date, table: str) -> bool:
@@ -239,9 +232,8 @@ async def check_preprocessed_files(route_id: str, oday: date, table: str) -> boo
 async def preprocess(
     df: pd.DataFrame,
     route_id: str,
-    oday: str,
+    oday: date,
 ):
-
     clusters = []  # tämä on aggregoinnin tason 1 output!,
     departures = []  # tämä on aggregoinnin tason 1 output!,
 

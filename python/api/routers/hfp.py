@@ -27,7 +27,7 @@ from fastapi.encoders import jsonable_encoder
 from api.services.hfp import get_hfp_data, get_speeding_data
 from api.services.tlp import get_tlp_data, get_tlp_data_as_json
 from common.recluster import get_recluster_status, run_analysis_and_set_status, load_recluster_geojson, load_recluster_csv, set_recluster_status, get_preprocessed_clusters, get_preprocessed_departures
-from common.utils import get_previous_day_oday, create_filename, set_timezone
+from common.utils import get_target_oday, create_filename, set_timezone
 
 logger = logging.getLogger("api")
 
@@ -458,7 +458,7 @@ async def get_delay_analytics_data(
         ),
         example="2025-02-10"
     ),
-    exclude_days: Optional[str] = Query(
+    exclude_dates: Optional[str] = Query(
         default=None,
         title="Days to exclude (YYYY-MM-DD)",
         description=(
@@ -472,9 +472,11 @@ async def get_delay_analytics_data(
     Get delay analytics data.
     """
     with CustomDbLogHandler("api"):
+        logger.debug(f"Request for hfp delay data. route_id: {route_id}, from_oday: {from_oday}, to_oday: {to_oday}, exclude_dates: {exclude_dates}")
+
         #TODO: get default oday offsets from configs
-        default_from_oday = get_previous_day_oday(15)
-        default_to_oday = get_previous_day_oday()
+        default_from_oday = get_target_oday(15)
+        default_to_oday = get_target_oday()
         if (from_oday is None):
             from_oday = default_from_oday
 
@@ -499,15 +501,32 @@ async def get_delay_analytics_data(
                         ]
                     )
 
-        days_to_exclude = exclude_days
-        if days_to_exclude is not None:
-            days_to_exclude = [r.strip() for r in days_to_exclude.split(",") if r.strip()]
-            days_to_exclude.sort()
 
-        logger.debug(f"Fetching hfp delay data. route_id: {route_ids}, from_oday: {from_oday}, to_oday: {to_oday}")
+        if exclude_dates is not None:
+            raw_dates = [r.strip() for r in exclude_dates.split(",") if r.strip()]
+            valid_dates = []
+            for d in raw_dates:
+                try:
+                    datetime.strptime(d, "%Y-%m-%d")
+                    valid_dates.append(d)
+                except ValueError:
+                    raise HTTPException(
+                        status_code=422,
+                        detail=[
+                            {
+                                "loc": ["query", "exclude_dates"],
+                                "msg": f"Invalid date: {d}. Expected format is YYYY-MM-DD.",
+                                "input": d,
+                            }
+                        ]
+                    )
+            valid_dates.sort()
+            exclude_dates = valid_dates
+        else:
+            exclude_dates = []
 
         # Get recluster analysis status
-        recluster_status = await get_recluster_status("recluster_routes", from_oday, to_oday, route_ids, days_to_exclude)
+        recluster_status = await get_recluster_status("recluster_routes", from_oday, to_oday, route_ids, exclude_dates)
         created_at = recluster_status["createdAt"]
         created_at_str = created_at.isoformat() if created_at is not None else None
         
@@ -518,13 +537,13 @@ async def get_delay_analytics_data(
                 "route_ids": route_ids,
                 "from_oday": str(from_oday),
                 "to_oday":   str(to_oday),
-                "exclude_days": str(days_to_exclude),
+                "exclude_dates": str(exclude_dates),
             },
         }
 
         if recluster_status["status"] == "DONE":
-            routecluster_geojson = await load_recluster_geojson("recluster_routes", from_oday, to_oday, days_to_exclude, route_ids)
-            routecluster_csv = await load_recluster_csv("recluster_routes", from_oday, to_oday, days_to_exclude, route_ids)
+            routecluster_geojson = await load_recluster_geojson("recluster_routes", from_oday, to_oday, exclude_dates, route_ids)
+            routecluster_csv = await load_recluster_csv("recluster_routes", from_oday, to_oday, exclude_dates, route_ids)
             parent_file_buffer = io.BytesIO()
 
             with zipfile.ZipFile(parent_file_buffer, "w") as parent_zip:
@@ -558,14 +577,15 @@ async def get_delay_analytics_data(
         if recluster_status["status"] is None or recluster_status["status"] == "FAILED" or is_stale:
             logger.debug(f"Create row route_id: {route_ids}, from_oday: {from_oday}, to_oday: {to_oday}, status: PENDING")
             # This is getting messy. Better approach would be to create an id out of the params. Something like this:
-            # f"{route_ids}_{from_oday}_{to_oday}_{days_to_exclude}
+            # f"{route_ids}_{from_oday}_{to_oday}_{exclude_dates}
             # Then use it as an identifier for the analysis rather than using all the params separately
-            await set_recluster_status("recluster_routes", from_oday, to_oday, route_ids, days_to_exclude, status="PENDING")
-            asyncio.create_task(run_analysis_and_set_status("recluster_routes", route_ids, from_oday, to_oday, days_to_exclude))
+            await set_recluster_status("recluster_routes", from_oday, to_oday, route_ids, exclude_dates, status="PENDING")
+            asyncio.create_task(run_analysis_and_set_status("recluster_routes", route_ids, from_oday, to_oday, exclude_dates))
 
             if recluster_status["status"] == "FAILED":
                 response_content["detail"] = "Found analysis with status FAILED. Rerunning.."
             else:
+                recluster_status["status"] == "CREATE"
                 response_content["detail"] = "No analysis found. Creating.."
 
             logger.debug("Created and started analysis. Returning 202")

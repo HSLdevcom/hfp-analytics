@@ -7,7 +7,7 @@ import httpx
 from io import BytesIO
 from datetime import date, timedelta, datetime
 from common.preprocess import preprocess, load_delay_hfp_data, check_preprocessed_files
-from common.utils import get_previous_day_oday
+from common.utils import get_target_oday
 from common.recluster import recluster_analysis
 from common.config import (
     POSTGRES_CONNECTION_STRING,
@@ -72,7 +72,7 @@ async def run_delay_analysis():
 
                 filtered_route_ids = [r for r in route_ids if not (r.endswith("N") or r.endswith("H"))]
                 filtered_route_ids.sort()
-                yesterday = get_previous_day_oday()
+                yesterday = get_target_oday()
 
                 for i, route_id in enumerate(filtered_route_ids, start=1):
                     preprocessed_routes_exist = await check_preprocessed_files(route_id, yesterday, "preprocess_clusters")
