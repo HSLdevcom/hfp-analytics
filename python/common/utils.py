@@ -45,12 +45,10 @@ def create_filename(prefix, *args):
     filename_identifier = "_".join(map(str, identifiers))
     return f"{prefix}{filename_identifier}.csv.gz"
 
-def get_previous_day_oday(offset=1):
+def get_target_oday(offset=1):
     today = date.today()
-    yesterday = today - timedelta(days=offset)
-
-    from_oday = yesterday.strftime("%Y-%m-%d")
-    return from_oday
+    start_date = today - timedelta(days=offset)
+    return start_date
 
 def get_season(month, seasons_and_months):
     key = [key for key, val in seasons_and_months.items() if month in val][0]

@@ -14,8 +14,11 @@ logger = logging.getLogger("importer")
 async def main(req: func.HttpRequest) -> func.HttpResponse:
     data = req.get_json() 
     oday = None
-    if data and data["date"]:
-        oday = data["date"]
+    if data and data.get("date"):
+        try:
+            oday = datetime.strptime(data["date"], "%Y-%m-%d").date()
+        except ValueError:
+            return func.HttpResponse("Invalid date format. Use YYYY-MM-DD.", status_code=400)
 
     with CustomDbLogHandler("importer"):
         await run_delay_analysis(oday)

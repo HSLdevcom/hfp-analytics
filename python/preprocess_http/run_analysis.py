@@ -7,7 +7,7 @@ import httpx
 from io import BytesIO
 from datetime import date, timedelta, datetime
 from common.preprocess import preprocess, load_delay_hfp_data, check_preprocessed_files
-from common.utils import get_previous_day_oday
+from common.utils import get_target_oday
 from common.recluster import recluster_analysis
 from common.config import (
     POSTGRES_CONNECTION_STRING,
@@ -44,13 +44,13 @@ async def get_query_async(query):
         raise Exception(f'{req} failed with status code {req.status_code}')
 
 async def run_recluster_analysis(days: int):
-    from_oday = get_previous_day_oday(days)
-    to_oday = get_previous_day_oday()
+    from_oday = get_target_oday(days)
+    to_oday = get_target_oday()
     logger.debug(f"Running recluster for all routes from {from_oday} to {to_oday}")
     await recluster_analysis(None, from_oday, to_oday)
     logger.debug(f"Recluster analysis done.")
 
-async def run_delay_analysis(requested_oday: str = None):
+async def run_delay_analysis(requested_oday: date = None):
     conn = psycopg2.connect(POSTGRES_CONNECTION_STRING)
     try:
         with conn:
@@ -80,7 +80,7 @@ async def run_delay_analysis(requested_oday: str = None):
                 filtered_route_ids.sort()
                 oday = requested_oday
                 if requested_oday is None:
-                    oday = get_previous_day_oday()
+                    oday = get_target_oday()
 
                 for i, route_id in enumerate(filtered_route_ids, start=1):
                     preprocessed_routes_exist = await check_preprocessed_files(route_id, oday, "preprocess_clusters")
