@@ -583,7 +583,7 @@ async def get_delay_analytics_data(
         # If it doesn't exist, is failed or is stale. Create or rerun, set to PENDING and start analysis
         if recluster_status["status"] is None or recluster_status["status"] == "FAILED" or is_stale:
             logger.debug(f"Create row route_id: {route_ids}, from_oday: {from_oday}, to_oday: {to_oday}, status: PENDING")
-            # This is getting messy. Better approach would be to create an id out of the params. Something like this:
+            # Better approach would be to create an id out of the params. Something like this:
             # f"{route_ids}_{from_oday}_{to_oday}_{exclude_dates}
             # Then use it as an identifier for the analysis rather than using all the params separately
             await set_recluster_status("recluster_routes", from_oday, to_oday, route_ids, exclude_dates, status="PENDING")
