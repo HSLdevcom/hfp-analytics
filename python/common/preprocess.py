@@ -168,17 +168,14 @@ def compress_csv_bytes_to_zst(csv_bytes: bytes) -> bytes:
     cctx = zstd.ZstdCompressor()
     return cctx.compress(csv_bytes)
 
-async def get_existing_date_and_route_id_from_preprocess_table(preprocess_type: str):
-    # preprocess_type: departures or clusters
+async def get_existing_date_and_route_id_from_preprocess_table(preprocess_type: str) -> List[PreprocessDBDistinctModel]:
     
     query = f'SELECT distinct oday, route_id from delay.preprocess_{preprocess_type}'
     
     async with pool.connection() as conn:
         result_cursor = await conn.execute(query)
         results = await result_cursor.fetchall()
-        # print(results[0][0].strftime("%Y-%m-%d"))
-        # print(results)
-    # return results
+
     return [
         PreprocessDBDistinctModel(oday=result[0].strftime("%Y-%m-%d"), route_id=result[1])
         for result in results
