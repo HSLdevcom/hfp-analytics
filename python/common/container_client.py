@@ -90,7 +90,7 @@ class FlowAnalyticsContainerClient:
         return blob_data
     
     def _get_preprocess_blob_models_from_blob_names(self, blob_names: List[str]) -> List[PreprocessBlobModel]:
-        preprocess_blob_models = []  # list of PreprocessBlobModel
+        preprocess_blob_models = []
         for blob_name in blob_names:
             file_name = blob_name.split('/')[-1]  # e.i. filename = '2025-06-01_4587_bus'
             date, route_id, mode = file_name.split('_')
