@@ -3,11 +3,17 @@ Services related to /hfp data endpoint
 """
 
 from io import BytesIO
-from typing import Optional
 from datetime import datetime
+import logging
+from typing import Optional, List
 
 from common.database import pool
+from common.logger_util import CustomDbLogHandler
+from common.container_client import FlowAnalyticsContainerClient
+from api.models.hfp import PreprocessBlobModel
 
+
+logger = logging.getLogger("api")
 
 async def get_hfp_data(
     route_id: Optional[str],
@@ -117,3 +123,29 @@ async def get_speeding_data(
                 stream.write(row)
         return row_count
 
+
+async def upload_missing_preprocess_data_to_db(
+    client: FlowAnalyticsContainerClient, 
+    missing_blobs: List[PreprocessBlobModel], 
+    preprocess_type: str
+) -> None:
+    with CustomDbLogHandler("api"):
+        for missing_blob in missing_blobs:
+            logger.debug(f'starting to import missing blob to database: {missing_blob.blob_path}')
+            compressed_csv = await client.load_blob(missing_blob.blob_path)
+            table_name = f"delay.preprocess_{preprocess_type}"
+            query = f"""
+                INSERT INTO {table_name} (route_id, oday, mode, zst)
+                VALUES (%(route_id)s, %(oday)s, %(mode)s, %(zst)s);
+            """
+            async with pool.connection() as conn:
+                await conn.execute(
+                    query,
+                    {
+                        "route_id": missing_blob.route_id,
+                        "oday": missing_blob.oday,
+                        "mode": missing_blob.mode,
+                        "zst": compressed_csv,
+                    },
+                )
+            logger.debug(f"Successfully added missing blob {missing_blob.blob_path}")
