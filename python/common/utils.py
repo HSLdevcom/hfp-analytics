@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import pptx
 import logging as logger
 from datetime import date, timedelta, datetime, time
@@ -56,26 +58,33 @@ def get_season(month, seasons_and_months):
 
 
 def is_date_range_valid(
-    start_date: str | date, end_date: str | date, max_days: int = 49
-) -> bool:
+    from_oday: str | date, to_oday: str | date, max_days: int = 49
+) -> Tuple[bool, str]:
     """
-    Check if between start_date and end_date (end_date inclusive) there are less or equal days
-    than specified as max_days
+    Check if between from_oday and to_day (to_day inclusive) there are less or equal days than specified as max_days. Also to_day cannot be in front of today.
     Args:
-        start_date (str): start of date range as string
-        end_date (str): start of date range (inclusive) as string
+        from_oday (str): start of date range as string
+        to_day (str): start of date range (inclusive) as string
         max_days (int, optional): Defaults to 49 days (7 weeks).
 
     Returns:
-        bool
+        Tuple[bool, str] where bool is information if is_date_range_valid and str is a detailed message in case bool = False. When bool = True, then message is an empty string.
     """
-    if isinstance(start_date, str):
-        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+    if isinstance(from_oday, str):
+        from_oday = datetime.strptime(from_oday, "%Y-%m-%d").date()
 
-    if isinstance(end_date, str):
-        end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+    if isinstance(to_oday, str):
+        to_oday = datetime.strptime(to_oday, "%Y-%m-%d").date()
 
-    if end_date < start_date:
-        return False
+    if to_oday < from_oday:
+        return False, "'to_oday' cannot be earlier than start day"
+    
+    if to_oday > datetime.today().date():
+        return False, "'to_oday' cannot exceed current date"
 
-    return ((end_date - start_date).days + 1) <= max_days
+    if ((to_oday - from_oday).days + 1) <= max_days:
+        return True, ""
+    return (
+        False,
+        f"Incorrect date range. Between 'from_oday' and 'to_oday' should be max {max_days} days. 'to_oday' is inclusive",
+    )
