@@ -642,10 +642,12 @@ async def add_preprocess_data_from_blob_to_db(
         logger.debug(f"Found {len(db_data)} rows in database")
         
         missing_data = await find_missing_preprocess_data_in_db_compared_to_blob_storage(db_data=db_data, blobs_data=blob_data)
-        logger.debug(f"Found { len(missing_data)} blobs which are not in the database yet. Starting upload process") 
-        
-        await upload_missing_preprocess_data_to_db(client=client, missing_blobs=missing_data, preprocess_type=preprocess_type)
-        logger.debug(f"Successfully imported {len(missing_data)} blobs from blob storage to database")
-        
+        logger.debug(f"Found { len(missing_data)} blobs which are not in the database yet.") 
+
+        if len(missing_data) > 0:
+            await upload_missing_preprocess_data_to_db(client=client, missing_blobs=missing_data, preprocess_type=preprocess_type)
+            logger.debug(f"Successfully imported {len(missing_data)} blobs from blob storage to database")
+        else:
+            logger.debug("There are 0 blobs to be added from blob storage to database")
         response.status_code = status.HTTP_201_CREATED
         return {'imported data': [blob.blob_path for blob in missing_data]}
