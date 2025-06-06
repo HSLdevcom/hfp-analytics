@@ -129,23 +129,30 @@ async def upload_missing_preprocess_data_to_db(
     missing_blobs: List[PreprocessBlobModel], 
     preprocess_type: str
 ) -> None:
-    with CustomDbLogHandler("api"):
-        for missing_blob in missing_blobs:
-            logger.debug(f'starting to import missing blob to database: {missing_blob.blob_path}')
-            compressed_csv = await client.load_blob(missing_blob.blob_path)
-            table_name = f"delay.preprocess_{preprocess_type}"
-            query = f"""
-                INSERT INTO {table_name} (route_id, oday, mode, zst)
-                VALUES (%(route_id)s, %(oday)s, %(mode)s, %(zst)s);
-            """
-            async with pool.connection() as conn:
-                await conn.execute(
-                    query,
-                    {
-                        "route_id": missing_blob.route_id,
-                        "oday": missing_blob.oday,
-                        "mode": missing_blob.mode,
-                        "zst": compressed_csv,
-                    },
-                )
-            logger.debug(f"Successfully added missing blob {missing_blob.blob_path}")
+    blobs_count = len(missing_blobs)
+    
+    logger.debug(
+        f"starting to import missing blobs one by one, total = {blobs_count}]"
+    )
+    
+    for blob_id, missing_blob in enumerate(missing_blobs):
+        logger.debug(f'starting to import missing blob to database: {missing_blob.blob_path}, [{blob_id + 1}/{blobs_count}]')
+        compressed_csv = await client.load_blob(missing_blob.blob_path)
+        table_name = f"delay.preprocess_{preprocess_type}"
+        query = f"""
+            INSERT INTO {table_name} (route_id, oday, mode, zst)
+            VALUES (%(route_id)s, %(oday)s, %(mode)s, %(zst)s);
+        """
+        async with pool.connection() as conn:
+            await conn.execute(
+                query,
+                {
+                    "route_id": missing_blob.route_id,
+                    "oday": missing_blob.oday,
+                    "mode": missing_blob.mode,
+                    "zst": compressed_csv,
+                },
+            )
+        logger.debug(
+            f"Successfully added missing blob, [{blob_id + 1}/{blobs_count}] {missing_blob.blob_path}"
+        )
