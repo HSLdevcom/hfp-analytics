@@ -18,4 +18,9 @@ COPY ./python/analyzer ${WORK_DIR}/analyzer/
 COPY ./python/common ${WORK_DIR}/common/
 COPY ./python/preprocess ${WORK_DIR}/preprocess/
 COPY ./python/preprocess_http ${WORK_DIR}/preprocess_http/
+COPY ./python/HttpStart ${WORK_DIR}/HttpStart/
+COPY ./python/Orchestrator ${WORK_DIR}/Orchestrator/
+COPY ./python/SetStatusActivity ${WORK_DIR}/SetStatusActivity/
+COPY ./python/GetStatusActivity ${WORK_DIR}/GetStatusActivity/
+COPY ./python/ReclusterAnalysisActivity ${WORK_DIR}/ReclusterAnalysisActivity/
 COPY ./python/host.json ${WORK_DIR}/host.json
