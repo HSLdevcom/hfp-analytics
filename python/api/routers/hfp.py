@@ -495,7 +495,7 @@ async def get_delay_analytics_data(
             raise HTTPException(status_code=422, detail=date_range_validity_message)
 
         if route_id is None or not route_id.strip():
-            route_ids = "ALL"
+            route_ids = []
         else:
             route_ids = [r.strip() for r in route_id.split(",") if r.strip()]
             route_ids.sort()
@@ -687,7 +687,7 @@ async def get_delay_analytics_data_durable(
 
 
     if route_id is None or not route_id.strip():
-        route_ids = "ALL"
+        route_ids = []
     else:
         route_ids = [r.strip() for r in route_id.split(",") if r.strip()]
         route_ids.sort()

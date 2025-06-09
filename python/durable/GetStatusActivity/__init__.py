@@ -7,11 +7,11 @@ logger = logging.getLogger("importer")
 
 async def main(input: dict) -> dict:
     with CustomDbLogHandler("importer"):
-        table = input["table"]
-        route_ids = input["route_ids"]
-        from_oday = input["from_oday"]
-        to_oday = input["to_oday"]
-        days_excluded = input.get("days_excluded", [])
+        table: str = input["table"]
+        route_ids: list = input["route_ids"]
+        from_oday: str = input["from_oday"]
+        to_oday: str = input["to_oday"]
+        days_excluded: list = input.get("days_excluded", [])
 
         logger.debug(
             f"GetStatusActivity: checking status for {table}, {route_ids}, {from_oday}, {to_oday}, {days_excluded}"

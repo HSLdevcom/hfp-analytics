@@ -7,10 +7,10 @@ logger = logging.getLogger("importer")
 def orchestrator_function(context: durableFunc.DurableOrchestrationContext):
     with CustomDbLogHandler("importer"):
         input_payload = context.get_input()
-        route_ids = input_payload.get("route_ids", [])
-        from_oday = input_payload.get("from_oday")
-        to_oday = input_payload.get("to_oday")
-        days_excluded = input_payload.get("days_excluded", [])
+        route_ids: list = input_payload.get("route_ids", [])
+        from_oday: str = input_payload.get("from_oday")
+        to_oday: str = input_payload.get("to_oday")
+        days_excluded: list = input_payload.get("days_excluded", [])
 
         logger.debug(
             f"Orchestrator started with: "

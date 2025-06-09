@@ -10,11 +10,11 @@ logger = logging.getLogger("importer")
 
 async def main(input: dict) -> None:
     with CustomDbLogHandler("importer"):
-        table = input["table"]
-        route_ids = input["route_ids"]
-        from_oday_str = input["from_oday"]
-        to_oday_str = input["to_oday"]
-        days_excluded_str = input.get("days_excluded", [])
+        table: str = input["table"]
+        route_ids: list = input["route_ids"]
+        from_oday_str: str = input["from_oday"]
+        to_oday_str: str = input["to_oday"]
+        days_excluded_str: list = input.get("days_excluded", [])
 
         try:
             from_oday = date.fromisoformat(from_oday_str)

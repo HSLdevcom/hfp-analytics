@@ -23,10 +23,10 @@ async def main(req: func.HttpRequest, starter: str) -> func.HttpResponse:
         except Exception:
             payload = {}
 
-        route_ids = payload.get("route_ids", [])
-        from_oday = payload.get("from_oday")
-        to_oday = payload.get("to_oday")
-        days_excluded = payload.get("days_excluded", [])
+        route_ids: list = payload.get("route_ids", [])
+        from_oday: str = payload.get("from_oday")
+        to_oday: str = payload.get("to_oday")
+        days_excluded: list = payload.get("days_excluded", [])
 
         table = "recluster_routes"
 
