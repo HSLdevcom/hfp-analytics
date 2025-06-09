@@ -4,15 +4,10 @@ import io
 import asyncio
 import gzip
 import zipfile
-import pandas as pd
-import geopandas as gpd
-import pytz
-import numpy as np
 import re
 import gc
+import httpx
 
-from sklearn.cluster import DBSCAN
-from collections import Counter
 from typing import Optional
 from datetime import date, timedelta, datetime, time, timezone
 from http import HTTPStatus
@@ -28,6 +23,7 @@ from api.services.hfp import get_hfp_data, get_speeding_data
 from api.services.tlp import get_tlp_data, get_tlp_data_as_json
 from common.recluster import get_recluster_status, run_analysis_and_set_status, load_recluster_geojson, load_recluster_csv, set_recluster_status, get_preprocessed_clusters, get_preprocessed_departures
 from common.utils import get_target_oday, create_filename, set_timezone, is_date_range_valid
+from common.config import DURABLE_BASE_URL
 
 logger = logging.getLogger("api")
 
@@ -608,3 +604,148 @@ async def get_delay_analytics_data(
             content=response_content,
         )
 
+
+@router.get(
+    "/durable_delay_analytics",
+    summary="Get delay analytics data.",
+    description="Returns delay analytics as packaged zip file. Initial request will start the analysis. Following requests will return the status of the analysis or the data.",
+    responses={
+        200: {
+            "description": "The data is returned as an attachment in the response.",
+            "content": {"application/gzip": {"schema": None, "example": None}}
+        },
+        202: {"description": "Status message returned. Analysis queued, pending or created, check again later."},   
+        204: {"description": "Query returned no data with the given parameters."},
+        422: {"description": "Query had invalid parameters."}
+    }
+)
+async def get_delay_analytics_data_durable(
+    route_id: Optional[str] = Query(
+        default=None,
+        title="Route ID or Route IDs",
+        description="Routes to be used in analysis. Single or multiple route ids can be used. If multiple given, then ids should be separated by a comma.",
+        example="1057,1070",
+    ),
+    from_oday: Optional[date] = Query(
+        default=None,
+        title="From oday (YYYY-MM-DD)",
+        description=(
+            "The oday from which the preprocessed clusters and departures will be used.",
+            "If same oday is used for from_oday and to_oday the analysis for that day will be returned.",
+            "If no date given the default value will be used (five days prior)."
+        ),
+        example="2025-02-10"
+    ),
+    to_oday: Optional[date] = Query(
+        default=None,
+        title="To oday (YYYY-MM-DD)",
+        description=(
+            "The oday to which the preprocessed clusters and departures will be used.",
+            "If same oday is used for from_oday and to_oday the analysis for that day will be returned.",
+            "If no date given the default value will be used (yesterday)."
+        ),
+        example="2025-02-10"
+    ),
+    exclude_dates: Optional[str] = Query(
+        default=None,
+        title="Days to exclude (YYYY-MM-DD)",
+        description=(
+            "The days to be excluded from the analysis."
+            "Provide valid date or dates separated with a comma."
+        ),
+        example="2025-02-10,2025-02-11"
+    ),
+) -> Response:
+    """
+    # 200: data returned
+    # 202: status message (pending, queued or created) returned
+    # 204: no data to do analysis
+    # 422: invalid parameters
+    """
+
+    default_from_oday = get_target_oday(15)
+    default_to_oday   = get_target_oday()
+    if not from_oday:
+        from_oday = default_from_oday
+    if not to_oday:
+        to_oday = default_to_oday
+
+    if not is_date_range_valid(start_date=from_oday, end_date=to_oday):
+        raise HTTPException(
+            status_code=422,
+            detail="Incorrect date range. Between 'from_oday' and 'to_oday' should be max 7 weeks (49 days). 'to_oday' is inclusive."
+        )
+
+    if route_id is None or not route_id.strip():
+        route_ids = "ALL"
+    else:
+        route_ids = [r.strip() for r in route_id.split(",") if r.strip()]
+        route_ids.sort()
+
+        for rid in route_ids:
+            if not route_id_pattern.match(rid):
+                raise HTTPException(
+                    status_code=422,
+                    detail=[
+                        {
+                            "loc": ["query", "route_id"],
+                            "msg": f"Invalid route ID: {rid}. Only letters and digits allowed.",
+                            "input": rid,
+                        }
+                    ]
+                )
+
+
+    if exclude_dates is not None:
+        raw_dates = [r.strip() for r in exclude_dates.split(",") if r.strip()]
+        valid_dates = []
+        for d in raw_dates:
+            try:
+                datetime.strptime(d, "%Y-%m-%d")
+                valid_dates.append(d)
+            except ValueError:
+                raise HTTPException(
+                    status_code=422,
+                    detail=[
+                        {
+                            "loc": ["query", "exclude_dates"],
+                            "msg": f"Invalid date: {d}. Expected format is YYYY-MM-DD.",
+                            "input": d,
+                        }
+                    ]
+                )
+        valid_dates.sort()
+        exclude_dates = valid_dates
+    else:
+        exclude_dates = []
+
+    payload = {
+        "route_ids": route_ids,
+        "from_oday": str(from_oday),
+        "to_oday": str(to_oday),
+        "days_excluded": exclude_dates
+    }
+
+    try:
+        async with httpx.AsyncClient() as client:
+            orchestrator_url = f"{DURABLE_BASE_URL}/durable/Orchestrator"
+            resp = await client.post(orchestrator_url, json=payload, timeout=10.0)
+            if resp.status_code == 202:
+                return Response(
+                    status_code=202,
+                    content=resp.content,
+                    media_type=resp.headers.get("Content-Type", "application/json")
+                )
+            resp.raise_for_status()
+            try:
+                return resp.json()
+            except ValueError:
+                return Response(
+                    status_code=200,
+                    content=resp.content,
+                    media_type=resp.headers.get("Content-Type", "application/zip")
+                )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Could not start Durable function: {e}")
+
+    return JSONResponse(content=durable_response, status_code=resp.status_code)

@@ -160,7 +160,7 @@ async def set_recluster_status(
     to_oday: date,
     route_id: str,
     days_excluded: list[date],
-    status: Literal["PENDING", "DONE", "FAILED"] = "PENDING",
+    status: Literal["PENDING", "DONE", "FAILED", "QUEUED"] = "PENDING",
 ) -> None:
     table_name = f"delay.{table}"
     query = f"""
@@ -568,7 +568,7 @@ async def recluster_analysis(route_ids: list[str], from_oday: date, to_oday: dat
         clusters = await get_preprocessed_clusters(route_ids, from_oday, to_oday, days_to_exclude)
         preprocessed_departures = await get_preprocessed_departures(route_ids, from_oday, to_oday, days_to_exclude)
         end_time = datetime.now()
-        logger.debug(f"Data fetched for recluster in {end_time - start_time}")
+        logger.debug(f"Data fetched for recluster {route_ids}, {from_oday}, {to_oday} in {end_time - start_time}")
 
         if clusters is None or preprocessed_departures is None:
             return

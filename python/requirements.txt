@@ -7,6 +7,7 @@ python-pptx==0.6.21
 fastapi==0.100.0
 azure-functions==1.15.0
 azure-storage-blob==12.17.0
+azure-functions-durable
 zstandard==0.21.0
 uvicorn==0.23.1
 pydantic==2.1.1
