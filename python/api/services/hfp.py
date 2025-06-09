@@ -10,7 +10,7 @@ from typing import Optional, List
 from common.database import pool
 from common.logger_util import CustomDbLogHandler
 from common.container_client import FlowAnalyticsContainerClient
-from api.models.hfp import PreprocessBlobModel
+from common.models.hfp import PreprocessBlobModel
 
 
 logger = logging.getLogger("api")

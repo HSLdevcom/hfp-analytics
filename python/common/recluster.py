@@ -87,7 +87,7 @@ async def load_preprocess_files(
     params["from_oday"] = from_oday
     params["to_oday"] = to_oday
 
-    if route_ids and route_ids != "ALL":
+    if route_ids:
         in_condition, in_params = get_routes_condition("route_id", route_ids)
         conditions.append(in_condition)
         params.update(in_params)
@@ -129,7 +129,7 @@ async def load_preprocess_files(
     return buffer.getvalue()
 
 
-async def get_recluster_status(table: str, from_oday: date, to_oday: date, route_id: str = "ALL", exclude_dates: list[date] = []) -> Dict[str, Optional[Any]]:
+async def get_recluster_status(table: str, from_oday: date, to_oday: date, route_id: list = [], exclude_dates: list[date] = []) -> Dict[str, Optional[Any]]:
     table_name = f"delay.{table}"
     query = f"""
         SELECT status, createdAt, progress
@@ -158,9 +158,9 @@ async def set_recluster_status(
     table: str,
     from_oday: date,
     to_oday: date,
-    route_id: str,
+    route_id: list,
     days_excluded: list[date],
-    status: Literal["PENDING", "DONE", "FAILED"] = "PENDING",
+    status: Literal["PENDING", "DONE", "FAILED", "QUEUED"] = "PENDING",
 ) -> None:
     table_name = f"delay.{table}"
     query = f"""
@@ -209,7 +209,7 @@ async def update_recluster_progress(
             }
         )
 
-async def load_recluster_geojson(table: str, from_oday: date, to_oday: date, days_excluded: list[date], route_id: str = "ALL",) -> bytes:
+async def load_recluster_geojson(table: str, from_oday: date, to_oday: date, days_excluded: list[date], route_id: list = [],) -> bytes:
     table_name = f"delay.{table}"
     query = f"""
         SELECT zst
@@ -236,7 +236,7 @@ async def load_recluster_geojson(table: str, from_oday: date, to_oday: date, day
     decompressed_geojson = dctx.decompress(compressed_data)
     return decompressed_geojson
 
-async def load_recluster_csv(table: str, from_oday: date, to_oday: date, days_excluded, route_id: str = "ALL",) -> bytes:
+async def load_recluster_csv(table: str, from_oday: date, to_oday: date, days_excluded, route_id: list = [],) -> bytes:
     table_name = f"delay.{table}"
     query = f"""
         SELECT csv_zst
@@ -266,7 +266,7 @@ async def load_recluster_csv(table: str, from_oday: date, to_oday: date, days_ex
 
 async def store_compressed_geojson(
     table: str,
-    route_id: str,
+    route_id: list,
     from_oday: date,
     to_oday: date,
     gdf: gpd.GeoDataFrame,
@@ -568,7 +568,7 @@ async def recluster_analysis(route_ids: list[str], from_oday: date, to_oday: dat
         clusters = await get_preprocessed_clusters(route_ids, from_oday, to_oday, days_to_exclude)
         preprocessed_departures = await get_preprocessed_departures(route_ids, from_oday, to_oday, days_to_exclude)
         end_time = datetime.now()
-        logger.debug(f"Data fetched for recluster in {end_time - start_time}")
+        logger.debug(f"Data fetched for recluster {route_ids}, {from_oday}, {to_oday} in {end_time - start_time}")
 
         if clusters is None or preprocessed_departures is None:
             return
@@ -650,7 +650,7 @@ async def recluster_analysis(route_ids: list[str], from_oday: date, to_oday: dat
         
         db_route_id = route_ids
         if not db_route_id:
-            db_route_id = 'ALL'
+            db_route_id = []
 
         flow_analytics_container_client = FlowAnalyticsContainerClient()
         

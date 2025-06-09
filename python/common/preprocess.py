@@ -12,7 +12,7 @@ from datetime import date, timedelta, datetime, time
 from io import BytesIO
 
 from common.utils import get_target_oday
-from api.models.hfp import PreprocessDBDistinctModel, PreprocessBlobModel
+from common.models.hfp import PreprocessDBDistinctModel, PreprocessBlobModel
 
 
 logger = logging.getLogger("analyzer")

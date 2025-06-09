@@ -6,7 +6,12 @@
   },
   "extensions": {
     "http": {
-        "routePrefix": ""
+      "routePrefix": ""
+    },
+    "durableTask": {
+      "azureStorageConnectionStringName": "AzureWebJobsStorage",
+      "maxConcurrentOrchestratorFunctions": 1,
+      "maxConcurrentActivityFunctions": 1
     }
   },
   "functionTimeout": "18:00:00",
