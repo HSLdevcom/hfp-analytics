@@ -491,12 +491,12 @@ async def get_delay_analytics_data(
 
         if (to_oday is None):
             to_oday = default_to_oday
-            
-        if not is_date_range_valid(start_date=from_oday, end_date=to_oday):
-            raise HTTPException(
-                status_code=422,
-                detail="Incorrect date range. Between 'from_oday' and 'to_oday' should be max 7 weeks (49 days). 'to_oday' is inclusive."
-            )
+        
+        is_date_range_valid_, date_range_validity_message = is_date_range_valid(
+            from_oday=from_oday, to_oday=to_oday
+        )
+        if not is_date_range_valid_:
+            raise HTTPException(status_code=422, detail=date_range_validity_message)
 
         if route_id is None or not route_id.strip():
             route_ids = "ALL"
@@ -642,10 +642,12 @@ async def add_preprocess_data_from_blob_to_db(
         logger.debug(f"Found {len(db_data)} rows in database")
         
         missing_data = await find_missing_preprocess_data_in_db_compared_to_blob_storage(db_data=db_data, blobs_data=blob_data)
-        logger.debug(f"Found { len(missing_data)} blobs which are not in the database yet. Starting upload process") 
-        
-        await upload_missing_preprocess_data_to_db(client=client, missing_blobs=missing_data, preprocess_type=preprocess_type)
-        logger.debug(f"Successfully imported {len(missing_data)} blobs from blob storage to database")
-        
+        logger.debug(f"Found { len(missing_data)} blobs which are not in the database yet.") 
+
+        if len(missing_data) > 0:
+            await upload_missing_preprocess_data_to_db(client=client, missing_blobs=missing_data, preprocess_type=preprocess_type)
+            logger.debug(f"Successfully imported {len(missing_data)} blobs from blob storage to database")
+        else:
+            logger.debug("There are 0 blobs to be added from blob storage to database")
         response.status_code = status.HTTP_201_CREATED
         return {'imported data': [blob.blob_path for blob in missing_data]}
