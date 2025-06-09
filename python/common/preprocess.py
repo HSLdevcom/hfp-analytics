@@ -7,11 +7,13 @@ from common.database import pool
 from common.container_client import FlowAnalyticsContainerClient
 from sklearn.cluster import DBSCAN
 from collections import Counter
-from typing import Optional
+from typing import Optional, List
 from datetime import date, timedelta, datetime, time
 from io import BytesIO
 
 from common.utils import get_target_oday
+from common.models.hfp import PreprocessDBDistinctModel, PreprocessBlobModel
+
 
 logger = logging.getLogger("analyzer")
 
@@ -165,6 +167,35 @@ def compress_csv_bytes_to_zst(csv_bytes: bytes) -> bytes:
     """Compress raw CSV bytes to zstd."""
     cctx = zstd.ZstdCompressor()
     return cctx.compress(csv_bytes)
+
+async def get_existing_date_and_route_id_from_preprocess_table(preprocess_type: str) -> List[PreprocessDBDistinctModel]:
+    
+    query = f'SELECT distinct oday, route_id from delay.preprocess_{preprocess_type}'
+    
+    async with pool.connection() as conn:
+        result_cursor = await conn.execute(query)
+        results = await result_cursor.fetchall()
+
+    return [
+        PreprocessDBDistinctModel(oday=result[0].strftime("%Y-%m-%d"), route_id=result[1])
+        for result in results
+    ]
+
+async def find_missing_preprocess_data_in_db_compared_to_blob_storage(db_data: List[PreprocessDBDistinctModel], blobs_data: List[PreprocessBlobModel]) -> List[PreprocessBlobModel]:
+    results = []
+    
+    for blob in blobs_data:
+        found_duplicate = False
+        for row in db_data:
+            if blob.route_id == row.route_id and blob.oday == row.oday:
+                found_duplicate = True
+                break
+        if not found_duplicate:
+            results.append(blob)
+            
+    return results
+            
+    
 
 async def store_compressed_csv(
     table: str,
