@@ -57,11 +57,11 @@ services:
       - ./python/importer:/home/site/wwwroot/importer:ro
       - ./python/preprocess:/home/site/wwwroot/preprocess:ro
       - ./python/preprocess_http:/home/site/wwwroot/preprocess_http:ro
-      - ./python/durable/HttpStart:/home/site/wwwroot/HttpStart:ro
-      - ./python/durable/Orchestrator:/home/site/wwwroot/Orchestrator:ro
-      - ./python/durable/SetStatusActivity:/home/site/wwwroot/SetStatusActivity:ro
-      - ./python/durable/GetStatusActivity:/home/site/wwwroot/GetStatusActivity:ro
-      - ./python/durable/ReclusterAnalysisActivity:/home/site/wwwroot/ReclusterAnalysisActivity:ro
+      - ./python/HttpStart:/home/site/wwwroot/HttpStart:ro
+      - ./python/Orchestrator:/home/site/wwwroot/Orchestrator:ro
+      - ./python/SetStatusActivity:/home/site/wwwroot/SetStatusActivity:ro
+      - ./python/GetStatusActivity:/home/site/wwwroot/GetStatusActivity:ro
+      - ./python/ReclusterAnalysisActivity:/home/site/wwwroot/ReclusterAnalysisActivity:ro
       - ./python/common:/home/site/wwwroot/common:ro
       - ./python/host.json:/home/site/wwwroot/host.json:ro
       - ./python/requirements.txt:/home/site/wwwroot/requirements.txt:ro
