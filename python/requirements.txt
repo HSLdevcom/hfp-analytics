@@ -7,7 +7,7 @@ python-pptx==0.6.21
 fastapi==0.100.0
 azure-functions==1.15.0
 azure-storage-blob==12.17.0
-azure-functions-durable
+azure-functions-durable==1.2.10
 zstandard==0.21.0
 uvicorn==0.23.1
 pydantic==2.1.1
@@ -19,5 +19,5 @@ geopandas==0.14.0
 python-dotenv==1.0.0
 PyYAML==6.0
 scikit-learn==1.3.0
-httpx
+httpx==0.28.1 
 aiohttp==3.11.18
