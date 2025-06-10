@@ -13,6 +13,7 @@ from common.recluster import (
     load_recluster_geojson,
     load_recluster_csv
 )
+from common.enums import ReclusterStatus
 
 logger = logging.getLogger("importer")
 
@@ -45,13 +46,13 @@ async def main(req: func.HttpRequest, starter: str) -> func.HttpResponse:
                 status_code=500
             )
 
-        status = analysis_status.get("status")
+        status: ReclusterStatus | None = analysis_status.get("status")
         progress = analysis_status.get("progress")
 
-        if status == "PENDING" or status == "QUEUED":
+        if status == ReclusterStatus.PENDING or status == ReclusterStatus.QUEUED:
             return func.HttpResponse(
                 body=json.dumps({
-                    "status": status,
+                    "status": status.value,
                     "progress": progress,
                     "params": payload
                 }),
@@ -59,7 +60,7 @@ async def main(req: func.HttpRequest, starter: str) -> func.HttpResponse:
                 mimetype="application/json"
             )
 
-        if status == "DONE":
+        if status == ReclusterStatus.DONE:
             try:
                 geojson_bytes = await load_recluster_geojson(
                     "recluster_routes",
@@ -101,12 +102,12 @@ async def main(req: func.HttpRequest, starter: str) -> func.HttpResponse:
 
         try:
             await set_recluster_status(
-                table,
-                from_oday,
-                to_oday,
-                route_ids,
-                days_excluded,
-                status="QUEUED"
+                table=table,
+                from_oday=from_oday,
+                to_oday=to_oday,
+                route_id=route_ids,
+                days_excluded=days_excluded,
+                status=ReclusterStatus.QUEUED
             )
         except Exception as e:
             logger.debug(f"Error setting status QUEUED: {e}")
@@ -120,7 +121,7 @@ async def main(req: func.HttpRequest, starter: str) -> func.HttpResponse:
         await client.start_new("Orchestrator", None, payload)
         return func.HttpResponse(
             body=json.dumps({
-                "status": "CREATED",
+                "status": ReclusterStatus.CREATED.value,
                 "progress": progress,
                 "params": payload
             }),

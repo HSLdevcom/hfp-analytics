@@ -3,6 +3,7 @@ import functools
 import asyncio
 from datetime import date
 
+from common.enums import ReclusterStatus
 from common.recluster import run_asyncio_task, recluster_analysis, set_recluster_status
 from common.logger_util import CustomDbLogHandler
 
@@ -54,7 +55,7 @@ async def main(input: dict) -> None:
                     to_oday,
                     route_ids,
                     days_excluded,
-                    "FAILED"
+                    ReclusterStatus.FAILED
                 )
             )
             raise

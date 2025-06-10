@@ -30,6 +30,7 @@ from common.preprocess import (
     get_existing_date_and_route_id_from_preprocess_table,
     find_missing_preprocess_data_in_db_compared_to_blob_storage,
 )
+from common.enums import ReclusterStatus
 from common.recluster import get_recluster_status, run_analysis_and_set_status, load_recluster_geojson, load_recluster_csv, set_recluster_status, get_preprocessed_clusters, get_preprocessed_departures
 from common.utils import get_target_oday, create_filename, set_timezone, is_date_range_valid
 from common.config import DURABLE_BASE_URL
@@ -543,7 +544,7 @@ async def get_delay_analytics_data(
         created_at_str = created_at.isoformat() if created_at is not None else None
         
         response_content = {
-            "status": recluster_status['status'],
+            "status": recluster_status['status'].value if recluster_status['status'] else None,
             "createdAt": created_at_str,
             "params": {
                 "route_ids": route_ids,
@@ -553,7 +554,7 @@ async def get_delay_analytics_data(
             },
         }
 
-        if recluster_status["status"] == "DONE":
+        if recluster_status["status"] == ReclusterStatus.DONE:
             routecluster_geojson = await load_recluster_geojson("recluster_routes", from_oday, to_oday, exclude_dates, route_ids)
             routecluster_csv = await load_recluster_csv("recluster_routes", from_oday, to_oday, exclude_dates, route_ids)
             parent_file_buffer = io.BytesIO()
@@ -586,18 +587,18 @@ async def get_delay_analytics_data(
             is_stale = created_at < stale_cutoff
 
         # If it doesn't exist, is failed or is stale. Create or rerun, set to PENDING and start analysis
-        if recluster_status["status"] is None or recluster_status["status"] == "FAILED" or is_stale:
+        if recluster_status["status"] is None or recluster_status["status"] == ReclusterStatus.FAILED or is_stale:
             logger.debug(f"Create row route_id: {route_ids}, from_oday: {from_oday}, to_oday: {to_oday}, status: PENDING")
             # Better approach would be to create an id out of the params. Something like this:
             # f"{route_ids}_{from_oday}_{to_oday}_{exclude_dates}
             # Then use it as an identifier for the analysis rather than using all the params separately
-            await set_recluster_status("recluster_routes", from_oday, to_oday, route_ids, exclude_dates, status="PENDING")
+            await set_recluster_status("recluster_routes", from_oday, to_oday, route_ids, exclude_dates, status=ReclusterStatus.PENDING)
             asyncio.create_task(run_analysis_and_set_status("recluster_routes", route_ids, from_oday, to_oday, exclude_dates))
 
-            if recluster_status["status"] == "FAILED":
+            if recluster_status["status"] ==ReclusterStatus.FAILED:
                 response_content["detail"] = "Found analysis with status FAILED. Rerunning.."
             else:
-                recluster_status["status"] == "CREATE"
+                recluster_status["status"] == ReclusterStatus.CREATED
                 response_content["detail"] = "No analysis found. Creating.."
 
             logger.debug("Created and started analysis. Returning 202")
@@ -607,7 +608,7 @@ async def get_delay_analytics_data(
             )
 
         # Return status
-        response_content["detail"] = f"Analysis found and is {recluster_status['status']}, processed: {recluster_status['progress']}"
+        response_content["detail"] = f"Analysis found and is {recluster_status['status'].value}, processed: {recluster_status['progress']}"
         return JSONResponse(
             status_code=202,
             content=response_content,
