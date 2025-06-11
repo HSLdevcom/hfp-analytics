@@ -7,9 +7,10 @@ import zipfile
 import re
 import gc
 import httpx
+import time
 
 from typing import Optional, Literal, List
-from datetime import date, timedelta, datetime, time, timezone
+from datetime import date, timedelta, datetime, timezone
 from http import HTTPStatus
 
 import logging
@@ -683,7 +684,7 @@ async def get_delay_analytics_data_durable(
         from_oday=from_oday, to_oday=to_oday
     )
     if not is_date_range_valid_:
-        raise HTTPException(status_code=422, detail=date_range_validity_message)
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=date_range_validity_message)
 
 
     if route_id is None or not route_id.strip():
@@ -695,7 +696,7 @@ async def get_delay_analytics_data_durable(
         for rid in route_ids:
             if not route_id_pattern.match(rid):
                 raise HTTPException(
-                    status_code=422,
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail=[
                         {
                             "loc": ["query", "route_id"],
@@ -715,7 +716,7 @@ async def get_delay_analytics_data_durable(
                 valid_dates.append(d)
             except ValueError:
                 raise HTTPException(
-                    status_code=422,
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail=[
                         {
                             "loc": ["query", "exclude_dates"],
@@ -738,11 +739,11 @@ async def get_delay_analytics_data_durable(
 
     try:
         async with httpx.AsyncClient() as client:
-            orchestrator_url = f"{DURABLE_BASE_URL}/durable/Orchestrator"
+            orchestrator_url = f"{DURABLE_BASE_URL}/durable/orchestrator"
             resp = await client.post(orchestrator_url, json=payload, timeout=10.0)
             if resp.status_code == 202:
                 return Response(
-                    status_code=202,
+                    status_code=status.HTTP_202_ACCEPTED,
                     content=resp.content,
                     media_type=resp.headers.get("Content-Type", "application/json")
                 )
@@ -751,12 +752,15 @@ async def get_delay_analytics_data_durable(
                 return resp.json()
             except ValueError:
                 return Response(
-                    status_code=200,
+                    status_code=status.HTTP_200_OK,
                     content=resp.content,
-                    media_type=resp.headers.get("Content-Type", "application/zip")
+                    media_type=resp.headers.get("Content-Type", "application/zip"),
+                    headers={
+                        "Content-Disposition": 'attachment; filename="clusters.zip"'
+                    }
                 )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Could not start Durable function: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Could not start Durable function: {e}")
 
     return JSONResponse(content=durable_response, status_code=resp.status_code)
 

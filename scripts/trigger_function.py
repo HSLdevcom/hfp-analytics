@@ -44,7 +44,7 @@ def main(function: str, environment: str, date_param: str, http: bool) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Helper script to trigger a backend function")
-    parser.add_argument("function", help="function to be triggered", choices=["analyzer", "importer", "preprocess", "preprocess-http"])
+    parser.add_argument("function", help="function to be triggered", choices=["analyzer", "importer", "preprocess", "http-preprocess"])
     parser.add_argument("--env", help="environment to send the trigger", choices=["local", "dev", "prod"], default="local")
     parser.add_argument("--date", help="Date to use as oday with preprocessing, e.g. '2025-04-10'", default=None)
     parser.add_argument("--http", help="Use http trigger. With --http it is read as True", action="store_true")

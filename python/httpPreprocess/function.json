@@ -8,7 +8,7 @@
       "name": "req",
       "methods": [ "post" ],
       "authLevel": "function",
-      "route": "preprocess-http",
+      "route": "http-preprocess",
       "runOnStartup": false
     },
     {

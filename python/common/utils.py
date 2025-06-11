@@ -2,7 +2,7 @@ from typing import Tuple
 
 import pptx
 import logging as logger
-from datetime import date, timedelta, datetime, time
+from datetime import date, timedelta, datetime, timezone
 
 def tuples_to_feature_collection(geom_tuples: list[tuple]) -> dict:
     """Transforms GeoJSON tuples returned by psycopg into a FeatureCollection dict for REST API."""
