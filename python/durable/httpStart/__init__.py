@@ -117,7 +117,7 @@ async def main(req: func.HttpRequest, starter: str) -> func.HttpResponse:
             )
 
         client = durableFunc.DurableOrchestrationClient(starter)
-        await client.start_new("Orchestrator", None, payload)
+        await client.start_new("orchestrator", None, payload)
         return func.HttpResponse(
             body=json.dumps({
                 "status": "CREATED",

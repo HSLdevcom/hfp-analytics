@@ -45,16 +45,12 @@ async def main(input: dict) -> None:
 
         except Exception as e:
             logger.debug(f"ReclusterAnalysisActivity error: {e}")
-            await asyncio.to_thread(
-                functools.partial(
-                    run_asyncio_task,
-                    set_recluster_status,
-                    table,
-                    from_oday,
-                    to_oday,
-                    route_ids,
-                    days_excluded,
-                    "FAILED"
-                )
+            await set_recluster_status(
+                table,
+                from_oday,
+                to_oday,
+                route_ids,
+                days_excluded,
+                "FAILED"
             )
             raise
