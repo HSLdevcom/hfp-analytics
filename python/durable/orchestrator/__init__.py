@@ -34,7 +34,7 @@ def orchestrator_function(context: durableFunc.DurableOrchestrationContext):
 
         status = status_check.get("status")
 
-        if status == ReclusterStatus.QUEUED or status is None:
+        if status is None or ReclusterStatus[status] == ReclusterStatus.QUEUED:
             logger.debug(
                 "Orchestrator: status is QUEUED or not found. Set status to PENDING"
             )
