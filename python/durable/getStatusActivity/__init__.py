@@ -30,10 +30,10 @@ async def main(input: dict) -> dict:
             logger.debug(f"Error in GetStatusActivity: {e}")
             return {"status": None, "progress": None}
 
-        progres = status.get("progress")
+        progress = status.get("progress")
         status = status.get("status")
         
         return {
             "status": status.value if status else None,
-            "progress": progres
+            "progress": progress
         }
