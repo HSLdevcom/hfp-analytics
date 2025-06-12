@@ -22,7 +22,7 @@ def orchestrator_function(context: durableFunc.DurableOrchestrationContext):
         )
 
         status_check = yield context.call_activity(
-            "GetStatusActivity",
+            "getStatusActivity",
             {
                 "table": "recluster_routes",
                 "route_ids": route_ids,
@@ -39,7 +39,7 @@ def orchestrator_function(context: durableFunc.DurableOrchestrationContext):
                 "Orchestrator: status is QUEUED or not found. Set status to PENDING"
             )
             yield context.call_activity(
-                "SetStatusActivity",
+                "setStatusActivity",
                 {
                     "table": "recluster_routes",
                     "route_ids": route_ids,
@@ -51,7 +51,7 @@ def orchestrator_function(context: durableFunc.DurableOrchestrationContext):
             )
 
             yield context.call_activity(
-                "ReclusterAnalysisActivity",
+                "reclusterAnalysisActivity",
                 {
                     "table": "recluster_routes",
                     "route_ids": route_ids,
@@ -62,7 +62,7 @@ def orchestrator_function(context: durableFunc.DurableOrchestrationContext):
             )
 
             yield context.call_activity(
-                "SetStatusActivity",
+                "setStatusActivity",
                 {
                     "table": "recluster_routes",
                     "route_ids": route_ids,

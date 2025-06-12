@@ -52,20 +52,28 @@ services:
     env_file: .env
     environment:
       - PYTHONUNBUFFERED=1
+      - WEBSITE_HOSTNAME=localhost:7072
     volumes:
       - ./python/analyzer:/home/site/wwwroot/analyzer:ro
       - ./python/importer:/home/site/wwwroot/importer:ro
       - ./python/preprocess:/home/site/wwwroot/preprocess:ro
-      - ./python/preprocess_http:/home/site/wwwroot/preprocess_http:ro
-      - ./python/durable/HttpStart:/home/site/wwwroot/HttpStart:ro
-      - ./python/durable/Orchestrator:/home/site/wwwroot/Orchestrator:ro
-      - ./python/durable/SetStatusActivity:/home/site/wwwroot/SetStatusActivity:ro
-      - ./python/durable/GetStatusActivity:/home/site/wwwroot/GetStatusActivity:ro
-      - ./python/durable/ReclusterAnalysisActivity:/home/site/wwwroot/ReclusterAnalysisActivity:ro
+      - ./python/httpPreprocess:/home/site/wwwroot/httpPreprocess:ro
+      - ./python/durable/httpStart:/home/site/wwwroot/httpStart:ro
+      - ./python/durable/orchestrator:/home/site/wwwroot/orchestrator:ro
+      - ./python/durable/setStatusActivity:/home/site/wwwroot/setStatusActivity:ro
+      - ./python/durable/getStatusActivity:/home/site/wwwroot/getStatusActivity:ro
+      - ./python/durable/reclusterAnalysisActivity:/home/site/wwwroot/reclusterAnalysisActivity:ro
       - ./python/common:/home/site/wwwroot/common:ro
       - ./python/host.json:/home/site/wwwroot/host.json:ro
       - ./python/requirements.txt:/home/site/wwwroot/requirements.txt:ro
     restart: on-failure
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: azurite
+    ports:
+      - "10000:10000"
+      - "10001:10001"
+      - "10002:10002"
   #worker:
   #  image: stopcorr/stopcorr-python:latest
   #  build: ./python
