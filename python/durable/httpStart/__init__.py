@@ -1,9 +1,11 @@
 import io
-import zipfile
 import logging
 import json
+
 import azure.functions as func
 import azure.durable_functions as durableFunc
+from fastapi import status as status_code
+import zipfile
 
 from common.logger_util import CustomDbLogHandler
 
@@ -119,12 +121,14 @@ async def main(req: func.HttpRequest, starter: str) -> func.HttpResponse:
 
         client = durableFunc.DurableOrchestrationClient(starter)
         await client.start_new("orchestrator", None, payload)
+        status_msg = status
+        if status_msg is None:
+            status_msg = ReclusterStatus.CREATED.value
+        
         return func.HttpResponse(
-            body=json.dumps({
-                "status": ReclusterStatus.CREATED.value,
-                "progress": progress,
-                "params": payload
-            }),
-            status_code=202,
-            mimetype="application/json"
+            body=json.dumps(
+                {"status": status_msg, "progress": progress, "params": payload}
+            ),
+            status_code=status_code.HTTP_202_ACCEPTED,
+            mimetype="application/json",
         )
