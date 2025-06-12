@@ -571,7 +571,7 @@ async def recluster_analysis(route_ids: list[str], from_oday: date, to_oday: dat
         logger.debug(f"Data fetched for recluster {route_ids}, {from_oday}, {to_oday} in {end_time - start_time}")
 
         if clusters is None or preprocessed_departures is None:
-            return
+            raise RuntimeError("Missing clusters or departures zst for recluster_analysis")
 
         start_time = datetime.now()
         logger.debug(f"Start recluster for routes")
