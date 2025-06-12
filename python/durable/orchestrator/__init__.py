@@ -36,7 +36,7 @@ def orchestrator_function(context: durableFunc.DurableOrchestrationContext):
 
         if status is None or ReclusterStatus[status] == ReclusterStatus.QUEUED:
             logger.debug(
-                "Orchestrator: status is QUEUED or not found. Set status to PENDING"
+                f"Orchestrator: status is {ReclusterStatus.QUEUED.value} or not found. Set status to {ReclusterStatus.RUNNING.value}"
             )
             yield context.call_activity(
                 "setStatusActivity",
@@ -46,7 +46,7 @@ def orchestrator_function(context: durableFunc.DurableOrchestrationContext):
                     "from_oday": from_oday,
                     "to_oday": to_oday,
                     "days_excluded": days_excluded,
-                    "status": ReclusterStatus.PENDING.value,
+                    "status": ReclusterStatus.RUNNING.value,
                 },
             )
 

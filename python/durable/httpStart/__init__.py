@@ -49,7 +49,7 @@ async def main(req: func.HttpRequest, starter: str) -> func.HttpResponse:
         status: ReclusterStatus | None = analysis_status.get("status")
         progress = analysis_status.get("progress")
 
-        if status == ReclusterStatus.PENDING or status == ReclusterStatus.QUEUED:
+        if status == ReclusterStatus.RUNNING or status == ReclusterStatus.QUEUED:
             return func.HttpResponse(
                 body=json.dumps({
                     "status": status.value,

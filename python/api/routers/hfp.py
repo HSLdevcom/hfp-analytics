@@ -593,7 +593,7 @@ async def get_delay_analytics_data(
             # Better approach would be to create an id out of the params. Something like this:
             # f"{route_ids}_{from_oday}_{to_oday}_{exclude_dates}
             # Then use it as an identifier for the analysis rather than using all the params separately
-            await set_recluster_status("recluster_routes", from_oday, to_oday, route_ids, exclude_dates, status=ReclusterStatus.PENDING)
+            await set_recluster_status("recluster_routes", from_oday, to_oday, route_ids, exclude_dates, status=ReclusterStatus.RUNNING)
             asyncio.create_task(run_analysis_and_set_status("recluster_routes", route_ids, from_oday, to_oday, exclude_dates))
 
             if recluster_status["status"] ==ReclusterStatus.FAILED:
@@ -625,7 +625,7 @@ async def get_delay_analytics_data(
             "description": "The data is returned as an attachment in the response.",
             "content": {"application/gzip": {"schema": None, "example": None}}
         },
-        202: {"description": "Status message returned. Analysis queued, pending or created, check again later."},   
+        202: {"description": "Status message returned. Analysis queued, running or created, check again later."},   
         204: {"description": "Query returned no data with the given parameters."},
         422: {"description": "Query had invalid parameters."}
     }

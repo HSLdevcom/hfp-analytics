@@ -161,7 +161,7 @@ async def set_recluster_status(
     to_oday: date,
     route_id: list,
     days_excluded: list[date],
-    status: ReclusterStatus = ReclusterStatus.PENDING
+    status: ReclusterStatus = ReclusterStatus.RUNNING
 ) -> None:
     table_name = f"delay.{table}"
     query = f"""
