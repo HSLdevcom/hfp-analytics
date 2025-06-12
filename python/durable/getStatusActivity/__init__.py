@@ -16,8 +16,6 @@ async def main(input: dict) -> dict:
         logger.debug(
             f"GetStatusActivity: checking status for {table}, {route_ids}, {from_oday}, {to_oday}, {days_excluded}"
         )
-        
-        print('<<<< GET STATUS  ACTIVITY >>>> MAIN')
 
         try:
             status = await get_recluster_status(
@@ -27,8 +25,7 @@ async def main(input: dict) -> dict:
                     route_id=route_ids,
                     exclude_dates=days_excluded
                 )
-            print("<<<< GET STATUS  ACTIVITY >>>> status after get_reculster_status")
-            print(status)
+
         except Exception as e:
             logger.debug(f"Error in GetStatusActivity: {e}")
             return {"status": None, "progress": None}
@@ -36,12 +33,6 @@ async def main(input: dict) -> dict:
         progres = status.get("progress")
         status = status.get("status")
         
-        print("<<<< GET STATUS  ACTIVITY >>>> return value")
-        print({
-            "status": status.value if status else None,
-            "progress": progres
-        })
-        print('======')
         return {
             "status": status.value if status else None,
             "progress": progres
