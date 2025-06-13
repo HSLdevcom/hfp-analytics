@@ -17,6 +17,7 @@ from common.logger_util import CustomDbLogHandler
 from common.utils import get_season
 from common.config import DAYS_TO_EXCLUDE
 from common.container_client import FlowAnalyticsContainerClient
+from common.enums import ReclusterStatus
 from sklearn.cluster import DBSCAN
 from typing import Dict, Any, Union, Optional, List, Literal
 
@@ -152,7 +153,7 @@ async def get_recluster_status(table: str, from_oday: date, to_oday: date, route
         return {"status": None, "createdAt": None, "progress": None}
 
     status, created_at, progress = row 
-    return {"status": status, "createdAt": created_at, "progress": progress}
+    return {"status": ReclusterStatus[status], "createdAt": created_at, "progress": progress}
 
 async def set_recluster_status(
     table: str,
@@ -160,7 +161,7 @@ async def set_recluster_status(
     to_oday: date,
     route_id: list,
     days_excluded: list[date],
-    status: Literal["PENDING", "DONE", "FAILED", "QUEUED"] = "PENDING",
+    status: ReclusterStatus = ReclusterStatus.RUNNING
 ) -> None:
     table_name = f"delay.{table}"
     query = f"""
@@ -179,7 +180,7 @@ async def set_recluster_status(
                 "from_oday": from_oday,
                 "to_oday": to_oday,
                 "days_excluded": days_excluded,
-                "status": status,
+                "status": status.value,
             }
         )
 
@@ -554,7 +555,14 @@ async def run_analysis_and_set_status(
             await asyncio.to_thread(functools.partial(run_asyncio_task, recluster_analysis, route_ids, from_oday, to_oday, days_excluded))
         except Exception:
             logger.debug(f"Something went wrong. Setting status as FAILED")
-            await set_recluster_status(table, from_oday, to_oday, route_ids, days_excluded, status="FAILED")
+            await set_recluster_status(
+                table=table, 
+                from_oday=from_oday, 
+                to_oday=to_oday, 
+                route_id=route_ids, 
+                days_excluded=days_excluded, 
+                status=ReclusterStatus.FAILED
+            )
             raise
         finally:
             gc.collect()

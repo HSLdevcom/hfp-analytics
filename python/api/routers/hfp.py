@@ -31,6 +31,7 @@ from common.preprocess import (
     get_existing_date_and_route_id_from_preprocess_table,
     find_missing_preprocess_data_in_db_compared_to_blob_storage,
 )
+from common.enums import ReclusterStatus
 from common.recluster import get_recluster_status, run_analysis_and_set_status, load_recluster_geojson, load_recluster_csv, set_recluster_status, get_preprocessed_clusters, get_preprocessed_departures
 from common.utils import get_target_oday, create_filename, set_timezone, is_date_range_valid
 from common.config import DURABLE_BASE_URL
@@ -432,7 +433,7 @@ async def get_speeding(
             "description": "The data is returned as an attachment in the response.",
             "content": {"application/gzip": {"schema": None, "example": None}}
         },
-        202: {"description": "Status message returned. Analysis queued, pending or created, check again later."},   
+        202: {"description": "Status message returned. Analysis queued, running or created, check again later."},   
         204: {"description": "Query returned no data with the given parameters."},
         422: {"description": "Query had invalid parameters."}
     }

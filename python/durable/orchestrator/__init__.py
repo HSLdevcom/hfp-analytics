@@ -1,8 +1,12 @@
-import azure.durable_functions as durableFunc
 import logging
+
+import azure.durable_functions as durableFunc
+
 from common.logger_util import CustomDbLogHandler
+from common.enums import ReclusterStatus
 
 logger = logging.getLogger("importer")
+
 
 def orchestrator_function(context: durableFunc.DurableOrchestrationContext):
     with CustomDbLogHandler("importer"):
@@ -24,14 +28,16 @@ def orchestrator_function(context: durableFunc.DurableOrchestrationContext):
                 "route_ids": route_ids,
                 "from_oday": from_oday,
                 "to_oday": to_oday,
-                "days_excluded": days_excluded
-            }
+                "days_excluded": days_excluded,
+            },
         )
 
         status = status_check.get("status")
 
-        if status == "QUEUED" or status is None:
-            logger.debug("Orchestrator: status is QUEUED or not found. Set status to PENDING")
+        if status is None or ReclusterStatus[status] == ReclusterStatus.QUEUED:
+            logger.debug(
+                f"Orchestrator: status is {ReclusterStatus.QUEUED.value} or not found. Set status to {ReclusterStatus.RUNNING.value}"
+            )
             yield context.call_activity(
                 "setStatusActivity",
                 {
@@ -40,8 +46,8 @@ def orchestrator_function(context: durableFunc.DurableOrchestrationContext):
                     "from_oday": from_oday,
                     "to_oday": to_oday,
                     "days_excluded": days_excluded,
-                    "status": "PENDING"
-                }
+                    "status": ReclusterStatus.RUNNING.value,
+                },
             )
 
             yield context.call_activity(
@@ -51,8 +57,8 @@ def orchestrator_function(context: durableFunc.DurableOrchestrationContext):
                     "route_ids": route_ids,
                     "from_oday": from_oday,
                     "to_oday": to_oday,
-                    "days_excluded": days_excluded
-                }
+                    "days_excluded": days_excluded,
+                },
             )
 
             yield context.call_activity(
@@ -63,11 +69,12 @@ def orchestrator_function(context: durableFunc.DurableOrchestrationContext):
                     "from_oday": from_oday,
                     "to_oday": to_oday,
                     "days_excluded": days_excluded,
-                    "status": "DONE"
-                }
+                    "status": ReclusterStatus.DONE.value,
+                },
             )
 
             # Currently not necessary but useful in the future is durable internal status urls are used
-            return { "status": "DONE" }
+            return {"status": ReclusterStatus.DONE.value}
+
 
 main = durableFunc.Orchestrator.create(orchestrator_function)

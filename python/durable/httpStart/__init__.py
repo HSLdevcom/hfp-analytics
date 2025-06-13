@@ -1,9 +1,11 @@
 import io
-import zipfile
 import logging
 import json
+
 import azure.functions as func
 import azure.durable_functions as durableFunc
+from fastapi import status as status_code
+import zipfile
 
 from common.logger_util import CustomDbLogHandler
 
@@ -13,6 +15,7 @@ from common.recluster import (
     load_recluster_geojson,
     load_recluster_csv
 )
+from common.enums import ReclusterStatus
 
 logger = logging.getLogger("importer")
 
@@ -45,13 +48,13 @@ async def main(req: func.HttpRequest, starter: str) -> func.HttpResponse:
                 status_code=500
             )
 
-        status = analysis_status.get("status")
+        status: ReclusterStatus | None = analysis_status.get("status")
         progress = analysis_status.get("progress")
 
-        if status == "PENDING" or status == "QUEUED":
+        if status == ReclusterStatus.RUNNING or status == ReclusterStatus.QUEUED or status == ReclusterStatus.PENDING:
             return func.HttpResponse(
                 body=json.dumps({
-                    "status": status,
+                    "status": status.value,
                     "progress": progress,
                     "params": payload
                 }),
@@ -59,7 +62,7 @@ async def main(req: func.HttpRequest, starter: str) -> func.HttpResponse:
                 mimetype="application/json"
             )
 
-        if status == "DONE":
+        if status == ReclusterStatus.DONE:
             try:
                 geojson_bytes = await load_recluster_geojson(
                     "recluster_routes",
@@ -101,12 +104,12 @@ async def main(req: func.HttpRequest, starter: str) -> func.HttpResponse:
 
         try:
             await set_recluster_status(
-                table,
-                from_oday,
-                to_oday,
-                route_ids,
-                days_excluded,
-                status="QUEUED"
+                table=table,
+                from_oday=from_oday,
+                to_oday=to_oday,
+                route_id=route_ids,
+                days_excluded=days_excluded,
+                status=ReclusterStatus.QUEUED
             )
         except Exception as e:
             logger.debug(f"Error setting status QUEUED: {e}")
@@ -120,14 +123,12 @@ async def main(req: func.HttpRequest, starter: str) -> func.HttpResponse:
         await client.start_new("orchestrator", None, payload)
         status_msg = status
         if status_msg is None:
-            status_msg = "CREATED"
+            status_msg = ReclusterStatus.CREATED.value
         
         return func.HttpResponse(
-            body=json.dumps({
-                "status": status_msg,
-                "progress": progress,
-                "params": payload
-            }),
-            status_code=202,
-            mimetype="application/json"
+            body=json.dumps(
+                {"status": status_msg, "progress": progress, "params": payload}
+            ),
+            status_code=status_code.HTTP_202_ACCEPTED,
+            mimetype="application/json",
         )

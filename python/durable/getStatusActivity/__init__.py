@@ -19,18 +19,21 @@ async def main(input: dict) -> dict:
 
         try:
             status = await get_recluster_status(
-                    table,
-                    from_oday,
-                    to_oday,
-                    route_ids,
-                    days_excluded
+                    table=table,
+                    from_oday=from_oday,
+                    to_oday=to_oday,
+                    route_id=route_ids,
+                    exclude_dates=days_excluded
                 )
 
         except Exception as e:
             logger.debug(f"Error in GetStatusActivity: {e}")
             return {"status": None, "progress": None}
 
+        progress = status.get("progress")
+        status = status.get("status")
+        
         return {
-            "status": status.get("status"),
-            "progress": status.get("progress")
+            "status": status.value if status else None,
+            "progress": progress
         }

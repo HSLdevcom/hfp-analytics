@@ -1,6 +1,7 @@
 import azure.functions as func
 import logging
 
+from common.enums import ReclusterStatus
 from common.recluster import set_recluster_status
 from common.logger_util import CustomDbLogHandler
 
@@ -18,7 +19,14 @@ async def main(input: dict) -> None:
 
             logger.debug(f"SetStatusActivity called: {table}, {route_ids}, {from_oday}, {to_oday}, {days_excluded}, {status}")
 
-            await set_recluster_status(table, from_oday, to_oday, route_ids, days_excluded, status=status)
+            await set_recluster_status(
+                table=table, 
+                from_oday=from_oday, 
+                to_oday=to_oday, 
+                route_id=route_ids, 
+                days_excluded=days_excluded, 
+                status=ReclusterStatus[status]
+            )
 
         except Exception as e:
             logger.debug(f"Error in SetStatusActivity: {e}")
