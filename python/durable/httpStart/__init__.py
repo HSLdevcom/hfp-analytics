@@ -7,6 +7,7 @@ import azure.durable_functions as durableFunc
 from fastapi import status as status_code
 import zipfile
 
+from datetime import timedelta, datetime, timezone
 from common.logger_util import CustomDbLogHandler
 
 from common.recluster import (
@@ -50,6 +51,31 @@ async def main(req: func.HttpRequest, starter: str) -> func.HttpResponse:
 
         status: ReclusterStatus | None = analysis_status.get("status")
         progress = analysis_status.get("progress")
+
+        is_stale = False
+        if analysis_status.get("createdAt"):
+            created_at = analysis_status.get("createdAt")
+            now = datetime.now(timezone.utc)
+            stale_cutoff = now - timedelta(hours=1)
+            is_stale = created_at < stale_cutoff
+
+        if is_stale and status == ReclusterStatus.RUNNING:
+            try:
+                await set_recluster_status(
+                    table=table,
+                    from_oday=from_oday,
+                    to_oday=to_oday,
+                    route_id=route_ids,
+                    days_excluded=days_excluded,
+                    status=ReclusterStatus.FAILED
+                )
+            except Exception as e:
+                logger.debug(f"Error setting status FAILED to stale analysis: {e}")
+                return func.HttpResponse(
+                    body=json.dumps({"error": f"Could not update status FAILED for stale analysis: {e}"}),
+                    status_code=500,
+                    mimetype="application/json"
+                )
 
         if status == ReclusterStatus.RUNNING or status == ReclusterStatus.QUEUED or status == ReclusterStatus.PENDING:
             return func.HttpResponse(
@@ -123,11 +149,11 @@ async def main(req: func.HttpRequest, starter: str) -> func.HttpResponse:
         await client.start_new("orchestrator", None, payload)
         status_msg = status
         if status_msg is None:
-            status_msg = ReclusterStatus.CREATED.value
+            status_msg = ReclusterStatus.CREATED
         
         return func.HttpResponse(
             body=json.dumps(
-                {"status": status_msg, "progress": progress, "params": payload}
+                {"status": status_msg.value, "progress": progress, "params": payload}
             ),
             status_code=status_code.HTTP_202_ACCEPTED,
             mimetype="application/json",
