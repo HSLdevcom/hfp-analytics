@@ -1,11 +1,8 @@
 """ Routes for /hfp endpoint """
 
 import io
-import asyncio
 import gzip
-import zipfile
 import re
-import gc
 import httpx
 import time
 
@@ -17,7 +14,7 @@ import logging
 from common.logger_util import CustomDbLogHandler
 
 from fastapi import APIRouter, HTTPException, Query, status
-from fastapi.responses import Response, JSONResponse, StreamingResponse
+from fastapi.responses import Response, JSONResponse
 from fastapi.encoders import jsonable_encoder
 
 from api.services.hfp import (
