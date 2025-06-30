@@ -40,11 +40,19 @@ def remove_old_data():
 
                 logger.debug(f"Removing old logs and blob info")
                 cur.execute("DELETE FROM importer.blob WHERE listed_at < now() - interval '4 week'")
+
                 logger.debug(f"{cur.rowcount} rows deleted from importer.blob .")
                 cur.execute("DELETE FROM logs.importer_log WHERE log_timestamp < now() - interval '4 week'")
                 logger.debug(f"{cur.rowcount} rows deleted from logs.importer_log.")
                 cur.execute("DELETE FROM logs.api_log WHERE log_timestamp < now() - interval '4 week'")
                 logger.debug(f"{cur.rowcount} rows deleted from logs.api_log.")
+
+                logger.debug("Removing delay data older than 12 months")
+                cur.execute("DELETE FROM delay.preprocess_clusters WHERE oday < now() - interval '12 month'")
+                cur.execute("DELETE FROM delay.preprocess_departures WHERE oday < now() - interval '12 month'")
+                cur.execute("DELETE FROM delay.recluster_routes WHERE createdAt < now() - interval '12 month'")
+                cur.execute("DELETE FROM delay.recluster_modes WHERE createdAt < now() - interval '12 month'")
+
 
     except psycopg2.OperationalError:
         logger.exception("Old data removal failed.")

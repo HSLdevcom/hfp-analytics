@@ -43,13 +43,6 @@ async def get_query_async(query):
     else:
         raise Exception(f'{req} failed with status code {req.status_code}')
 
-async def run_recluster_analysis(days: int):
-    from_oday = get_target_oday(days)
-    to_oday = get_target_oday()
-    logger.debug(f"Running recluster for all routes from {from_oday} to {to_oday}")
-    await recluster_analysis(None, from_oday, to_oday)
-    logger.debug(f"Recluster analysis done.")
-
 async def run_delay_analysis(requested_oday: date = None):
     conn = psycopg2.connect(POSTGRES_CONNECTION_STRING)
     try:

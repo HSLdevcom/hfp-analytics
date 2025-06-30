@@ -5,7 +5,7 @@ import logging
 from io import BytesIO
 from datetime import date, timedelta, datetime, time
 from common.logger_util import CustomDbLogHandler
-from .run_analysis import run_analysis, run_vehicle_analysis, run_recluster_analysis
+from .run_analysis import run_analysis, run_vehicle_analysis
 from .remove_old_data import remove_old_data
 
 logger = logging.getLogger("importer")
@@ -19,13 +19,12 @@ async def start_analysis():
 
     logger.debug("Going to run analysis.")
 
-    await run_recluster_analysis()
     run_analysis()
 
     analysis_end = datetime.now()
 
     logger.debug("Going to run vehicle analysis.")
-    #await run_vehicle_analysis()
+    await run_vehicle_analysis()
     vehicle_analysis_end = datetime.now()
 
 
