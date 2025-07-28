@@ -51,7 +51,8 @@ def remove_old_data():
                 cur.execute("DELETE FROM delay.preprocess_clusters WHERE oday < now() - interval '12 month'")
                 cur.execute("DELETE FROM delay.preprocess_departures WHERE oday < now() - interval '12 month'")
                 cur.execute("DELETE FROM delay.recluster_routes WHERE createdAt < now() - interval '12 month'")
-                cur.execute("DELETE FROM delay.recluster_modes WHERE createdAt < now() - interval '12 month'")
+                # TODO: add createdAt for recluster_modes
+                #cur.execute("DELETE FROM delay.recluster_modes WHERE createdAt < now() - interval '12 month'")
 
 
     except psycopg2.OperationalError:
