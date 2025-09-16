@@ -100,32 +100,25 @@ COMMENT ON VIEW api.view_jore_stop_4326 IS
 'Returns all jore_stops as GeoJSON features';
 
 CREATE VIEW api.view_stop_median_4326 AS (
-  WITH selected_cols AS (
-    SELECT
-      sm.stop_id,
-      sm.from_date,
-      sm.n_stop_known,
-      sm.n_stop_guessed,
-      sm.n_stop_null_near,
-      sm.dist_to_jore_point_m,
-      sm.observation_route_dirs,
-      sm.result_class,
-      sm.recommended_min_radius_m,
-      sm.manual_acceptance_needed,
-      json_agg(
-        json_build_object(
-          'percentile', pr.percentile,
-          'radius_m', pr.radius_m,
-          'n_observations', pr.n_observations
+ WITH selected_cols AS (
+         SELECT sm.stop_id,
+            sm.from_date,
+            sm.n_stop_known,
+            sm.n_stop_guessed,
+            sm.n_stop_null_near,
+            sm.dist_to_jore_point_m,
+            sm.observation_route_dirs,
+            sm.result_class,
+            sm.recommended_min_radius_m,
+            sm.manual_acceptance_needed,
+            json_agg(json_build_object('percentile', pr.percentile, 'radius_m', pr.radius_m, 'n_observations', pr.n_observations)) AS percentile_radii_list,
+            st_transform(sm.geom, 4326) AS geom
+           FROM stopcorr.stop_median sm
+             LEFT JOIN stopcorr.percentile_radii pr ON sm.stop_id = pr.stop_id
+          GROUP BY sm.stop_id
         )
-      ) as percentile_radii_list,
-      ST_Transform(sm.geom, 4326) as geometry
-     FROM stopcorr.stop_median sm
-     LEFT JOIN stopcorr.percentile_radii pr ON sm.stop_id = pr.stop_id
-     GROUP BY sm.stop_id
-  )
-  SELECT cast(ST_AsGeoJSON(sc.*) AS json)
-  FROM selected_cols AS sc
+ SELECT json_build_object('type', 'Feature', 'geometry', st_asgeojson(sc.geom)::json, 'properties', to_jsonb(sc.*) - 'geom'::text) AS st_asgeojson
+   FROM selected_cols sc;
 );
 COMMENT ON VIEW api.view_stop_median_4326 IS
 'Returns all stop_medians as GeoJSON features';
