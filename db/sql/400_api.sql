@@ -93,7 +93,7 @@ CREATE VIEW api.view_jore_stop_4326 AS (
            FROM jore.jore_stop js
         )
  SELECT json_build_object('type', 'Feature', 'geometry', st_asgeojson(sc.geometry)::json, 'properties', to_jsonb(sc.*) - 'geometry'::text) AS st_asgeojson
-   FROM selected_cols sc;
+   FROM selected_cols sc
 );
 COMMENT ON VIEW api.view_jore_stop_4326 IS
 'Returns all jore_stops as GeoJSON features';
@@ -117,7 +117,7 @@ CREATE VIEW api.view_stop_median_4326 AS (
           GROUP BY sm.stop_id
         )
  SELECT json_build_object('type', 'Feature', 'geometry', st_asgeojson(sc.geom)::json, 'properties', to_jsonb(sc.*) - 'geom'::text) AS st_asgeojson
-   FROM selected_cols sc;
+   FROM selected_cols sc
 );
 COMMENT ON VIEW api.view_stop_median_4326 IS
 'Returns all stop_medians as GeoJSON features';
@@ -133,7 +133,7 @@ CREATE VIEW api.view_observation_4326 AS (
            FROM stopcorr.observation o
         )
  SELECT json_build_object('type', 'Feature', 'geometry', st_asgeojson(sc.geometry)::json, 'properties', to_jsonb(sc.*) - 'geometry'::text) AS st_asgeojson
-   FROM selected_cols sc;
+   FROM selected_cols sc
 );
 COMMENT ON VIEW api.view_observation_4326 IS
 'Returns all observations as GeoJSON features';
