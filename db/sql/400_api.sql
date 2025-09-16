@@ -156,17 +156,22 @@ RETURNS setof json as $$
       found_ob_stops.event,
       found_ob_stops.dist_to_jore_point_m,
       found_ob_stops.dist_to_median_point_m,
-      ST_Transform(found_ob_stops.geom, 4326) as geometry
+      ST_Transform(found_ob_stops.geom, 4326) AS geometry
     FROM jore.jore_stop js
     INNER JOIN LATERAL (
-      SELECT * FROM stopcorr.observation AS ob
-      WHERE ob.stop_id IS NULL AND
-      ST_DWithin(ob.geom, js.geom, $2)
-    ) as found_ob_stops
-    ON true
+      SELECT *
+      FROM stopcorr.observation AS ob
+      WHERE ob.stop_id IS NULL
+        AND ST_DWithin(ob.geom, js.geom, $2)
+    ) AS found_ob_stops
+      ON TRUE
     WHERE js.stop_id = $1
   )
-  SELECT cast(ST_AsGeoJSON(sc.*) AS json)
+  SELECT json_build_object(
+           'type',       'Feature',
+           'geometry',   ST_AsGeoJSON(sc.geometry)::json,
+           'properties', to_jsonb(sc) - 'geometry'
+         )::json
   FROM selected_cols AS sc;
 $$ LANGUAGE SQL STABLE;
 COMMENT ON FUNCTION api.get_observations_with_null_stop_id_4326 IS
