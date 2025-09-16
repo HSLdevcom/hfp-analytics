@@ -124,18 +124,17 @@ COMMENT ON VIEW api.view_stop_median_4326 IS
 'Returns all stop_medians as GeoJSON features';
 
 CREATE VIEW api.view_observation_4326 AS (
-  WITH selected_cols AS (
-    SELECT
-      stop_id,
-      stop_id_guessed,
-      event,
-      dist_to_jore_point_m,
-      dist_to_median_point_m,
-      ST_Transform(geom, 4326) as geometry
-     FROM stopcorr.observation
-  )
-  SELECT cast(ST_AsGeoJSON(sc.*) AS json)
-  FROM selected_cols AS sc
+ WITH selected_cols AS (
+         SELECT o.stop_id,
+            o.stop_id_guessed,
+            o.event,
+            o.dist_to_jore_point_m,
+            o.dist_to_median_point_m,
+            st_transform(o.geom, 4326) AS geometry
+           FROM stopcorr.observation o
+        )
+ SELECT json_build_object('type', 'Feature', 'geometry', st_asgeojson(sc.geometry)::json, 'properties', to_jsonb(sc.*) - 'geometry'::text) AS st_asgeojson
+   FROM selected_cols sc;
 );
 COMMENT ON VIEW api.view_observation_4326 IS
 'Returns all observations as GeoJSON features';
