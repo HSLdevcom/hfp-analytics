@@ -81,20 +81,19 @@ CREATE OR REPLACE VIEW api.view_as_original_tlp_event AS (
 
 
 CREATE VIEW api.view_jore_stop_4326 AS (
-  WITH selected_cols AS (
-    SELECT
-      stop_id,
-      stop_code,
-      stop_name,
-      parent_station,
-      stop_mode,
-      route_dirs_via_stop,
-      date_imported,
-      ST_Transform(geom, 4326) as geometry
-     FROM jore.jore_stop
-  )
-  SELECT cast(ST_AsGeoJSON(sc.*) AS json)
-  FROM selected_cols AS sc
+ WITH selected_cols AS (
+         SELECT js.stop_id,
+            js.stop_code,
+            js.stop_name,
+            js.parent_station,
+            js.stop_mode,
+            js.route_dirs_via_stop,
+            js.date_imported,
+            st_transform(js.geom, 4326) AS geometry
+           FROM jore.jore_stop js
+        )
+ SELECT json_build_object('type', 'Feature', 'geometry', st_asgeojson(sc.geometry)::json, 'properties', to_jsonb(sc.*) - 'geometry'::text) AS st_asgeojson
+   FROM selected_cols sc;
 );
 COMMENT ON VIEW api.view_jore_stop_4326 IS
 'Returns all jore_stops as GeoJSON features';
