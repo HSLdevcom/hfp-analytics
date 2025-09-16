@@ -180,10 +180,22 @@ COMMENT ON FUNCTION api.get_observations_with_null_stop_id_4326 IS
 CREATE OR REPLACE FUNCTION api.get_percentile_circles_with_stop_id(stop_id int)
 RETURNS setof json as $$
   WITH selected_cols AS (
-    SELECT * FROM stopcorr.view_percentile_circles pc WHERE pc.stop_id = $1
+    SELECT
+      pc.stop_id,
+      pc.percentile,
+      pc.radius_m,
+      pc.n_observations,
+      ST_Transform(pc.geom, 4326) AS geom
+    FROM stopcorr.view_percentile_circles pc
+    WHERE pc.stop_id = $1
   )
-  SELECT cast(ST_AsGeoJSON(sc.*) AS json)
-  FROM selected_cols AS sc;
+  SELECT json_build_object(
+           'type', 'Feature',
+           'geometry',  ST_AsGeoJSON(sc.geom)::json,
+           'properties', to_jsonb(sc) - 'geom'
+         )::json AS st_asgeojson
+  FROM selected_cols sc
+  ORDER BY sc.percentile;
 $$ LANGUAGE SQL STABLE;
 COMMENT ON FUNCTION api.get_percentile_circles_with_stop_id IS
 'Returns percentile circles around given stop_id as GeoJSON features';
