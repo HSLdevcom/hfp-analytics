@@ -7,7 +7,9 @@ from datetime import date
 from psycopg2 import sql
 from common.config import POSTGRES_CONNECTION_STRING, DIGITRANSIT_APIKEY
 
-GRAPHQL_URL = 'https://api.digitransit.fi/routing/v1/routers/hsl/index/graphql'
+
+GRAPHQL_URL = 'https://api.digitransit.fi/routing/v2/hsl/gtfs/v1'
+
 
 def create_query(query_type):
     assert query_type in ('stops', 'stations')
