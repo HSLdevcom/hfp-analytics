@@ -110,7 +110,7 @@ async def get_stop_medians(
     response_model=HFPStopPointFeatureCollection,
 )
 async def get_hfp_points(
-    stop_id: int = Path(title="Stop ID", description="JORE ID of the stop.", example=1140439)
+    stop_id: int = Path(title="Stop ID", description="JORE ID of the stop.", example=6150219)
 ) -> JSONResponse:
     stop_id_observations = await get_stop_observations(stop_id)
     null_observations = await get_null_observations_for_stop(stop_id)  # possibility to parametrize radius for search
