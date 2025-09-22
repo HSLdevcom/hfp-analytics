@@ -65,8 +65,7 @@ async def get_stop_observations(stop_id: int) -> List[Tuple]:
         async with conn.cursor() as cur:
             await cur.execute(
                 """
-                SELECT * FROM api.view_observation_4326
-                WHERE CAST(st_asgeojson -> 'properties' ->> 'stop_id' as INTEGER) = %(stop_id)s
+                SELECT api.get_observation_4326(%(stop_id)s)
                 """,
                 {"stop_id": stop_id},
             )
