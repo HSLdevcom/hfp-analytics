@@ -1,14 +1,14 @@
-""" Module contains db queries for importer """
+"""Module contains db queries for importer"""
+
+import io
+import logging
 from collections.abc import Iterable
 from datetime import datetime
-import logging
-import io
 
+import common.constants as constants
+from common.config import POSTGRES_CONNECTION_STRING
 from psycopg import sql
 from psycopg_pool import ConnectionPool  # todo: refactor to use common.database pool
-
-from common.config import POSTGRES_CONNECTION_STRING
-import common.constants as constants
 
 from .schemas import DBSchema
 
@@ -35,7 +35,9 @@ def create_db_lock() -> bool:
                     )
                     return False
 
-                cur.execute("SELECT pg_advisory_lock(%s)", (constants.IMPORTER_LOCK_ID,))
+                cur.execute(
+                    "SELECT pg_advisory_lock(%s)", (constants.IMPORTER_LOCK_ID,)
+                )
     except Exception:
         logger.exception("Error when creating locks for importer.")
         return False
@@ -78,7 +80,10 @@ def is_blob_listed(blob_name: str) -> bool:
     """Returns true if the blob is found in the table."""
     with pool.connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT EXISTS( SELECT 1 FROM importer.blob WHERE name = %s )", (blob_name,))
+            cur.execute(
+                "SELECT EXISTS( SELECT 1 FROM importer.blob WHERE name = %s )",
+                (blob_name,),
+            )
             res = cur.fetchone()
 
     exists_in_list = res[0] if res else False
@@ -162,7 +167,9 @@ def pickup_blobs_for_import() -> list:
     return blob_names
 
 
-def copy_data_to_db(db_schema: DBSchema, data_rows: Iterable[dict], invalid_blob: bool = False) -> None:
+def copy_data_to_db(
+    db_schema: DBSchema, data_rows: Iterable[dict], invalid_blob: bool = False
+) -> None:
     """Copy data from storage downloader to db staging table,
     and call procedures to move data from staging to the master storage."""
     with pool.connection() as conn:
@@ -179,7 +186,9 @@ def copy_data_to_db(db_schema: DBSchema, data_rows: Iterable[dict], invalid_blob
 
             # Create a copy statement from selected field list
             # FORMAT and NULL can be used with copy.write(), do not use if changed to copy.write_row()
-            copy_query = sql.SQL("COPY {schema}.{table} ({fields}) FROM STDIN (FORMAT TEXT, NULL '')").format(
+            copy_query = sql.SQL(
+                "COPY {schema}.{table} ({fields}) FROM STDIN (FORMAT TEXT, NULL '')"
+            ).format(
                 schema=sql.Identifier(db_schema["copy_target"]["schema"]),
                 table=sql.Identifier(db_schema["copy_target"]["table"]),
                 fields=sql.SQL(",").join([sql.Identifier(f) for f in db_field_names]),
@@ -204,7 +213,10 @@ def copy_data_to_db(db_schema: DBSchema, data_rows: Iterable[dict], invalid_blob
 
                 # Construct a data row as a string to be copied.
                 # None will be converted as empty string "" instead of "None"
-                data_stream.write("\t".join([str(row[f]) if row[f] else "" for f in raw_field_names]) + "\n")
+                data_stream.write(
+                    "\t".join([str(row[f]) if row[f] else "" for f in raw_field_names])
+                    + "\n"
+                )
 
             # Copy data as chunks
             data_stream.seek(0)
@@ -214,7 +226,9 @@ def copy_data_to_db(db_schema: DBSchema, data_rows: Iterable[dict], invalid_blob
                     copy.write(data)
 
             if invalid_row_count > 0:
-                logger.error(f"Unique key error count for the blob: {invalid_row_count}")
+                logger.error(
+                    f"Unique key error count for the blob: {invalid_row_count}"
+                )
 
             # Move data from staging to persistent storage
             if not invalid_blob:

@@ -1,13 +1,13 @@
 """HFP Analytics data importer"""
-import azure.functions as func
 
 import logging
 from datetime import datetime
 
+import azure.functions as func
 from common.logger_util import CustomDbLogHandler
-from .run_analysis import run_analysis, run_vehicle_analysis
-from .remove_old_data import remove_old_data
 
+from .remove_old_data import remove_old_data
+from .run_analysis import run_analysis, run_vehicle_analysis
 
 logger = logging.getLogger("importer")
 

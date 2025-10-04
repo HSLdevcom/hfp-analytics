@@ -1,20 +1,24 @@
 """HFP Analytics REST API"""
+
 import os
 from typing import Optional
+
 import azure.functions as func
-from fastapi import FastAPI, Query, Depends
-from fastapi.responses import HTMLResponse
+from common.config import BUILD_VERSION
+from fastapi import Depends, FastAPI, Query
 from fastapi.openapi.docs import (
     get_redoc_html,
     get_swagger_ui_html,
 )
+from fastapi.responses import HTMLResponse
 
-from common.config import BUILD_VERSION
-from api.routers import hfp, apc, stops, journeys, vehicles
+from api.routers import apc, hfp, journeys, stops, vehicles
 
 
 async def verify_api_code(
-    code: Optional[str] = Query(default=os.getenv("DEFAULT_AUTH_CODE", ""), description="Authentication code")
+    code: Optional[str] = Query(
+        default=os.getenv("DEFAULT_AUTH_CODE", ""), description="Authentication code"
+    ),
 ):
     pass
 
@@ -26,22 +30,38 @@ app = FastAPI(
     "The documentation of HFP schema is here: "
     "<a href=https://digitransit.fi/en/developers/apis/4-realtime-api/vehicle-positions/ > "
     "https://digitransit.fi/en/developers/apis/4-realtime-api/vehicle-positions/  </a>",
-    contact={"name": "HSL Analytics", "url": "https://github.com/HSLdevcom/hfp-analytics"},
-    license_info={"name": "MIT License", "url": "https://github.com/HSLdevcom/hfp-analytics/blob/main/LICENSE"},
+    contact={
+        "name": "HSL Analytics",
+        "url": "https://github.com/HSLdevcom/hfp-analytics",
+    },
+    license_info={
+        "name": "MIT License",
+        "url": "https://github.com/HSLdevcom/hfp-analytics/blob/main/LICENSE",
+    },
     openapi_tags=[
         {"name": "HFP data", "description": "API to query raw HFP data."},
-        {"name": "Journey analytics data", "description": "API to query analytics data of journeys."},
-        {"name": "Stop analytics data", "description": "API to query analytics data of stops."},
+        {
+            "name": "Journey analytics data",
+            "description": "API to query analytics data of journeys.",
+        },
+        {
+            "name": "Stop analytics data",
+            "description": "API to query analytics data of stops.",
+        },
     ],
     docs_url=None,
     redoc_url=None,
     responses={
-        401: {"description": "Unauthorized. API key (`code=`) was missing in request parameters."},
+        401: {
+            "description": "Unauthorized. API key (`code=`) was missing in request parameters."
+        },
         500: {
             "description": "Internal server error. Something went wrong in server-side in the request. "
             "This is a bug and should be reported to developers with details how this happened."
         },
-        504: {"description": "Gateway timeout. The query took too long to be accomplished."},
+        504: {
+            "description": "Gateway timeout. The query took too long to be accomplished."
+        },
     },
     dependencies=[Depends(verify_api_code)],
 )
