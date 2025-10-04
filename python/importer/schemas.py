@@ -1,5 +1,10 @@
 import json
-from typing import Callable, Optional, TypedDict  # TODO change optional to NotRequired after Python 3.11
+from typing import (  # TODO change optional to NotRequired after Python 3.11
+    Callable,
+    Optional,
+    TypedDict,
+)
+
 from psycopg.sql import SQL
 
 
@@ -8,7 +13,9 @@ class SchemaFields(TypedDict):
     # Order is guaranteed, so they are used with .keys() and .values() -methods
     mapping: dict[str, str]
     required: list[str]  # These are used for unique index
-    modifier_function: Optional[Callable[[dict], dict]]  # Function to map new fields based on others
+    modifier_function: Optional[
+        Callable[[dict], dict]
+    ]  # Function to map new fields based on others
 
 
 class StagingScripts(TypedDict):
@@ -36,7 +43,9 @@ def apc_row_modifier(row: dict) -> dict:
 
     door_counts = row.get("door_counts")
     if door_counts:
-        row["door_counts"] = json.dumps(door_counts)  # Door counts is json, that should be inserted as text
+        row["door_counts"] = json.dumps(
+            door_counts
+        )  # Door counts is json, that should be inserted as text
 
     # Convert dir and countquality which are read as byte format
     dir = row.get("dir")

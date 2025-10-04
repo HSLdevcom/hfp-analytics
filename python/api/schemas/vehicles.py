@@ -15,7 +15,9 @@ class VehicleAnalysisObject(BaseModel):
     vehicle_number: int = Field(description="Analyzed vehicle's number.")
     operator_id: int = Field(description="Operator id of the analyzed vehicle.")
     date: datetime.date = Field(description="Date of analyzed data for vehicle.")
-    events_amount: PositiveInt = Field(description="Total amount of all analyzed events for the vehicle.")
+    events_amount: PositiveInt = Field(
+        description="Total amount of all analyzed events for the vehicle."
+    )
 
 
 class VehiclePositionAnalysisObject(VehicleAnalysisObject):
@@ -88,5 +90,9 @@ class VehicleAnalysis(BaseModel, Generic[AnalysisModelType]):
 VehiclePositionAnalysis = create_model(
     "VehiclePositionAnalysis", __base__=VehicleAnalysis[VehiclePositionAnalysisObject]
 )
-VehicleDoorsAnalysis = create_model("VehicleDoorsAnalysis", __base__=VehicleAnalysis[VehicleDoorsAnalysisObject])
-VehicleOdoAnalysis = create_model("VehicleOdoAnalysis", __base__=VehicleAnalysis[VehicleOdoAnalysisObject])
+VehicleDoorsAnalysis = create_model(
+    "VehicleDoorsAnalysis", __base__=VehicleAnalysis[VehicleDoorsAnalysisObject]
+)
+VehicleOdoAnalysis = create_model(
+    "VehicleOdoAnalysis", __base__=VehicleAnalysis[VehicleOdoAnalysisObject]
+)

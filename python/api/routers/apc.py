@@ -1,17 +1,14 @@
-""" Routes for /hfp endpoint """
+"""Routes for /hfp endpoint"""
 
-import io
-import gzip
-from typing import Optional
-from datetime import datetime, timezone, timedelta
-
-import time
 import logging
-from common.logger_util import CustomDbLogHandler
+import time
+from datetime import datetime, timedelta, timezone
+from typing import Optional
 
+from common.logger_util import CustomDbLogHandler
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 
 from api.services.apc import get_apc_data
 
@@ -30,7 +27,8 @@ async def get_apc_raw_data(
     route_id: Optional[str] = Query(
         default=None,
         title="Route ID",
-        description="JORE ID of the route. " "**Required** when no `operator_id` and `vehicle_number` provided.",
+        description="JORE ID of the route. "
+        "**Required** when no `operator_id` and `vehicle_number` provided.",
         example="2550",
     ),
     operator_id: Optional[int] = Query(
@@ -84,7 +82,7 @@ async def get_apc_raw_data(
     Get apc data in json format filtered by parameters.
     """
     with CustomDbLogHandler("api"):
-        fetch_start_time = time.time()
+        time.time()
         logger.debug(
             f"Fetching raw apc data. route_id: {route_id}, operator_id: {operator_id}, "
             f"veh: {vehicle_number}, from_tst: {from_tst}, to_tst: {to_tst}"
@@ -92,7 +90,9 @@ async def get_apc_raw_data(
 
         if not route_id and not (operator_id and vehicle_number):
             logger.error("Missing required parameters.")
-            raise HTTPException(400, detail="Either route_id or oper and veh -parameters are required!")
+            raise HTTPException(
+                400, detail="Either route_id or oper and veh -parameters are required!"
+            )
 
         # Set to_tst default 24 hours
         if not to_tst:
@@ -103,6 +103,8 @@ async def get_apc_raw_data(
         from_tst = from_tst.replace(tzinfo=tzone)
         to_tst = to_tst.replace(tzinfo=tzone)
 
-        data = await get_apc_data(route_id, operator_id, vehicle_number, from_tst, to_tst)
+        data = await get_apc_data(
+            route_id, operator_id, vehicle_number, from_tst, to_tst
+        )
 
         return JSONResponse(content=jsonable_encoder(data))

@@ -2,11 +2,13 @@
 Services related to /hfp data endpoint
 """
 
-from io import BytesIO
 from datetime import datetime
-from psycopg.rows import dict_row
-from common.database import pool
+from io import BytesIO
 from typing import Optional
+
+from common.database import pool
+from psycopg.rows import dict_row
+
 
 async def get_tlp_data(
     route_id: Optional[str],
@@ -21,7 +23,7 @@ async def get_tlp_data(
     Query tlp raw data filtered by parameters and return as CSV or JSON.
     """
 
-    query = f"""
+    query = """
         COPY (
             SELECT
                 *
@@ -55,6 +57,7 @@ async def get_tlp_data(
                 row_count += 1
                 stream.write(row)
         return row_count
+
 
 async def get_tlp_data_as_json(
     route_id: Optional[str],
@@ -90,7 +93,3 @@ async def get_tlp_data_as_json(
             )
             data = await cur.fetchall()
     return data
-
-
-
-

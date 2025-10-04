@@ -1,12 +1,14 @@
 # Call db server-side COPY to import HFP events from csv.
 
-import psycopg2
 from datetime import datetime
+
+import psycopg2
 from common.config import POSTGRES_CONNECTION_STRING
+
 
 def main():
     starttime = datetime.now()
-    print(f'[{starttime}] Importing HFP events to database')
+    print(f"[{starttime}] Importing HFP events to database")
 
     conn = psycopg2.connect(POSTGRES_CONNECTION_STRING)
     try:
@@ -15,7 +17,8 @@ def main():
                 cur.execute(
                     "CREATE TEMPORARY TABLE _import ( \
                     LIKE stopcorr.observation) \
-                    ON COMMIT DROP")
+                    ON COMMIT DROP"
+                )
                 cur.execute(
                     "COPY _import (\
                     tst,event,oper,veh,route,dir,oday,start,stop_id,long,lat) \
@@ -23,7 +26,7 @@ def main():
                     CSV HEADER"
                 )
                 cur.execute("SELECT count(1) FROM _import")
-                print(f'{cur.fetchone()[0]} events read')
+                print(f"{cur.fetchone()[0]} events read")
                 cur.execute(
                     "UPDATE _import\
                     SET stop_id_guessed = false\
@@ -39,11 +42,12 @@ def main():
                     RETURNING 1 ) \
                     SELECT count(1) FROM inserted"
                 )
-                print(f'{cur.fetchone()[0]} events imported')
+                print(f"{cur.fetchone()[0]} events imported")
                 endtime = datetime.now()
-                print(f'[{endtime}] HFP events imported in {endtime-starttime}')
+                print(f"[{endtime}] HFP events imported in {endtime - starttime}")
     finally:
         conn.close()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

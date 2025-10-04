@@ -1,5 +1,7 @@
 """GeoJSON models"""
+
 from typing import Dict, Generic, List, Literal, Optional, TypeVar
+
 from pydantic import BaseModel, Field
 
 GeoJSONPropertyModelType = TypeVar("GeoJSONPropertyModelType")
@@ -24,15 +26,21 @@ class PointGeometry(Geometry):
 
 class PolygonGeometry(Geometry):
     type: Literal["Polygon"]
-    coordinates: List[List[float]] = Field(examples=[[[384792, 6673806], [384678, 6673810], [384880, 6673826]]])
+    coordinates: List[List[float]] = Field(
+        examples=[[[384792, 6673806], [384678, 6673810], [384880, 6673826]]]
+    )
 
 
-class GeoJSONFeature(BaseModel, Generic[GeoJSONPropertyModelType, GeoJSONGeometryModelType]):
+class GeoJSONFeature(
+    BaseModel, Generic[GeoJSONPropertyModelType, GeoJSONGeometryModelType]
+):
     type: Literal["Feature"]
     geometry: GeoJSONGeometryModelType
     properties: GeoJSONPropertyModelType
 
 
-class GeoJSONFeatureCollection(BaseModel, Generic[GeoJSONPropertyModelType, GeoJSONGeometryModelType]):
+class GeoJSONFeatureCollection(
+    BaseModel, Generic[GeoJSONPropertyModelType, GeoJSONGeometryModelType]
+):
     type: Literal["FeatureCollection"]
     features: List[GeoJSONFeature[GeoJSONPropertyModelType, GeoJSONGeometryModelType]]

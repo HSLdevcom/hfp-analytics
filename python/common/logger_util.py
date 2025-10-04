@@ -2,10 +2,15 @@ import logging
 import traceback
 
 import psycopg2
-from psycopg2 import sql
 import requests
+from psycopg2 import sql
 
-from common.config import ENVIRONMENT, POSTGRES_CONNECTION_STRING, SLACK_WEBHOOK_URL, SLACK_USERS_TO_ALERT
+from common.config import (
+    ENVIRONMENT,
+    POSTGRES_CONNECTION_STRING,
+    SLACK_USERS_TO_ALERT,
+    SLACK_WEBHOOK_URL,
+)
 
 SLACK_LOG_LEVEL = logging.INFO  # Do not log debug to slack
 SLACK_ALERT_LEVELS = ["CRITICAL", "ERROR"]  # Tag users in these log levels
@@ -62,9 +67,9 @@ class PostgresDBHandler(logging.Handler):
             self.sql_conn, self.sql_cursor = None, None
             print(f"Could not initialize PostgresDBHandler for logging: {err}")
         self.target_table = f"{function_name}_log"
-        self.query_template = sql.SQL("INSERT INTO logs.{table} (log_level, log_text) VALUES (%s, %s)").format(
-            table=sql.Identifier(self.target_table)
-        )
+        self.query_template = sql.SQL(
+            "INSERT INTO logs.{table} (log_level, log_text) VALUES (%s, %s)"
+        ).format(table=sql.Identifier(self.target_table))
 
     def emit(self, record):
         if not (self.sql_cursor and self.sql_conn):

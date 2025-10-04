@@ -1,33 +1,37 @@
-""" Routes for /stops endpoint """
+"""Routes for /stops endpoint"""
 
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query, Path
-from fastapi.responses import JSONResponse, PlainTextResponse
-from fastapi.encoders import jsonable_encoder
-
 from common.utils import tuples_to_feature_collection
+from fastapi import APIRouter, HTTPException, Path, Query
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse, PlainTextResponse
+
 from api.digitransit_import import main as run_digitransit_import
 from api.schemas.stops import (
+    HFPStopPointFeatureCollection,
     JoreStopFeatureCollection,
     StopMedianFeatureCollection,
-    HFPStopPointFeatureCollection,
     StopMedianPercentileFeatureCollection,
 )
 from api.services.stops import (
-    get_stops,
-    is_stops_table_empty,
     get_medians,
-    is_stop_medians_table_empty,
-    get_stop_observations,
     get_null_observations_for_stop,
     get_percentiles,
+    get_stop_observations,
+    get_stops,
+    is_stop_medians_table_empty,
+    is_stops_table_empty,
 )
 
 router = APIRouter(
     prefix="/stops",
     tags=["Stop analytics data"],
-    responses={"404": {"description": "Not found. JORE stops not found on database with the given id, or at all."}},
+    responses={
+        "404": {
+            "description": "Not found. JORE stops not found on database with the given id, or at all."
+        }
+    },
 )
 
 
@@ -58,15 +62,21 @@ async def get_jore_stops(
         title="Stop ID",
         description="JORE ID of the stop used to get only one specific stop.",
         example=1140439,
-    )
+    ),
 ) -> JSONResponse:
     stops = await get_stops(stop_id)
 
     if len(stops) == 0:
         if await is_stops_table_empty():
-            raise HTTPException(status_code=404, detail="Have you ran Jore & HFP data imports and then analysis?")
+            raise HTTPException(
+                status_code=404,
+                detail="Have you ran Jore & HFP data imports and then analysis?",
+            )
         else:
-            raise HTTPException(status_code=404, detail=f"Did not find stop with given stop_id: {stop_id}")
+            raise HTTPException(
+                status_code=404,
+                detail=f"Did not find stop with given stop_id: {stop_id}",
+            )
 
     data = tuples_to_feature_collection(geom_tuples=stops)
     return JSONResponse(content=jsonable_encoder(data))
@@ -86,15 +96,21 @@ async def get_stop_medians(
         title="Stop ID",
         description="JORE ID of the stop used to get only one specific stop.",
         example=1140439,
-    )
+    ),
 ) -> JSONResponse:
     stop_medians = await get_medians(stop_id)
 
     if len(stop_medians) == 0:
         if await is_stop_medians_table_empty():
-            raise HTTPException(status_code=404, detail="Have you ran Jore & HFP data imports and then analysis?")
+            raise HTTPException(
+                status_code=404,
+                detail="Have you ran Jore & HFP data imports and then analysis?",
+            )
         else:
-            raise HTTPException(status_code=404, detail=f"Did not find stop median with given stop_id: {stop_id}")
+            raise HTTPException(
+                status_code=404,
+                detail=f"Did not find stop median with given stop_id: {stop_id}",
+            )
 
     data = tuples_to_feature_collection(geom_tuples=stop_medians)
     return JSONResponse(content=jsonable_encoder(data))
@@ -110,14 +126,20 @@ async def get_stop_medians(
     response_model=HFPStopPointFeatureCollection,
 )
 async def get_hfp_points(
-    stop_id: int = Path(title="Stop ID", description="JORE ID of the stop.", example=6150219)
+    stop_id: int = Path(
+        title="Stop ID", description="JORE ID of the stop.", example=6150219
+    ),
 ) -> JSONResponse:
     stop_id_observations = await get_stop_observations(stop_id)
-    null_observations = await get_null_observations_for_stop(stop_id)  # possibility to parametrize radius for search
+    null_observations = await get_null_observations_for_stop(
+        stop_id
+    )  # possibility to parametrize radius for search
     total_observations = stop_id_observations + null_observations
 
     if len(total_observations) == 0:
-        raise HTTPException(status_code=404, detail=f"Did not find hfp data for given stop: {stop_id}")
+        raise HTTPException(
+            status_code=404, detail=f"Did not find hfp data for given stop: {stop_id}"
+        )
 
     data = tuples_to_feature_collection(geom_tuples=total_observations)
     return JSONResponse(content=jsonable_encoder(data))
@@ -132,7 +154,9 @@ async def get_hfp_points(
     response_model=StopMedianPercentileFeatureCollection,
 )
 async def get_percentile_circles(
-    stop_id: int = Path(title="Stop ID", description="JORE ID of the stop.", example=1140439)
+    stop_id: int = Path(
+        title="Stop ID", description="JORE ID of the stop.", example=1140439
+    ),
 ) -> JSONResponse:
     percentile_circles = await get_percentiles(stop_id)
     data = tuples_to_feature_collection(geom_tuples=percentile_circles)
