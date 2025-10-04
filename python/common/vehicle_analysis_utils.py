@@ -1,8 +1,6 @@
 import json
 import logging
-import logging as logger
 import os
-import time
 from collections import defaultdict
 from datetime import date, datetime, time, timedelta
 
@@ -206,8 +204,8 @@ def analyze_vehicle_door_data(vehicle_data):
 
         for d in data_list_sorted:
             drst = d.get("drst")
-            stop = d.get("stop")
-            spd = d.get("spd")
+            d.get("stop")
+            d.get("spd")
             utc = pytz.timezone("UTC")
             helsinki = pytz.timezone("Europe/Helsinki")
 
@@ -734,8 +732,8 @@ async def insert_vehicle_data(vehicle_data):
             for data in vehicle_data:
                 if "date" not in data or "vehicle_number" not in data:
                     continue
-                vehicleDate = data["date"]
-                vehicleNumber = data["vehicle_number"]
+                data["date"]
+                data["vehicle_number"]
                 try:
                     await cur.execute(
                         "INSERT INTO hfp.vehicle_analysis "

@@ -158,7 +158,7 @@ async def get_hfp_raw_data(
         from_tst, to_tst = set_timezone(from_tst, tz), set_timezone(to_tst, tz)
 
         # Set timestamp information
-        tzone = timezone(timedelta(hours=tz))
+        timezone(timedelta(hours=tz))
 
         row_count = await get_hfp_data(
             route_id,
@@ -318,7 +318,7 @@ async def get_tlp_raw_data(
         else:
             input_stream = io.BytesIO()
             output_stream = io.BytesIO()
-            row_count = await get_tlp_data(
+            await get_tlp_data(
                 route_id,
                 operator_id,
                 vehicle_number,

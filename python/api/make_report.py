@@ -76,13 +76,13 @@ def main():
 
         img_path = f"/qgis/out/main_{stop_id}.png"
         if os.path.exists(img_path):
-            pic = slide.placeholders[phi["main_map"]].insert_picture(img_path)
+            slide.placeholders[phi["main_map"]].insert_picture(img_path)
         else:
             print(f"{img_path} does not exist, skipping")
 
         img_path = f"/qgis/out/index_{stop_id}.png"
         if os.path.exists(img_path):
-            pic = slide.placeholders[phi["index_map"]].insert_picture(img_path)
+            slide.placeholders[phi["index_map"]].insert_picture(img_path)
         else:
             print(f"{img_path} does not exist, skipping")
 

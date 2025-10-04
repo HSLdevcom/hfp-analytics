@@ -40,7 +40,7 @@ def main():
     """
 
     dev_db_connection_string = os.getenv("DEV_DB_CONNECTION_STRING")
-    if is_dev_db_connection_string_ok(dev_db_connection_string) == False:
+    if not is_dev_db_connection_string_ok(dev_db_connection_string):
         return
 
     args = list(sys.argv)

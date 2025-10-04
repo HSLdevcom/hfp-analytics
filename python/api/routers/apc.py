@@ -82,7 +82,7 @@ async def get_apc_raw_data(
     Get apc data in json format filtered by parameters.
     """
     with CustomDbLogHandler("api"):
-        fetch_start_time = time.time()
+        time.time()
         logger.debug(
             f"Fetching raw apc data. route_id: {route_id}, operator_id: {operator_id}, "
             f"veh: {vehicle_number}, from_tst: {from_tst}, to_tst: {to_tst}"
