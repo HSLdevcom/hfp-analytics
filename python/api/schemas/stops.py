@@ -16,23 +16,36 @@ class StopModeEnum(str, Enum):
 
 
 class JoreStop(BaseModel):
-    stop_id: int = Field(title="Stop ID", description="Long stop ID", examples=["2222214"])
-    stop_code: str = Field(title="Stop code", description="Short stop ID", examples=["E2210"])
-    stop_name: str = Field(title="Stop name", description="Finnish name of the stop", examples=["Tekniikantie"])
+    stop_id: int = Field(
+        title="Stop ID", description="Long stop ID", examples=["2222214"]
+    )
+    stop_code: str = Field(
+        title="Stop code", description="Short stop ID", examples=["E2210"]
+    )
+    stop_name: str = Field(
+        title="Stop name",
+        description="Finnish name of the stop",
+        examples=["Tekniikantie"],
+    )
     parent_station: Optional[int] = Field(
         title="Parent station",
         description="JORE ID of the parent station / terminal, if exists.",
         examples=[1000001],
         default=None,
     )
-    stop_mode: StopModeEnum = Field(title="Stop mode", description="Type of vehicles using the stop", examples=["BUS"])
+    stop_mode: StopModeEnum = Field(
+        title="Stop mode",
+        description="Type of vehicles using the stop",
+        examples=["BUS"],
+    )
     route_dirs_via_stop: List[str] = Field(
         title="Routes via the stop",
         description="Routes that stops on the stop. The field includes the direction. `<route_id>-<direction_id>`.",
         examples=["1052-1", "2108N-2"],
     )
     date_imported: date = Field(
-        title="Import date", description="The date when the stop was imported last time to Analytics."
+        title="Import date",
+        description="The date when the stop was imported last time to Analytics.",
     )
 
 
@@ -44,14 +57,20 @@ class PercendileRadii(BaseModel):
         le=1,
         examples=[0.5],
     )
-    radius_m: PositiveFloat = Field(title="Radius", description="Radius size in meters.", examples=[5.764])
+    radius_m: PositiveFloat = Field(
+        title="Radius", description="Radius size in meters.", examples=[5.764]
+    )
     n_observations: PositiveInt = Field(
-        title="Observation count", description="Number of observations that the radius encloses.", examples=[340]
+        title="Observation count",
+        description="Number of observations that the radius encloses.",
+        examples=[340],
     )
 
 
 class StopMedian(BaseModel):
-    stop_id: int = Field(title="Stop ID", description="Long stop ID", examples=["2222214"])
+    stop_id: int = Field(
+        title="Stop ID", description="Long stop ID", examples=["2222214"]
+    )
     from_date: date = Field(
         title="Min date of observations",
         description="Minimum date of the observations of the stop used in analysis.",
@@ -84,10 +103,14 @@ class StopMedian(BaseModel):
         examples=["1052-1", "2108N-2"],
     )
     result_class: str = Field(
-        title="Result class", description="Result class for reporting.", examples=["Tarkista (ratikka)"]
+        title="Result class",
+        description="Result class for reporting.",
+        examples=["Tarkista (ratikka)"],
     )
     recommended_min_radius_m: PositiveFloat = Field(
-        title="Recommended radius", description="Recommended minimum stop radius for Jore in meters.", examples=[18.998]
+        title="Recommended radius",
+        description="Recommended minimum stop radius for Jore in meters.",
+        examples=[18.998],
     )
     manual_acceptance_needed: bool = Field(
         title="Manual acceptance needed",
@@ -101,25 +124,37 @@ class StopMedian(BaseModel):
 
 
 class StopMedianPercentile(BaseModel):
-    stop_id: int = Field(title="Stop ID", description="Long stop ID", examples=["2222214"])
-    percentile: float = Field(title="Percentile", description="Percentile value.", ge=0, le=1, examples=[0.75])
+    stop_id: int = Field(
+        title="Stop ID", description="Long stop ID", examples=["2222214"]
+    )
+    percentile: float = Field(
+        title="Percentile", description="Percentile value.", ge=0, le=1, examples=[0.75]
+    )
     radius_m: PositiveFloat = Field(
-        title="Radius of the percentile", description="Radius of the percentile in meters.", examples=[4.223]
+        title="Radius of the percentile",
+        description="Radius of the percentile in meters.",
+        examples=[4.223],
     )
     n_observations: PositiveInt = Field(
-        title="Number of observations", description="Number of observations covered by the percentile", examples=[4334]
+        title="Number of observations",
+        description="Number of observations covered by the percentile",
+        examples=[4334],
     )
 
 
 class HFPStopPoint(BaseModel):
-    stop_id: int = Field(title="Stop ID", description="Long stop ID", examples=["2222214"])
+    stop_id: int = Field(
+        title="Stop ID", description="Long stop ID", examples=["2222214"]
+    )
     stop_id_guessed: bool = Field(
         title="Stop ID is guessed",
         description="Boolean value wheather the stop id was found on HFP payload or guessed",
         examples=[False],
     )
     event: Literal["DOO", "DOC"] = Field(
-        title="HFP event type", description="Event type of the observation. Either `DOO` or `DOC`", examples=["DOO"]
+        title="HFP event type",
+        description="Event type of the observation. Either `DOO` or `DOC`",
+        examples=["DOO"],
     )
     dist_to_jore_point_m: PositiveFloat = Field(
         title="Distance to JORE",
@@ -134,14 +169,18 @@ class HFPStopPoint(BaseModel):
 
 
 JoreStopFeatureCollection = create_model(
-    "JoreStopFeatureCollection", __base__=GeoJSONFeatureCollection[JoreStop, PointGeometry]
+    "JoreStopFeatureCollection",
+    __base__=GeoJSONFeatureCollection[JoreStop, PointGeometry],
 )
 StopMedianFeatureCollection = create_model(
-    "StopMedianFeatureCollection", __base__=GeoJSONFeatureCollection[StopMedian, PointGeometry]
+    "StopMedianFeatureCollection",
+    __base__=GeoJSONFeatureCollection[StopMedian, PointGeometry],
 )
 StopMedianPercentileFeatureCollection = create_model(
-    "StopMedianPercentileFeatureCollection", __base__=GeoJSONFeatureCollection[StopMedianPercentile, PolygonGeometry]
+    "StopMedianPercentileFeatureCollection",
+    __base__=GeoJSONFeatureCollection[StopMedianPercentile, PolygonGeometry],
 )
 HFPStopPointFeatureCollection = create_model(
-    "HFPStopPointFeatureCollection", __base__=GeoJSONFeatureCollection[HFPStopPoint, PointGeometry]
+    "HFPStopPointFeatureCollection",
+    __base__=GeoJSONFeatureCollection[HFPStopPoint, PointGeometry],
 )

@@ -1,25 +1,27 @@
-""" Routes for /vehicles endpoint """
+"""Routes for /vehicles endpoint"""
 
 import csv
 import logging
 
-from typing import Optional
-
 # from starlette.responses import FileResponse
 from datetime import date
-from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import JSONResponse, FileResponse
-from fastapi.encoders import jsonable_encoder
-
 from itertools import chain
-
-from api.schemas.vehicles import VehiclePositionAnalysis, VehicleDoorsAnalysis, VehicleOdoAnalysis
+from typing import Optional
 
 from common.vehicle_analysis_utils import (
-    get_positioning_analysis_by_date,
     get_all_analysis_by_date,
     get_door_analysis_by_date,
     get_odo_analysis_by_date,
+    get_positioning_analysis_by_date,
+)
+from fastapi import APIRouter, HTTPException, Query
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import FileResponse, JSONResponse
+
+from api.schemas.vehicles import (
+    VehicleDoorsAnalysis,
+    VehicleOdoAnalysis,
+    VehiclePositionAnalysis,
 )
 
 # TODO: These should be set somewhere else. They are also used in vehicle_analysis_utils.py
@@ -45,10 +47,14 @@ ERROR_TYPES_TRANSLATIONS = {
 
 COMMON_QUERY_PARAMS = {
     "date": Query(
-        ..., title="Analysis date", description="The date of which analysis will be returned. Format YYYY-MM-DD"
+        ...,
+        title="Analysis date",
+        description="The date of which analysis will be returned. Format YYYY-MM-DD",
     ),
     "operator_id": Query(
-        default=None, title="Operator ID for analysis", description="HFP topic's operator id. Use without prefix zeros."
+        default=None,
+        title="Operator ID for analysis",
+        description="HFP topic's operator id. Use without prefix zeros.",
     ),
     "errors_only": Query(
         default=False,
@@ -62,7 +68,11 @@ logger = logging.getLogger("api")
 router = APIRouter(
     prefix="/vehicles",
     tags=["Vehicle analytics data"],
-    responses={"404": {"description": "Not found. Analysis is not available for selected date."}},
+    responses={
+        "404": {
+            "description": "Not found. Analysis is not available for selected date."
+        }
+    },
 )
 
 
@@ -90,7 +100,9 @@ async def get_vehicle_position_analysis(
     timerange_metadata = {"start": "00:00:00.000+00", "end": "11:59:00.000+00"}
     if is_current_date:
         # Analysis for current date disabled for now
-        raise HTTPException(status_code=404, detail="Analysis disabled for current date")
+        raise HTTPException(
+            status_code=404, detail="Analysis disabled for current date"
+        )
     else:
         analyzed_data = await get_positioning_analysis_by_date(date, operator_id)
 
@@ -128,12 +140,18 @@ async def get_vehicle_door_analysis(
     timerange_metadata = {"start": "00:00:00.000+00", "end": "11:59:00.000+00"}
     if is_current_date:
         # Analysis for current date disabled for now
-        raise HTTPException(status_code=404, detail="Analysis disabled for current date")
+        raise HTTPException(
+            status_code=404, detail="Analysis disabled for current date"
+        )
     else:
         analyzed_data = await get_door_analysis_by_date(date, operator_id)
 
     if errors_only:
-        analyzed_data = [vehicle for vehicle in analyzed_data if len(vehicle["door_error_events"]["types"]) > 0]
+        analyzed_data = [
+            vehicle
+            for vehicle in analyzed_data
+            if len(vehicle["door_error_events"]["types"]) > 0
+        ]
 
     analyzed_data = sorted(analyzed_data, key=lambda x: x["vehicle_number"])
     data = {
@@ -168,13 +186,19 @@ async def get_vehicle_odo_analysis(
     analyzed_data = []
     if is_current_date:
         # Analysis for current date disabled for now
-        raise HTTPException(status_code=404, detail="Analysis disabled for current date")
+        raise HTTPException(
+            status_code=404, detail="Analysis disabled for current date"
+        )
     else:
         analyzed_data = await get_odo_analysis_by_date(date, operator_id)
 
     if errors_only:
         return JSONResponse(content=jsonable_encoder(analyzed_data))
-        analyzed_data = [vehicle for vehicle in analyzed_data if len(vehicle["door_error_events"]["types"]) > 0]
+        analyzed_data = [
+            vehicle
+            for vehicle in analyzed_data
+            if len(vehicle["door_error_events"]["types"]) > 0
+        ]
 
     analyzed_data = sorted(analyzed_data, key=lambda x: x["vehicle_number"])
     data = {
@@ -206,7 +230,9 @@ async def get_vehicle_analysis_for_operator(
     analyzed_data = []
     if is_current_date:
         # Analysis for current date disabled for now
-        raise HTTPException(status_code=404, detail="Analysis disabled for current date")
+        raise HTTPException(
+            status_code=404, detail="Analysis disabled for current date"
+        )
     else:
         analyzed_data = await get_all_analysis_by_date(date, operator_id)
 
@@ -222,7 +248,13 @@ async def get_vehicle_analysis_for_operator(
     csv_filename = f"hfp-analysis-{date}.csv"
 
     with open(csv_filename, "w", newline="", encoding="utf-8") as csvfile:
-        fieldnames = ["Päivämäärä", "Operaattori", "Kylkinumero", "Havaittu ongelma", "Syyt"]
+        fieldnames = [
+            "Päivämäärä",
+            "Operaattori",
+            "Kylkinumero",
+            "Havaittu ongelma",
+            "Syyt",
+        ]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
 
@@ -242,12 +274,22 @@ async def get_vehicle_analysis_for_operator(
                 "Operaattori": item["operator_id"],
                 "Kylkinumero": item["vehicle_number"],
             }
-            if len(door_error_types) == 0 and len(odo_error_types) == 0 and len(loc_error_types) == 0:
-                row_data = {**common_data, "Havaittu ongelma": "Ei havaittu ongelmia", "Syyt": ""}
+            if (
+                len(door_error_types) == 0
+                and len(odo_error_types) == 0
+                and len(loc_error_types) == 0
+            ):
+                row_data = {
+                    **common_data,
+                    "Havaittu ongelma": "Ei havaittu ongelmia",
+                    "Syyt": "",
+                }
                 writer.writerow(row_data)
             else:
                 translated_error_types = []
-                for error_type in chain(door_error_types, odo_error_types, loc_error_types):
+                for error_type in chain(
+                    door_error_types, odo_error_types, loc_error_types
+                ):
                     translated_error_types.append(ERROR_TYPES_TRANSLATIONS[error_type])
                 error_types_str = ", ".join(translated_error_types)
                 detected_problems = []
@@ -258,7 +300,11 @@ async def get_vehicle_analysis_for_operator(
                 if len(loc_error_types) > 0:
                     detected_problems.append("Epäluotettava paikkatieto")
 
-                row_data = {**common_data, "Havaittu ongelma": detected_problems, "Syyt": error_types_str}
+                row_data = {
+                    **common_data,
+                    "Havaittu ongelma": detected_problems,
+                    "Syyt": error_types_str,
+                }
                 writer.writerow(row_data)
 
     return CsvFileResponse(csv_filename, filename=csv_filename)

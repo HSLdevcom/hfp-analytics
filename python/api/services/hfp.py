@@ -2,9 +2,9 @@
 Services related to /hfp data endpoint
 """
 
+from datetime import datetime
 from io import BytesIO
 from typing import Optional
-from datetime import datetime
 
 from common.database import pool
 
@@ -23,10 +23,10 @@ async def get_hfp_data(
     Return row count.
     """
     event_types_list = []
-    event_types_filter = "TRUE" 
-    
+    event_types_filter = "TRUE"
+
     if event_types:
-        event_types_list = event_types.split(',')
+        event_types_list = event_types.split(",")
         event_types_filter = "event_type = ANY(%(event_types_list)s)"
 
     query = f"""
@@ -64,6 +64,7 @@ async def get_hfp_data(
                 stream.write(row)
         return row_count
 
+
 async def get_speeding_data(
     route_id: int,
     min_spd: int,
@@ -76,7 +77,7 @@ async def get_speeding_data(
     stream: BytesIO,
 ):
     # Speed limit given in km/h. Convert to m/s
-    min_spd = min_spd / 3.6 
+    min_spd = min_spd / 3.6
 
     async with pool.connection() as conn:
         async with conn.cursor().copy(
@@ -116,4 +117,3 @@ async def get_speeding_data(
                 row_count += 1
                 stream.write(row)
         return row_count
-

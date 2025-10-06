@@ -1,18 +1,17 @@
-""" Routes for /hfp endpoint """
+"""Routes for /hfp endpoint"""
 
-import io
 import gzip
-from typing import Optional
-from datetime import datetime, timezone, timedelta
-from http import HTTPStatus
-
-import time
+import io
 import logging
-from common.logger_util import CustomDbLogHandler
+import time
+from datetime import datetime, timedelta, timezone
+from http import HTTPStatus
+from typing import Optional
 
+from common.logger_util import CustomDbLogHandler
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import Response, JSONResponse
 from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse, Response
 
 from api.services.hfp import get_hfp_data, get_speeding_data
 from api.services.tlp import get_tlp_data, get_tlp_data_as_json
@@ -21,11 +20,13 @@ logger = logging.getLogger("api")
 
 router = APIRouter(prefix="/hfp", tags=["HFP data"])
 
-CHUNK_SIZE = 10000 # Adjust to optimize if needed
+CHUNK_SIZE = 10000  # Adjust to optimize if needed
+
 
 def set_timezone(timestamp, tz_offset):
     tzone = timezone(timedelta(hours=tz_offset))
     return timestamp.replace(tzinfo=tzone)
+
 
 def create_filename(prefix, *args):
     identifiers = filter(None, args)
@@ -43,6 +44,7 @@ class GzippedFileResponse(Response):
             headers={"content-disposition": f'attachment; filename="{filename}"'},
         )
 
+
 @router.get(
     "/data",
     summary="Get HFP raw data",
@@ -56,7 +58,9 @@ class GzippedFileResponse(Response):
             "content": {"application/gzip": {"schema": None, "example": None}},
             "headers": {
                 "Content-Disposition": {
-                    "schema": {"example": 'attachment; filename="hfp-export_20230316_550_18_662.csv.gz"'}
+                    "schema": {
+                        "example": 'attachment; filename="hfp-export_20230316_550_18_662.csv.gz"'
+                    }
                 }
             },
         },
@@ -136,7 +140,12 @@ async def get_hfp_raw_data(
         if not route_id and not (operator_id and vehicle_number):
             logger.error("Missing required parameters.")
             raise HTTPException(
-                422, detail=[{"msg": "Either route_id or operator_id and vehicle_number -parameters are required!"}]
+                422,
+                detail=[
+                    {
+                        "msg": "Either route_id or operator_id and vehicle_number -parameters are required!"
+                    }
+                ],
             )
 
         # Input stream for csv data from database, output stream for compressed data
@@ -149,9 +158,17 @@ async def get_hfp_raw_data(
         from_tst, to_tst = set_timezone(from_tst, tz), set_timezone(to_tst, tz)
 
         # Set timestamp information
-        tzone = timezone(timedelta(hours=tz))
+        timezone(timedelta(hours=tz))
 
-        row_count = await get_hfp_data(route_id, operator_id, vehicle_number, event_types, from_tst, to_tst, input_stream)
+        row_count = await get_hfp_data(
+            route_id,
+            operator_id,
+            vehicle_number,
+            event_types,
+            from_tst,
+            to_tst,
+            input_stream,
+        )
 
         if row_count == 0:
             # No data was found, return no content response
@@ -161,20 +178,30 @@ async def get_hfp_raw_data(
 
         # Read as chunks to save memory
         input_stream.seek(0)
-        chunk_size = CHUNK_SIZE 
+        chunk_size = CHUNK_SIZE
 
         with gzip.GzipFile(fileobj=output_stream, mode="wb") as compressed_data_stream:
             while data := input_stream.read(chunk_size):
                 compressed_data_stream.write(data)
 
+        filename = create_filename(
+            "hfp-export_",
+            from_tst.strftime("%Y%m%d") if from_tst else None,
+            route_id,
+            operator_id,
+            vehicle_number,
+        )
 
-        filename = create_filename("hfp-export_", from_tst.strftime("%Y%m%d") if from_tst else None, route_id, operator_id, vehicle_number)
-
-        response = GzippedFileResponse(filename=filename, content=output_stream.getvalue())
+        response = GzippedFileResponse(
+            filename=filename, content=output_stream.getvalue()
+        )
 
         duration = time.time() - fetch_start_time
-        logger.debug(f"Hfp raw data fetch finished in {int(duration)} seconds. Exported file: {filename}")
+        logger.debug(
+            f"Hfp raw data fetch finished in {int(duration)} seconds. Exported file: {filename}"
+        )
         return response
+
 
 @router.get(
     "/tlp",
@@ -189,7 +216,9 @@ async def get_hfp_raw_data(
             "content": {"application/gzip": {"schema": None, "example": None}},
             "headers": {
                 "Content-Disposition": {
-                    "schema": {"example": 'attachment; filename="tlp-export_20240318_1003H6.csv.gz"'}
+                    "schema": {
+                        "example": 'attachment; filename="tlp-export_20240318_1003H6.csv.gz"'
+                    }
                 }
             },
         },
@@ -266,35 +295,62 @@ async def get_tlp_raw_data(
     """
     with CustomDbLogHandler("api"):
         fetch_start_time = time.time()
-        logger.debug(f"Fetching TLR & TLA data. route_id: {route_id}, operator_id: {operator_id}, "
-                     f"vehicle_number: {vehicle_number}, sid: {sid}, from_tst: {from_tst}, to_tst: {to_tst}")
+        logger.debug(
+            f"Fetching TLR & TLA data. route_id: {route_id}, operator_id: {operator_id}, "
+            f"vehicle_number: {vehicle_number}, sid: {sid}, from_tst: {from_tst}, to_tst: {to_tst}"
+        )
 
         if not route_id and not (operator_id and vehicle_number):
             logger.error("Missing required parameters.")
-            raise HTTPException(status_code=HTTPStatus.UNPROCESSABLE_ENTITY, detail="Either route_id or both operator_id and vehicle_number parameters are required!")
+            raise HTTPException(
+                status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
+                detail="Either route_id or both operator_id and vehicle_number parameters are required!",
+            )
 
         to_tst = to_tst or from_tst + timedelta(hours=24)
         from_tst, to_tst = set_timezone(from_tst, tz), set_timezone(to_tst, tz)
 
         if json:
-            data = await get_tlp_data_as_json(route_id, operator_id, vehicle_number, sid, from_tst, to_tst)
+            data = await get_tlp_data_as_json(
+                route_id, operator_id, vehicle_number, sid, from_tst, to_tst
+            )
             return JSONResponse(content=jsonable_encoder(data))
         else:
             input_stream = io.BytesIO()
             output_stream = io.BytesIO()
-            row_count = await get_tlp_data(route_id, operator_id, vehicle_number, sid, from_tst, to_tst, input_stream)
+            await get_tlp_data(
+                route_id,
+                operator_id,
+                vehicle_number,
+                sid,
+                from_tst,
+                to_tst,
+                input_stream,
+            )
 
             logger.debug("TLR & TLA data received. Compressing.")
 
             input_stream.seek(0)
-            with gzip.GzipFile(fileobj=output_stream, mode="wb") as compressed_data_stream:
-                for data in iter(lambda: input_stream.read(CHUNK_SIZE), b''):
+            with gzip.GzipFile(
+                fileobj=output_stream, mode="wb"
+            ) as compressed_data_stream:
+                for data in iter(lambda: input_stream.read(CHUNK_SIZE), b""):
                     compressed_data_stream.write(data)
 
-            filename = create_filename("tlp-export_", from_tst.strftime("%Y%m%d") if from_tst else None, route_id, operator_id, vehicle_number)
-            response = GzippedFileResponse(filename=filename, content=output_stream.getvalue())
+            filename = create_filename(
+                "tlp-export_",
+                from_tst.strftime("%Y%m%d") if from_tst else None,
+                route_id,
+                operator_id,
+                vehicle_number,
+            )
+            response = GzippedFileResponse(
+                filename=filename, content=output_stream.getvalue()
+            )
 
-            logger.debug(f"TLR & TLA raw data fetch and export completed in {int(time.time() - fetch_start_time)} seconds. Exported file: {filename}")
+            logger.debug(
+                f"TLR & TLA raw data fetch and export completed in {int(time.time() - fetch_start_time)} seconds. Exported file: {filename}"
+            )
             return response
 
 
@@ -311,7 +367,9 @@ async def get_tlp_raw_data(
             "content": {"application/gzip": {"schema": None, "example": None}},
             "headers": {
                 "Content-Disposition": {
-                    "schema": {"example": 'attachment; filename="speeding-export_20240915_20240923_2015_20.csv"'}
+                    "schema": {
+                        "example": 'attachment; filename="speeding-export_20240915_20240923_2015_20.csv"'
+                    }
                 }
             },
         },
@@ -390,26 +448,51 @@ async def get_speeding(
             "y_max": y_max,
         }
 
-        missing_params = [param_name for param_name, param_value in required_params.items() if param_value is None]
+        missing_params = [
+            param_name
+            for param_name, param_value in required_params.items()
+            if param_value is None
+        ]
 
         if missing_params:
             logger.error(f"Missing required parameters: {', '.join(missing_params)}")
             raise HTTPException(
                 status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
-                detail=f"The following parameters are missing: {', '.join(missing_params)}"
+                detail=f"The following parameters are missing: {', '.join(missing_params)}",
             )
-        logger.debug(f"Fetching speeding data. route_id: {route_id}, min_spd: {min_spd}, from_tst: {from_tst}, to_tst:{to_tst}")
-        data = await get_speeding_data(route_id, min_spd, from_tst, to_tst, x_min, y_min, x_max, y_max, input_stream)
+        logger.debug(
+            f"Fetching speeding data. route_id: {route_id}, min_spd: {min_spd}, from_tst: {from_tst}, to_tst:{to_tst}"
+        )
+        data = await get_speeding_data(
+            route_id,
+            min_spd,
+            from_tst,
+            to_tst,
+            x_min,
+            y_min,
+            x_max,
+            y_max,
+            input_stream,
+        )
         logger.debug(f"Speeding data for {route_id} received. Compressing.")
         input_stream.seek(0)
         with gzip.GzipFile(fileobj=output_stream, mode="wb") as compressed_data_stream:
-            for data in iter(lambda: input_stream.read(CHUNK_SIZE), b''):
+            for data in iter(lambda: input_stream.read(CHUNK_SIZE), b""):
                 compressed_data_stream.write(data)
 
-        filename = create_filename("speeding-export_", from_tst.strftime("%Y%m%d"), to_tst.strftime("%Y%m%d"), route_id, min_spd)
-        response = GzippedFileResponse(filename=filename, content=output_stream.getvalue())
+        filename = create_filename(
+            "speeding-export_",
+            from_tst.strftime("%Y%m%d"),
+            to_tst.strftime("%Y%m%d"),
+            route_id,
+            min_spd,
+        )
+        response = GzippedFileResponse(
+            filename=filename, content=output_stream.getvalue()
+        )
 
-        logger.debug(f"Speeding data fetch and export completed in {int(time.time() - fetch_start_time)} seconds. Exported file: {filename}")
+        logger.debug(
+            f"Speeding data fetch and export completed in {int(time.time() - fetch_start_time)} seconds. Exported file: {filename}"
+        )
 
         return response
-
