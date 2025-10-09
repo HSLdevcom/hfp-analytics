@@ -36,7 +36,7 @@ class SlackLoggingHandler(logging.Handler):
         msg_object = {
             "text": (
                 f"{emoji} Msg from {ENVIRONMENT} [{log_level}]: "
-                f"{self.alert_list if alert and self.alert_list else ''}\n"
+                f"{self.alert_list if alert and self.alert_list and ENVIRONMENT == 'PROD' else ''}\n"
                 f"```{log_msg}```"
             )
         }
