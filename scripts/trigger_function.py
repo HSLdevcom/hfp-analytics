@@ -1,5 +1,7 @@
 """Test importer / analyzer backend function on different environments."""
+
 import argparse
+
 import requests
 import json
 
@@ -12,7 +14,9 @@ LOCAL_TRIGGER_KEY = "MSrah7gr4eGE1x8wWAlX2uO6A3mT54NWG6FaO121ViAC7xOfd2net9=="
 
 def main(function: str, environment: str, date_param: str, http: bool) -> None:
     if environment != "local":
-        trigger_key = input(f"Type in >>> master key <<< to trigger {environment} {function}: ")
+        trigger_key = input(
+            f"Type in >>> master key <<< to trigger {environment} {function}: "
+        )
 
         if not trigger_key:
             print("Did not receive master key, exiting.")
@@ -29,6 +33,9 @@ def main(function: str, environment: str, date_param: str, http: bool) -> None:
     if http is False:
         functions_url = "admin/functions/"
     url = f"{ENV_URLS[environment]}{functions_url}{function}"
+    print(
+        f"Sending a request to trigger {environment} {function}... {ENV_URLS[environment]}"
+    )
 
     resp = requests.post(
         url=url,

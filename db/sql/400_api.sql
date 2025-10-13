@@ -81,71 +81,64 @@ CREATE OR REPLACE VIEW api.view_as_original_tlp_event AS (
 
 
 CREATE VIEW api.view_jore_stop_4326 AS (
-  WITH selected_cols AS (
-    SELECT
-      stop_id,
-      stop_code,
-      stop_name,
-      parent_station,
-      stop_mode,
-      route_dirs_via_stop,
-      date_imported,
-      ST_Transform(geom, 4326) as geometry
-     FROM jore.jore_stop
-  )
-  SELECT cast(ST_AsGeoJSON(sc.*) AS json)
-  FROM selected_cols AS sc
+ WITH selected_cols AS (
+         SELECT js.stop_id,
+            js.stop_code,
+            js.stop_name,
+            js.parent_station,
+            js.stop_mode,
+            js.route_dirs_via_stop,
+            js.date_imported,
+            st_transform(js.geom, 4326) AS geometry
+           FROM jore.jore_stop js
+        )
+ SELECT json_build_object('type', 'Feature', 'geometry', st_asgeojson(sc.geometry)::json, 'properties', to_jsonb(sc.*) - 'geometry'::text) AS st_asgeojson
+   FROM selected_cols sc
 );
 COMMENT ON VIEW api.view_jore_stop_4326 IS
 'Returns all jore_stops as GeoJSON features';
 
 CREATE VIEW api.view_stop_median_4326 AS (
-  WITH selected_cols AS (
-    SELECT
-      sm.stop_id,
-      sm.from_date,
-      sm.n_stop_known,
-      sm.n_stop_guessed,
-      sm.n_stop_null_near,
-      sm.dist_to_jore_point_m,
-      sm.observation_route_dirs,
-      sm.result_class,
-      sm.recommended_min_radius_m,
-      sm.manual_acceptance_needed,
-      json_agg(
-        json_build_object(
-          'percentile', pr.percentile,
-          'radius_m', pr.radius_m,
-          'n_observations', pr.n_observations
+ WITH selected_cols AS (
+         SELECT sm.stop_id,
+            sm.from_date,
+            sm.n_stop_known,
+            sm.n_stop_guessed,
+            sm.n_stop_null_near,
+            sm.dist_to_jore_point_m,
+            sm.observation_route_dirs,
+            sm.result_class,
+            sm.recommended_min_radius_m,
+            sm.manual_acceptance_needed,
+            json_agg(json_build_object('percentile', pr.percentile, 'radius_m', pr.radius_m, 'n_observations', pr.n_observations)) AS percentile_radii_list,
+            st_transform(sm.geom, 4326) AS geom
+           FROM stopcorr.stop_median sm
+             LEFT JOIN stopcorr.percentile_radii pr ON sm.stop_id = pr.stop_id
+          GROUP BY sm.stop_id
         )
-      ) as percentile_radii_list,
-      ST_Transform(sm.geom, 4326) as geometry
-     FROM stopcorr.stop_median sm
-     LEFT JOIN stopcorr.percentile_radii pr ON sm.stop_id = pr.stop_id
-     GROUP BY sm.stop_id
-  )
-  SELECT cast(ST_AsGeoJSON(sc.*) AS json)
-  FROM selected_cols AS sc
+ SELECT json_build_object('type', 'Feature', 'geometry', st_asgeojson(sc.geom)::json, 'properties', to_jsonb(sc.*) - 'geom'::text) AS st_asgeojson
+   FROM selected_cols sc
 );
 COMMENT ON VIEW api.view_stop_median_4326 IS
 'Returns all stop_medians as GeoJSON features';
 
-CREATE VIEW api.view_observation_4326 AS (
-  WITH selected_cols AS (
-    SELECT
-      stop_id,
-      stop_id_guessed,
-      event,
-      dist_to_jore_point_m,
-      dist_to_median_point_m,
-      ST_Transform(geom, 4326) as geometry
-     FROM stopcorr.observation
-  )
-  SELECT cast(ST_AsGeoJSON(sc.*) AS json)
-  FROM selected_cols AS sc
-);
-COMMENT ON VIEW api.view_observation_4326 IS
-'Returns all observations as GeoJSON features';
+CREATE OR REPLACE FUNCTION api.get_observation_4326 (stop_id int)
+RETURNS setof json as $$
+ WITH selected_cols AS (
+         SELECT o.stop_id,
+            o.stop_id_guessed,
+            o.event,
+            o.dist_to_jore_point_m,
+            o.dist_to_median_point_m,
+            st_transform(o.geom, 4326) AS geometry
+           FROM stopcorr.observation o
+           WHERE o.stop_id = $1
+        )
+ SELECT json_build_object('type', 'Feature', 'geometry', st_asgeojson(sc.geometry)::json, 'properties', to_jsonb(sc.*) - 'geometry'::text) AS st_asgeojson
+   FROM selected_cols sc;
+$$ LANGUAGE SQL STABLE;
+COMMENT ON FUNCTION api.get_observation_4326 IS
+'Returns all observations as GeoJSON features for a specific stop';
 
 CREATE OR REPLACE FUNCTION api.get_observations_with_null_stop_id_4326(stop_id int, search_distance_m int default 100)
 RETURNS setof json as $$
@@ -156,17 +149,22 @@ RETURNS setof json as $$
       found_ob_stops.event,
       found_ob_stops.dist_to_jore_point_m,
       found_ob_stops.dist_to_median_point_m,
-      ST_Transform(found_ob_stops.geom, 4326) as geometry
+      ST_Transform(found_ob_stops.geom, 4326) AS geometry
     FROM jore.jore_stop js
     INNER JOIN LATERAL (
-      SELECT * FROM stopcorr.observation AS ob
-      WHERE ob.stop_id IS NULL AND
-      ST_DWithin(ob.geom, js.geom, $2)
-    ) as found_ob_stops
-    ON true
+      SELECT *
+      FROM stopcorr.observation AS ob
+      WHERE ob.stop_id IS NULL
+        AND ST_DWithin(ob.geom, js.geom, $2)
+    ) AS found_ob_stops
+      ON TRUE
     WHERE js.stop_id = $1
   )
-  SELECT cast(ST_AsGeoJSON(sc.*) AS json)
+  SELECT json_build_object(
+           'type',       'Feature',
+           'geometry',   ST_AsGeoJSON(sc.geometry)::json,
+           'properties', to_jsonb(sc) - 'geometry'
+         )::json
   FROM selected_cols AS sc;
 $$ LANGUAGE SQL STABLE;
 COMMENT ON FUNCTION api.get_observations_with_null_stop_id_4326 IS
@@ -175,10 +173,22 @@ COMMENT ON FUNCTION api.get_observations_with_null_stop_id_4326 IS
 CREATE OR REPLACE FUNCTION api.get_percentile_circles_with_stop_id(stop_id int)
 RETURNS setof json as $$
   WITH selected_cols AS (
-    SELECT * FROM stopcorr.view_percentile_circles pc WHERE pc.stop_id = $1
+    SELECT
+      pc.stop_id,
+      pc.percentile,
+      pc.radius_m,
+      pc.n_observations,
+      ST_Transform(pc.geom, 4326) AS geom
+    FROM stopcorr.view_percentile_circles pc
+    WHERE pc.stop_id = $1
   )
-  SELECT cast(ST_AsGeoJSON(sc.*) AS json)
-  FROM selected_cols AS sc;
+  SELECT json_build_object(
+           'type', 'Feature',
+           'geometry',  ST_AsGeoJSON(sc.geom)::json,
+           'properties', to_jsonb(sc) - 'geom'
+         )::json AS st_asgeojson
+  FROM selected_cols sc
+  ORDER BY sc.percentile;
 $$ LANGUAGE SQL STABLE;
 COMMENT ON FUNCTION api.get_percentile_circles_with_stop_id IS
 'Returns percentile circles around given stop_id as GeoJSON features';

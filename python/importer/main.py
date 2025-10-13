@@ -1,38 +1,51 @@
 """HFP Analytics data importer"""
-import azure.functions as func
 
 import logging
 from datetime import datetime, timedelta
 
-from common.logger_util import CustomDbLogHandler
+import azure.functions as func
 from common.config import (
     APC_STORAGE_CONTAINER_NAME,
-    HFP_STORAGE_CONTAINER_NAME,
     HFP_EVENTS_TO_IMPORT,
+    HFP_STORAGE_CONTAINER_NAME,
     IMPORT_COVERAGE_DAYS,
 )
+from common.logger_util import CustomDbLogHandler
 
 from .importer import Importer, parquet_to_dict_decoder, zst_csv_to_dict_decoder
-from .schemas import APC as APCSchema, HFP as HFPSchema, TLP as TLPSchema
+from .schemas import APC as APCSchema
+from .schemas import HFP as HFPSchema
+from .schemas import TLP as TLPSchema
 from .services import (
-    create_db_lock,
-    release_db_lock,
     add_new_blob,
-    is_blob_listed,
-    mark_blob_status_started,
-    mark_blob_status_finished,
-    pickup_blobs_for_import,
     copy_data_to_db,
+    create_db_lock,
+    is_blob_listed,
+    mark_blob_status_finished,
+    mark_blob_status_started,
+    pickup_blobs_for_import,
+    release_db_lock,
 )
 
 logger = logging.getLogger("importer")
 
 importers = {
     "APC": Importer(
-        APC_STORAGE_CONTAINER_NAME, data_converter=parquet_to_dict_decoder, db_schema=APCSchema, blob_name_prefix="apc_"
+        APC_STORAGE_CONTAINER_NAME,
+        data_converter=parquet_to_dict_decoder,
+        db_schema=APCSchema,
+        blob_name_prefix="apc_",
     ),
-    "HFP": Importer(HFP_STORAGE_CONTAINER_NAME, data_converter=zst_csv_to_dict_decoder, db_schema=HFPSchema),
-    "TLP": Importer(HFP_STORAGE_CONTAINER_NAME, data_converter=zst_csv_to_dict_decoder, db_schema=TLPSchema),
+    "HFP": Importer(
+        HFP_STORAGE_CONTAINER_NAME,
+        data_converter=zst_csv_to_dict_decoder,
+        db_schema=HFPSchema,
+    ),
+    "TLP": Importer(
+        HFP_STORAGE_CONTAINER_NAME,
+        data_converter=zst_csv_to_dict_decoder,
+        db_schema=TLPSchema,
+    ),
 }
 
 
@@ -51,14 +64,20 @@ def update_blob_list_for_import(day_since_today):
                 blob_data = {}
 
                 blob_data["blob_name"] = blob_name
-                blob_data["event_type"] = metadata.get("eventType") if importer_type in ["HFP", "TLP"] else "APC"
+                blob_data["event_type"] = (
+                    metadata.get("eventType")
+                    if importer_type in ["HFP", "TLP"]
+                    else "APC"
+                )
                 blob_data["min_oday"] = metadata.get("min_oday")
                 blob_data["max_oday"] = metadata.get("max_oday")
                 blob_data["min_tst"] = metadata.get("min_tst")
                 blob_data["max_tst"] = metadata.get("max_tst")
                 blob_data["row_count"] = metadata.get("row_count")
                 blob_data["invalid"] = metadata.get("invalid", False)
-                blob_data["covered_by_import"] = blob_data["event_type"] in HFP_EVENTS_TO_IMPORT
+                blob_data["covered_by_import"] = (
+                    blob_data["event_type"] in HFP_EVENTS_TO_IMPORT
+                )
 
                 add_new_blob(blob_data)
 
@@ -81,17 +100,20 @@ def import_blob(blob_name):
         else:
             importer = importers["HFP"]
 
-
         data_rows = importer.get_data_from_blob(blob_name)
 
-        copy_data_to_db(db_schema=importer.db_schema, data_rows=data_rows, invalid_blob=blob_is_invalid)
+        copy_data_to_db(
+            db_schema=importer.db_schema,
+            data_rows=data_rows,
+            invalid_blob=blob_is_invalid,
+        )
 
         processing_time = mark_blob_status_finished(blob_name)
 
         logger.debug(
             f"{blob_name} is done. "
             f"Imported {blob_row_count} rows in {processing_time} seconds "
-            f"({int(blob_row_count/processing_time)} rows/second)"
+            f"({int(blob_row_count / processing_time)} rows/second)"
         )
 
     except Exception as e:
@@ -100,7 +122,9 @@ def import_blob(blob_name):
         if "ErrorCode:BlobNotFound" in str(e):
             logger.error(f"Blob {blob_name} not found.")
         else:
-            logger.exception(f"Error after {processing_time} seconds when reading blob {blob_name}.")
+            logger.exception(
+                "Error after {processing_time} seconds when reading blob {blob_name}."
+            )
 
 
 def run_import() -> None:
@@ -136,7 +160,7 @@ def main(importer: func.TimerRequest, context: func.Context) -> None:
         try:
             run_import()
         except Exception:
-            logger.exception(f"Error when running importer.")
+            logger.exception("Error when running importer.")
         finally:
             # Remove lock at this point
             release_db_lock()

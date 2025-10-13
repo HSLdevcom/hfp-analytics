@@ -2,7 +2,7 @@
 
 A REST API that
 
-- provides [HFP data](https://digitransit.fi/en/developers/apis/4-realtime-api/vehicle-positions/) from the past in a compact format for further use;
+- provides [HFP data](https://digitransit.fi/en/developers/apis/5-realtime-api/vehicle-positions/high-frequency-positioning/) from the past in a compact format for further use;
 - analyzes the expected vs. actual quality of HFP data with various metrics.
 
 The API is under early development and currently not public.

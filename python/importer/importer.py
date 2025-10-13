@@ -1,15 +1,13 @@
-""" Class module for importer. Importer can be initialized with different parameters depending on data source. """
+"""Class module for importer. Importer can be initialized with different parameters depending on data source."""
 
-from azure.storage.blob import ContainerClient
-
-from collections.abc import Callable, Iterable
 import csv
-from io import BytesIO, TextIOWrapper
+from collections.abc import Callable, Iterable
 from datetime import date
-import zstandard
+from io import BytesIO, TextIOWrapper
 
 import pyarrow.parquet as pq
-
+import zstandard
+from azure.storage.blob import ContainerClient
 from common.config import HFP_STORAGE_CONNECTION_STRING
 
 from .schemas import DBSchema
@@ -56,7 +54,10 @@ class Importer:
         """Get blob tag metadata from container."""
         blob_client = self.container_client.get_blob_client(blob=blob_name)
         # merge metadata and tags, tags preferred
-        metadata = {**blob_client.get_blob_properties().metadata, **blob_client.get_blob_tags()}
+        metadata = {
+            **blob_client.get_blob_properties().metadata,
+            **blob_client.get_blob_tags(),
+        }
         return metadata
 
     def get_data_from_blob(self, blob_name: str) -> Iterable[dict]:

@@ -2,12 +2,11 @@
 Services related to /apc endpoint
 """
 
-from typing import Optional
 from datetime import datetime
-
-from psycopg.rows import dict_row
+from typing import Optional
 
 from common.database import pool
+from psycopg.rows import dict_row
 
 
 async def get_apc_data(
