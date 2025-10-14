@@ -6,6 +6,7 @@ from azure.storage.blob.aio import ContainerClient
 from common.config import FLOW_ANALYTICS_SAS_CONNECTION_STRING
 from common.models.hfp import PreprocessBlobModel
 
+
 class FlowAnalyticsContainerClient:
 
     async def save_preprocess_data(

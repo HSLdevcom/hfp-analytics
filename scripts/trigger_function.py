@@ -1,9 +1,9 @@
 """Test importer / analyzer backend function on different environments."""
 
 import argparse
+import json
 
 import requests
-import json
 
 ENV_URLS = {
     "local": "http://localhost:7072/",

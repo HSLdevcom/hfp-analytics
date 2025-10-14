@@ -2,8 +2,7 @@
 
 import logging
 import time
-import common.constants as constants
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 from itertools import chain
 
 import common.constants as constants

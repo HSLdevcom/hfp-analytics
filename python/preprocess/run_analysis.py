@@ -1,13 +1,11 @@
-import psycopg2
 import logging
+
 import common.constants as constants
 import httpx
-from common.preprocess import preprocess, load_delay_hfp_data, check_preprocessed_files
+import psycopg2
+from common.config import DIGITRANSIT_APIKEY, POSTGRES_CONNECTION_STRING
+from common.preprocess import check_preprocessed_files, load_delay_hfp_data, preprocess
 from common.utils import get_target_oday
-from common.config import (
-    POSTGRES_CONNECTION_STRING,
-    DIGITRANSIT_APIKEY
-)
 
 start_time = 0
 GRAPHQL_URL = 'https://api.digitransit.fi/routing/v2/hsl/gtfs/v1'

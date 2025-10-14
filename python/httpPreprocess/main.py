@@ -1,12 +1,10 @@
 """HFP Analytics data importer"""
-import azure.functions as func
 import logging
-import pandas as pd
-import httpx
+from datetime import datetime
 
-from io import BytesIO
-from datetime import date, timedelta, datetime, time
+import azure.functions as func
 from common.logger_util import CustomDbLogHandler
+
 from .run_analysis import run_delay_analysis
 
 logger = logging.getLogger("importer")

@@ -1,7 +1,7 @@
 import logging
-from datetime import datetime
-from common.recluster import get_recluster_status
+
 from common.logger_util import CustomDbLogHandler
+from common.recluster import get_recluster_status
 
 logger = logging.getLogger("importer")
 

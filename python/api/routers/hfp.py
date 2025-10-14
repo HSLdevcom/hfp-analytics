@@ -1,37 +1,38 @@
 """Routes for /hfp endpoint"""
 
 import gzip
-import re
-import httpx
-import time
-
-from typing import Optional, Literal, List
-from datetime import date, timedelta, datetime, timezone
-from http import HTTPStatus
-from typing import Optional
-
+import io
 import logging
-from common.logger_util import CustomDbLogHandler
+import re
+import time
+from datetime import date, datetime, timedelta, timezone
+from http import HTTPStatus
+from typing import List, Literal, Optional
 
+import httpx
+from common.config import DURABLE_BASE_URL
+from common.container_client import FlowAnalyticsContainerClient
+from common.logger_util import CustomDbLogHandler
+from common.preprocess import (
+    find_missing_preprocess_data_in_db_compared_to_blob_storage,
+    get_existing_date_and_route_id_from_preprocess_table,
+)
+from common.utils import (
+    create_filename,
+    get_target_oday,
+    is_date_range_valid,
+    set_timezone,
+)
 from fastapi import APIRouter, HTTPException, Query, status
-from fastapi.responses import Response, JSONResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, Response
 
 from api.services.hfp import (
-    get_hfp_data, 
-    get_speeding_data, 
-    upload_missing_preprocess_data_to_db
+    get_hfp_data,
+    get_speeding_data,
+    upload_missing_preprocess_data_to_db,
 )
 from api.services.tlp import get_tlp_data, get_tlp_data_as_json
-from common.container_client import FlowAnalyticsContainerClient
-from common.preprocess import (
-    get_existing_date_and_route_id_from_preprocess_table,
-    find_missing_preprocess_data_in_db_compared_to_blob_storage,
-)
-from common.enums import ReclusterStatus
-from common.utils import get_target_oday, create_filename, set_timezone, is_date_range_valid
-from common.config import DURABLE_BASE_URL
 
 logger = logging.getLogger("api")
 
@@ -39,18 +40,6 @@ router = APIRouter(prefix="/hfp", tags=["HFP data"])
 
 route_id_pattern = re.compile(r"^[A-Za-z0-9]+$")
 CHUNK_SIZE = 10000  # Adjust to optimize if needed
-
-
-def set_timezone(timestamp, tz_offset):
-    tzone = timezone(timedelta(hours=tz_offset))
-    return timestamp.replace(tzinfo=tzone)
-
-
-def create_filename(prefix, *args):
-    identifiers = filter(None, args)
-    filename_identifier = "_".join(map(str, identifiers))
-    return f"{prefix}{filename_identifier}.csv.gz"
-
 
 class GzippedFileResponse(Response):
     media_type = "application/gzip"
@@ -662,8 +651,6 @@ async def get_delay_analytics_data_durable(
                 )
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Could not start Durable function: {e}")
-
-    return JSONResponse(content=durable_response, status_code=resp.status_code)
 
 
 @router.post(

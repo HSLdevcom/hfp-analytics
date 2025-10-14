@@ -1,10 +1,7 @@
 """HFP Analytics data importer"""
-import azure.functions as func
-
 import logging
-
-from io import BytesIO
 from datetime import datetime
+
 import azure.functions as func
 from common.logger_util import CustomDbLogHandler
 

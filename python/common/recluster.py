@@ -1,25 +1,24 @@
 
 # TODO: clean up imports
-import io
 import asyncio
 import functools
-import pandas as pd
-import numpy as np
-import geopandas as gpd
-import zstandard as zstd
-import logging
 import gc
+import io
+import logging
+from datetime import date, datetime
+from typing import Any, Dict, List, Optional
 
-from datetime import date, datetime, timedelta
-from dotenv import load_dotenv
+import geopandas as gpd
+import numpy as np
+import pandas as pd
+import zstandard as zstd
+from sklearn.cluster import DBSCAN
+
+from common.container_client import FlowAnalyticsContainerClient
 from common.database import pool
+from common.enums import ReclusterStatus
 from common.logger_util import CustomDbLogHandler
 from common.utils import get_season
-from common.config import DAYS_TO_EXCLUDE
-from common.container_client import FlowAnalyticsContainerClient
-from common.enums import ReclusterStatus
-from sklearn.cluster import DBSCAN
-from typing import Dict, Any, Union, Optional, List, Literal
 
 logger = logging.getLogger("api")
 
@@ -191,7 +190,7 @@ async def update_recluster_progress(
     days_excluded: list[date],
     progress: str
 ) -> None:
-    query = f"""
+    query = """
         INSERT INTO delay.recluster_routes (route_id, from_oday, to_oday, days_excluded, progress)
         VALUES (%(route_id)s, %(from_oday)s, %(to_oday)s, %(days_excluded)s, %(progress)s)
         ON CONFLICT (route_id, from_oday, to_oday, days_excluded)
@@ -330,7 +329,7 @@ async def store_compressed_geojson(
         compressed_data=compressed_data,
         from_oday=from_oday.strftime("%Y-%m-%d"),
         to_oday=to_oday.strftime("%Y-%m-%d"),
-        route_id=','.join(route_id) if type(route_id) == list else route_id,
+        route_id=','.join(route_id) if isinstance(route_id, list) else route_id,
     )   
 
     del compressed_data, compressed_csv_data
@@ -551,10 +550,10 @@ async def run_analysis_and_set_status(
 ):
     with CustomDbLogHandler("api"):
         try:
-            logger.debug(f"Start asyncio task to run recluster analysis")    
+            logger.debug("Start asyncio task to run recluster analysis")    
             await asyncio.to_thread(functools.partial(run_asyncio_task, recluster_analysis, route_ids, from_oday, to_oday, days_excluded))
         except Exception:
-            logger.debug(f"Something went wrong. Setting status as FAILED")
+            logger.debug("Something went wrong. Setting status as FAILED")
             await set_recluster_status(
                 table=table, 
                 from_oday=from_oday, 
@@ -571,7 +570,7 @@ async def run_analysis_and_set_status(
 async def recluster_analysis(route_ids: list[str], from_oday: date, to_oday: date, days_to_exclude: list[date]):
     with CustomDbLogHandler("api"):
 
-        logger.debug(f"Fetch data for recluster")
+        logger.debug("Fetch data for recluster")
         start_time = datetime.now()
         clusters = await get_preprocessed_clusters(route_ids, from_oday, to_oday, days_to_exclude)
         preprocessed_departures = await get_preprocessed_departures(route_ids, from_oday, to_oday, days_to_exclude)
@@ -582,7 +581,7 @@ async def recluster_analysis(route_ids: list[str], from_oday: date, to_oday: dat
             raise RuntimeError("Missing clusters or departures zst for recluster_analysis")
 
         start_time = datetime.now()
-        logger.debug(f"Start recluster for routes")
+        logger.debug("Start recluster for routes")
 
         vars_to_group_level_one_clusters_by=['route_id', 'direction_id', 'time_group', 'dclass']
         cluster_id_vars_on_2nd_level=['route_id', 'direction_id', 'time_group', 'dclass', 'cluster_on_reclustered_level']

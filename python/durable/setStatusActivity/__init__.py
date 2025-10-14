@@ -1,9 +1,8 @@
-import azure.functions as func
 import logging
 
 from common.enums import ReclusterStatus
-from common.recluster import set_recluster_status
 from common.logger_util import CustomDbLogHandler
+from common.recluster import set_recluster_status
 
 logger = logging.getLogger("importer")
 

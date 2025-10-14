@@ -1,19 +1,18 @@
-import pytz
 import logging
-import pandas as pd
-import numpy as np
-import zstandard as zstd
-from common.database import pool
-from common.container_client import FlowAnalyticsContainerClient
-from sklearn.cluster import DBSCAN
 from collections import Counter
-from typing import Optional, List
-from datetime import date, timedelta, datetime, time
+from datetime import date, datetime, time, timedelta
 from io import BytesIO
+from typing import List, Optional
 
-from common.utils import get_target_oday
-from common.models.hfp import PreprocessDBDistinctModel, PreprocessBlobModel
+import numpy as np
+import pandas as pd
+import pytz
+import zstandard as zstd
+from sklearn.cluster import DBSCAN
 
+from common.container_client import FlowAnalyticsContainerClient
+from common.database import pool
+from common.models.hfp import PreprocessBlobModel, PreprocessDBDistinctModel
 
 logger = logging.getLogger("analyzer")
 
@@ -81,7 +80,7 @@ async def get_delay_hfp_data(
     from_tst = from_datetime.isoformat()
     to_tst = to_datetime.isoformat()
 
-    query = f"""
+    query = """
         COPY (
             SELECT
                 *
@@ -268,15 +267,10 @@ async def preprocess(
     clusters = []  # tämä on aggregoinnin tason 1 output!,
     departures = []  # tämä on aggregoinnin tason 1 output!,
 
-    speed_in_location = []
     failed_in_quality = []
-    vp_events_in_clusters = []
     timezone = pytz.timezone("Europe/Helsinki")
     counts = Counter(df.oday)
-    file_date = None
-    if counts:
-        file_date = counts.most_common()[0][0]
-    else:
+    if not counts:
         raise ValueError("No oday found. Skipping")
 
     counts = Counter(df.transport_mode)
@@ -455,11 +449,11 @@ async def preprocess(
             departures_df,
             flow_analytics_container_client=flow_analytics_container_client,
         )
-    if vp_events_in_clusters:
-        path = f"./HFP_vp_events_in_clusters_{str(key[0])}_{file_date}.csv"
+    #if vp_events_in_clusters:
+        #path = f"./HFP_vp_events_in_clusters_{str(key[0])}_{file_date}.csv"
         #pd.concat(vp_events_in_clusters).to_csv(path, sep=";", encoding="utf-8", index=False)
-    if failed_in_quality:
-        path = f"./failure_debug_data_{str(key[0])}_{file_date}.csv"
+    #if failed_in_quality:
+        #path = f"./failure_debug_data_{str(key[0])}_{file_date}.csv"
         #pd.concat(failed_in_quality).to_csv(path, sep=";", encoding="utf-8", index=False)
     # path = f"./auxillary/failed_in_quality/failure_debug_data_{k[0]}_{file_date}.csv"
     # pd.concat(failed_in_quality).to_csv(path, sep=";", encoding="utf-8", index=False)"

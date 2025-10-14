@@ -2,17 +2,14 @@
 Services related to /hfp data endpoint
 """
 
+import logging
 from datetime import datetime
 from io import BytesIO
-from datetime import datetime
-import logging
-from typing import Optional, List
+from typing import List, Optional
 
-from common.database import pool
-from common.logger_util import CustomDbLogHandler
 from common.container_client import FlowAnalyticsContainerClient
+from common.database import pool
 from common.models.hfp import PreprocessBlobModel
-
 
 logger = logging.getLogger("api")
 

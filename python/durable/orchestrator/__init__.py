@@ -1,9 +1,8 @@
 import logging
 
 import azure.durable_functions as durableFunc
-
-from common.logger_util import CustomDbLogHandler
 from common.enums import ReclusterStatus
+from common.logger_util import CustomDbLogHandler
 
 logger = logging.getLogger("importer")
 
