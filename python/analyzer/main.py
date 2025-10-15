@@ -1,5 +1,4 @@
 """HFP Analytics data importer"""
-
 import logging
 from datetime import datetime
 
@@ -11,7 +10,6 @@ from .run_analysis import run_analysis, run_vehicle_analysis
 
 logger = logging.getLogger("importer")
 
-
 async def start_analysis():
     start_time = datetime.now()
     logger.debug("Going to remove old data.")
@@ -20,20 +18,21 @@ async def start_analysis():
     removal_end = datetime.now()
 
     logger.debug("Going to run analysis.")
+
     run_analysis()
 
     analysis_end = datetime.now()
 
     logger.debug("Going to run vehicle analysis.")
     await run_vehicle_analysis()
-
     vehicle_analysis_end = datetime.now()
+
 
     logger.info(
         f"Analyzer done. It took {removal_end - start_time} for data removal, "
         f"{analysis_end - removal_end} for stop and journey analysis, "
-        f"and {vehicle_analysis_end - analysis_end} for vehicle analysis. "
-        f"Total time: {vehicle_analysis_end - start_time}"
+        f"and {vehicle_analysis_end - analysis_end} for vehicle analysis, "
+        f"Total time: {analysis_end - start_time}"
     )
 
 

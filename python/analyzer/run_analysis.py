@@ -58,6 +58,7 @@ async def run_vehicle_analysis():
             vehicle_operator_id = vehicle["operator_id"]
 
             try:
+                logger.debug(f"{analyze_count}/{len(vehicles)} Retrieving vehicle data for: {vehicle_number}/{vehicle_operator_id}")
                 formatted_data = await get_vehicle_data(
                     yesterday, vehicle_operator_id, vehicle_number, None
                 )
@@ -213,3 +214,4 @@ def run_analysis():
             "SELECT pg_advisory_unlock(%s)", (constants.IMPORTER_LOCK_ID,)
         )
         conn.close()
+

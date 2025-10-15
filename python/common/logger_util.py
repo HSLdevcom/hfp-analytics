@@ -41,7 +41,7 @@ class SlackLoggingHandler(logging.Handler):
         msg_object = {
             "text": (
                 f"{emoji} Msg from {ENVIRONMENT} [{log_level}]: "
-                f"{self.alert_list if alert and self.alert_list else ''}\n"
+                f"{self.alert_list if alert and self.alert_list and ENVIRONMENT == 'PROD' else ''}\n"
                 f"```{log_msg}```"
             )
         }
@@ -139,6 +139,10 @@ class CustomDbLogHandler:
         return self
 
     def __exit__(self, *args):
+        if self.logger_name not in log_handler_store:
+            # No handler found, exiting
+            return
+
         # Execution done, decrease count
         log_handler_store[self.logger_name]["count"] -= 1
 

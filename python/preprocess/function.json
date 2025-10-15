@@ -1,0 +1,14 @@
+{
+    "scriptFile": "main.py",
+    "bindings": [
+      {
+        "authLevel": "function",
+        "type": "timerTrigger",
+        "direction": "in",
+        "name": "preprocess",
+        "runOnStartup": false,
+        "schedule": "0 45 * * * *"
+      }
+    ]
+  }
+  

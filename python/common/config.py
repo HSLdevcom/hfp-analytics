@@ -76,12 +76,18 @@ APC_STORAGE_CONTAINER_NAME: str = get_env("APC_STORAGE_CONTAINER_NAME")
 HFP_STORAGE_CONTAINER_NAME: str = get_env("HFP_STORAGE_CONTAINER_NAME")
 HFP_STORAGE_CONNECTION_STRING: str = get_env("HFP_STORAGE_CONNECTION_STRING")
 POSTGRES_CONNECTION_STRING: str = get_env("POSTGRES_CONNECTION_STRING")
+FLOW_ANALYTICS_SAS_CONNECTION_STRING: str = get_env("FLOW_ANALYTICS_SAS_CONNECTION_STRING", "")
+DURABLE_BASE_URL: str = get_env("DURABLE_BASE_URL")
+AzureWebJobsStorage: str = get_env("AzureWebJobsStorage")
 
 # Envs related to importing blob
 HFP_EVENTS_TO_IMPORT: list[str] = get_env(
     "HFP_EVENTS_TO_IMPORT", modifier=env_as_upper_str_list
 )
 IMPORT_COVERAGE_DAYS: int = get_env("IMPORT_COVERAGE_DAYS", "14", modifier=env_as_int)
+
+# Days to exclude from delay analysis
+DAYS_TO_EXCLUDE: list[str] = get_env("DAYS_TO_EXCLUDE","",modifier=env_as_upper_str_list)
 
 # Authentication str for docs.
 DEFAULT_AUTH_CODE: str = get_env("DEFAULT_AUTH_CODE", "")
