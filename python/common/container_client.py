@@ -1,4 +1,5 @@
 import datetime
+import math
 from typing import List
 
 from azure.storage.blob.aio import ContainerClient
@@ -17,9 +18,20 @@ class FlowAnalyticsContainerClient:
         mode: str,
         oday: str,
     ) -> None:
-        metadata = {"oday": oday, "route_id": route_id, "mode": mode}
-
         path = f"preprocess/{preprocess_type}/{oday}/{oday}_{route_id}_{mode}"
+
+        def parse_metadata(v) -> str:
+            if v is None:
+                return ""
+            if isinstance(v, float) and math.isnan(v):
+                return ""
+            return str(v)
+
+        metadata = {
+            "oday": parse_metadata(oday),
+            "route_id": parse_metadata(route_id),
+            "mode": parse_metadata(mode),
+        }
 
         async with self._get_container_client() as client:
             await client.upload_blob(
