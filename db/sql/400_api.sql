@@ -80,7 +80,7 @@ CREATE OR REPLACE VIEW api.view_as_original_tlp_event AS (
 );
 
 
-CREATE VIEW api.view_jore_stop_4326 AS (
+CREATE OR REPLACE VIEW api.view_jore_stop_4326 AS (
  WITH selected_cols AS (
          SELECT js.stop_id,
             js.stop_code,
@@ -92,13 +92,13 @@ CREATE VIEW api.view_jore_stop_4326 AS (
             st_transform(js.geom, 4326) AS geometry
            FROM jore.jore_stop js
         )
- SELECT json_build_object('type', 'Feature', 'geometry', st_asgeojson(sc.geometry)::json, 'properties', to_jsonb(sc.*) - 'geometry'::text) AS st_asgeojson
+ SELECT json_build_object('type', 'Feature', 'geometry', ST_AsGeoJSON(sc.geometry)::json, 'properties', to_jsonb(sc.*) - 'geometry'::text) AS st_asgeojson
    FROM selected_cols sc
 );
 COMMENT ON VIEW api.view_jore_stop_4326 IS
 'Returns all jore_stops as GeoJSON features';
 
-CREATE VIEW api.view_stop_median_4326 AS (
+CREATE OR REPLACE VIEW api.view_stop_median_4326 AS (
  WITH selected_cols AS (
          SELECT sm.stop_id,
             sm.from_date,
@@ -116,7 +116,7 @@ CREATE VIEW api.view_stop_median_4326 AS (
              LEFT JOIN stopcorr.percentile_radii pr ON sm.stop_id = pr.stop_id
           GROUP BY sm.stop_id
         )
- SELECT json_build_object('type', 'Feature', 'geometry', st_asgeojson(sc.geom)::json, 'properties', to_jsonb(sc.*) - 'geom'::text) AS st_asgeojson
+ SELECT json_build_object('type', 'Feature', 'geometry', ST_AsGeoJSON(sc.geom)::json, 'properties', to_jsonb(sc.*) - 'geom'::text) AS st_asgeojson
    FROM selected_cols sc
 );
 COMMENT ON VIEW api.view_stop_median_4326 IS
@@ -134,7 +134,7 @@ RETURNS setof json as $$
            FROM stopcorr.observation o
            WHERE o.stop_id = $1
         )
- SELECT json_build_object('type', 'Feature', 'geometry', st_asgeojson(sc.geometry)::json, 'properties', to_jsonb(sc.*) - 'geometry'::text) AS st_asgeojson
+ SELECT json_build_object('type', 'Feature', 'geometry', ST_AsGeoJSON(sc.geometry)::json, 'properties', to_jsonb(sc.*) - 'geometry'::text) AS st_asgeojson
    FROM selected_cols sc;
 $$ LANGUAGE SQL STABLE;
 COMMENT ON FUNCTION api.get_observation_4326 IS
