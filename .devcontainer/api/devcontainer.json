@@ -1,0 +1,92 @@
+{
+    "name": "HFP Analytics API (FastAPI)",
+    "dockerComposeFile": [
+        "../docker-compose.yml"
+    ],
+    "service": "api",
+    "workspaceFolder": "/workspace",
+    "shutdownAction": "stopCompose",
+    
+    // Forward ports for the API, database, and Azurite
+    "forwardPorts": [
+        8000,  // FastAPI
+        5433,  // PostgreSQL (remapped to avoid conflict with host)
+        10100, // Azurite Blob (remapped to avoid conflict)
+        10101, // Azurite Queue (remapped to avoid conflict)
+        10102  // Azurite Table (remapped to avoid conflict)
+    ],
+    
+    "portsAttributes": {
+        "8000": {
+            "label": "FastAPI",
+            "onAutoForward": "notify"
+        },
+        "5433": {
+            "label": "PostgreSQL"
+        },
+        "10100": {
+            "label": "Azurite Blob"
+        },
+        "10101": {
+            "label": "Azurite Queue"
+        },
+        "10102": {
+            "label": "Azurite Table"
+        }
+    },
+
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "ms-python.black-formatter",
+                "ms-python.isort",
+                "ms-python.debugpy",
+                "ms-azuretools.vscode-azurefunctions",
+                "ms-azuretools.vscode-docker",
+                "mtxr.sqltools",
+                "mtxr.sqltools-driver-pg",
+                "GitHub.copilot",
+                "esbenp.prettier-vscode"
+            ],
+            "settings": {
+                "python.defaultInterpreterPath": "/usr/local/bin/python",
+                "python.linting.enabled": true,
+                "python.linting.pylintEnabled": false,
+                "python.formatting.provider": "black",
+                "python.testing.pytestEnabled": true,
+                "python.testing.unittestEnabled": false,
+                "editor.formatOnSave": true,
+                "editor.codeActionsOnSave": {
+                    "source.organizeImports": "explicit"
+                },
+                "[python]": {
+                    "editor.defaultFormatter": "ms-python.python"
+                }
+            }
+        }
+    },
+
+    // Commands to run after container is created
+    "postCreateCommand": "pip install -r python/requirements.txt && pip install debugpy pytest pytest-asyncio httpx",
+    
+    // Commands to run when attaching to existing container
+    "postAttachCommand": "echo 'Container attached. Run: cd python && uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload'",
+
+    // Features to add to the container
+    "features": {
+        "ghcr.io/devcontainers/features/git:1": {},
+        "ghcr.io/devcontainers/features/github-cli:1": {}
+    },
+
+    // Set environment variables
+    "containerEnv": {
+        "PYTHONPATH": "/workspace/python",
+        "PYTHONUNBUFFERED": "1",
+        "TZ": "Europe/Helsinki"
+    },
+
+    // Run as non-root user
+    "remoteUser": "vscode"
+}

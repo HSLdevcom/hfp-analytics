@@ -1,0 +1,36 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run FastAPI Development Server",
+            "type": "shell",
+            "command": "cd python && uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "isBackground": true,
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Run Tests",
+            "type": "shell",
+            "command": "cd python && pytest",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Database: Run Migrations",
+            "type": "shell",
+            "command": "psql -h localhost -U postgres -d analytics -f db/sql/100_create_global_objects.sql",
+            "problemMatcher": []
+        }
+    ]
+}
