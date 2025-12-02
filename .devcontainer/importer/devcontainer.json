@@ -1,24 +1,25 @@
 {
-    "name": "HFP Analytics API (FastAPI)",
+    "name": "HFP Analytics Importer (Azure Functions)",
     "dockerComposeFile": [
         "../docker-compose.yml"
     ],
-    "service": "api",
+    "service": "importer",
     "workspaceFolder": "/workspace",
     "shutdownAction": "stopCompose",
     
-    // Forward ports for the API, database, and Azurite
+    // Forward ports for Azure Functions, database, and Azurite
+    // Note: Database and Azurite are shared with API container
     "forwardPorts": [
-        8000,  // FastAPI
-        5433,  // PostgreSQL (remapped to avoid conflict with host)
-        10100, // Azurite Blob (remapped to avoid conflict)
-        10101, // Azurite Queue (remapped to avoid conflict)
-        10102  // Azurite Table (remapped to avoid conflict)
+        7071,  // Azure Functions
+        5433,  // PostgreSQL (shared with API)
+        10100, // Azurite Blob (shared with API)
+        10101, // Azurite Queue (shared with API)
+        10102  // Azurite Table (shared with API)
     ],
     
     "portsAttributes": {
-        "8000": {
-            "label": "FastAPI",
+        "7071": {
+            "label": "Azure Functions",
             "onAutoForward": "notify"
         },
         "5433": {
@@ -64,6 +65,9 @@
                 "[python]": {
                     "editor.defaultFormatter": "ms-python.python"
                 },
+                "azureFunctions.deploySubpath": "python",
+                "azureFunctions.projectRuntime": "~4",
+                "azureFunctions.projectLanguage": "Python",
                 "launch": {
                     "configurations": [],
                     "compounds": []
@@ -77,15 +81,16 @@
     },
 
     // Commands to run after container is created
-    "postCreateCommand": "pip install -r python/requirements.txt && pip install debugpy pytest pytest-asyncio httpx && mkdir -p /workspace/.vscode && cp /workspace/.devcontainer/shared/launch.json /workspace/.vscode/launch.json && cp /workspace/.devcontainer/shared/tasks.json /workspace/.vscode/tasks.json",
+    "postCreateCommand": "pip install -r python/requirements.txt && pip install debugpy pytest pytest-asyncio httpx && mkdir -p /workspace/.vscode && cp /workspace/.devcontainer/shared/launch.json /workspace/.vscode/launch.json && cp /workspace/.devcontainer/shared/tasks.json /workspace/.vscode/tasks.json && cd /workspace/python && ln -sf durable/httpStart httpStart && ln -sf durable/orchestrator orchestrator && ln -sf durable/getStatusActivity getStatusActivity && ln -sf durable/setStatusActivity setStatusActivity && ln -sf durable/reclusterAnalysisActivity reclusterAnalysisActivity",
     
     // Commands to run when attaching to existing container
-    "postAttachCommand": "echo 'Container attached. Run: cd python && uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload'",
+    "postAttachCommand": "echo 'Container attached. To start Azure Functions:\n  cd python\n  func start --port 7071'",
 
     // Features to add to the container
     "features": {
         "ghcr.io/devcontainers/features/git:1": {},
-        "ghcr.io/devcontainers/features/github-cli:1": {}
+        "ghcr.io/devcontainers/features/github-cli:1": {},
+        "ghcr.io/devcontainers/features/azure-cli:1": {}
     },
 
     // Set environment variables

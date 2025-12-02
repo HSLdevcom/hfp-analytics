@@ -1,0 +1,86 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Start Azure Functions",
+            "type": "shell",
+            "command": "cd python && func start --port 7071",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "isBackground": true,
+            "group": "none"
+        },
+        {
+            "label": "Start Azure Functions (Debug Mode)",
+            "type": "shell",
+            "command": "cd python && func start --port 7071 --verbose",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "isBackground": true
+        },
+        {
+            "label": "Start Azure Functions with Debugger",
+            "type": "shell",
+            "command": "cd python && func start --port 7071 --python-debug-port 9091",
+            "problemMatcher": [
+                {
+                    "pattern": [
+                        {
+                            "regexp": ".",
+                            "file": 1,
+                            "location": 2,
+                            "message": 3
+                        }
+                    ],
+                    "background": {
+                        "activeOnStart": true,
+                        "beginsPattern": ".*Azure Functions Core Tools.*",
+                        "endsPattern": ".*(Worker process started and initialized|Host started|Job host started).*"
+                    }
+                }
+            ],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            },
+            "isBackground": true,
+            "runOptions": {
+                "instanceLimit": 1
+            }
+        },
+        {
+            "label": "Install Python Dependencies",
+            "type": "shell",
+            "command": "pip install -r python/requirements.txt",
+            "problemMatcher": []
+        },
+        {
+            "label": "Run Tests",
+            "type": "shell",
+            "command": "cd python && pytest",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Database: Run Migrations",
+            "type": "shell",
+            "command": "psql -h localhost -U postgres -d analytics -f db/sql/100_create_global_objects.sql",
+            "problemMatcher": []
+        },
+        {
+            "label": "Trigger HTTP Function (httpPreprocess)",
+            "type": "shell",
+            "command": "curl -X POST http://localhost:7071/httpPreprocess",
+            "problemMatcher": []
+        }
+    ]
+}

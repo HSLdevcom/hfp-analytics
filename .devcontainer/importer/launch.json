@@ -1,0 +1,99 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Azure Functions: All Functions (Start All)",
+            "type": "debugpy",
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                "port": 9091
+            },
+            "preLaunchTask": "Start Azure Functions with Debugger",
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}/python",
+                    "remoteRoot": "/home/site/wwwroot"
+                }
+            ],
+            "justMyCode": false
+        },
+        {
+            "name": "Azure Functions: Debug",
+            "type": "debugpy",
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                "port": 9091
+            },
+            "preLaunchTask": "Start Azure Functions with Debugger",
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}/python",
+                    "remoteRoot": "/home/site/wwwroot"
+                }
+            ]
+        },
+        {
+            "name": "Attach to Python Functions",
+            "type": "debugpy",
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                "port": 9091
+            },
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}/python",
+                    "remoteRoot": "/home/site/wwwroot"
+                }
+            ]
+        },
+        {
+            "name": "Azure Functions: Python (Local)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "azure_functions_worker",
+            "args": [
+                "--host",
+                "127.0.0.1",
+                "--port",
+                "7071",
+                "--worker-id",
+                "test-worker"
+            ],
+            "cwd": "${workspaceFolder}/python",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/python",
+                "AzureWebJobsScriptRoot": "${workspaceFolder}/python"
+            },
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/python",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/python"
+            }
+        },
+        {
+            "name": "Python: Pytest",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "-v",
+                "${file}"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/python",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/python"
+            }
+        }
+    ]
+}

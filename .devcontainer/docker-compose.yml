@@ -10,13 +10,34 @@ services:
       - vscode-server-extensions:/home/vscode/.vscode-server/extensions
       - vscode-server-insiders-extensions:/home/vscode/.vscode-server-insiders/extensions
     command: sleep infinity
-    network_mode: service:db
     depends_on:
       - db
       - azurite
     environment:
       - PYTHONUNBUFFERED=1
       - TZ=Europe/Helsinki
+    env_file:
+      - ../.env
+
+  importer:
+    build:
+      context: ..
+      dockerfile: .devcontainer/importer/Dockerfile
+    volumes:
+      # Mount the workspace
+      - ..:/workspace:cached
+      # Mount vscode server extensions for persistence
+      - vscode-server-extensions-importer:/home/azurefunc/.vscode-server/extensions
+      - vscode-server-insiders-extensions-importer:/home/azurefunc/.vscode-server-insiders/extensions
+    command: sleep infinity
+    depends_on:
+      - db
+      - azurite
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TZ=Europe/Helsinki
+      - AzureWebJobsScriptRoot=/home/site/wwwroot
+      - WEBSITE_HOSTNAME=localhost:7072
     env_file:
       - ../.env
 
@@ -54,3 +75,5 @@ volumes:
   azurite-data:
   vscode-server-extensions:
   vscode-server-insiders-extensions:
+  vscode-server-extensions-importer:
+  vscode-server-insiders-extensions-importer:
