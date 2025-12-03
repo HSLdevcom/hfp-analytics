@@ -113,9 +113,6 @@ async def load_preprocess_files(
         compressed_data = r[0]  
         decompressed_csv = decompressor.decompress(compressed_data)
         df = pd.read_csv(io.BytesIO(decompressed_csv), sep=";")
-        df["tst_median"] = pd.to_datetime(df["tst_median"], format="ISO8601").dt.tz_convert(
-            "UTC"
-        )
         dfs.append(df)
 
     if not dfs:
@@ -438,7 +435,6 @@ def calculate_cluster_features(df: pd.DataFrame, cluster_id_vars_on_2nd_level: l
     res = res.merge(clust_delay_feats, on=cluster_id_vars_on_2nd_level, how="outer")
     res["oday_min"] = df.oday.min()
     res["oday_max"] = df.oday.max()
-    res["tst_median"] = res["tst_median"].dt.tz_convert("Europe/Helsinki")
     return res
 
 
