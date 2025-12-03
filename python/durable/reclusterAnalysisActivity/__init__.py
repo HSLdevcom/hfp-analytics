@@ -45,7 +45,7 @@ async def main(input: dict) -> None:
             logger.debug("ReclusterAnalysisActivity completed successfully.")
 
         except Exception as e:
-            logger.debug(f"ReclusterAnalysisActivity error: {e}")
+            logger.exception("ReclusterAnalysisActivity error")
             await set_recluster_status(
                 table,
                 from_oday,
