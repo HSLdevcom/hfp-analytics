@@ -81,6 +81,20 @@
             "type": "shell",
             "command": "curl -X POST http://localhost:7071/httpPreprocess",
             "problemMatcher": []
+        },
+        {
+            "type": "func",
+            "label": "func: host start",
+            "command": "start",
+            "problemMatcher": "$func-python-watch",
+            "isBackground": true,
+            // "dependsOn": "pip install (functions)",
+            "options": {
+                "cwd": "${workspaceFolder}/python",
+                "env": {
+                "languageWorkers__python__arguments": "-m debugpy --listen 127.0.0.1:9091"
+                }
+            }
         }
     ]
 }
