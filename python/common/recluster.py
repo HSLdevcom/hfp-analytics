@@ -413,8 +413,20 @@ def calculate_cluster_features(df: pd.DataFrame, cluster_id_vars_on_2nd_level: l
         pd.DataFrame: clusters with descriptive variables
     """
 
-    df["tst_median"] = pd.to_datetime(df["tst_median"], format="ISO8601")
-    df["oday"] = pd.to_datetime(df["oday"])
+    df = df.copy()
+
+    for col in ["lat_median", "long_median", "hdg_median", "weight"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    if "tst_median" in df.columns:
+        df["tst_median"] = pd.to_datetime(df["tst_median"], errors="coerce", utc=True)
+        df["tst_median_ns"] = df["tst_median"].view("int64") 
+    else:
+        df["tst_median_ns"] = pd.Series(index=df.index, dtype="float64")
+
+    if "oday" in df.columns:
+        df["oday"] = pd.to_datetime(df["oday"], errors="coerce")
 
     clust_counts = df.drop_duplicates(
         subset=[
@@ -430,11 +442,26 @@ def calculate_cluster_features(df: pd.DataFrame, cluster_id_vars_on_2nd_level: l
     clust_delay_feats = df.groupby(cluster_id_vars_on_2nd_level, observed=False)["weight"].quantile([0.10, 0.25, 0.5, 0.75, 0.90]).unstack()
     clust_delay_feats.columns = [(int(x * 100)) for x in clust_delay_feats.columns]
     clust_delay_feats = clust_delay_feats.add_prefix("q_").reset_index()
-    median_vars = df.groupby(cluster_id_vars_on_2nd_level, observed=False)[["lat_median", "long_median", "tst_median", "hdg_median"]].median().reset_index()
+
+    median_cols = ["lat_median", "long_median", "hdg_median", "tst_median_ns"]
+    existing_median_cols = [c for c in median_cols if c in df.columns]
+
+    median_vars = (df.groupby(cluster_id_vars_on_2nd_level, observed=False)[existing_median_cols].median().reset_index())
+
+    if "tst_median_ns" in median_vars.columns:
+        median_vars["tst_median"] = pd.to_datetime(median_vars["tst_median_ns"], utc=True)
+        median_vars = median_vars.drop(columns=["tst_median_ns"])
+
     res = median_vars.merge(clust_counts, on=cluster_id_vars_on_2nd_level, how="outer")
     res = res.merge(clust_delay_feats, on=cluster_id_vars_on_2nd_level, how="outer")
-    res["oday_min"] = df.oday.min()
-    res["oday_max"] = df.oday.max()
+
+    if "oday" in df.columns:
+        res["oday_min"] = df["oday"].min()
+        res["oday_max"] = df["oday"].max()
+    else:
+        res["oday_min"] = pd.NaT
+        res["oday_max"] = pd.NaT
+
     return res
 
 
