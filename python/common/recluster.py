@@ -421,12 +421,10 @@ def calculate_cluster_features(df: pd.DataFrame, cluster_id_vars_on_2nd_level: l
 
     if "tst_median" in df.columns:
         df["tst_median"] = pd.to_datetime(df["tst_median"], errors="coerce", utc=True)
-        df["tst_median_ns"] = df["tst_median"].view("int64") 
+        df["tst_median_ns"] = df["tst_median"].astype("int64") 
     else:
         df["tst_median_ns"] = pd.Series(index=df.index, dtype="float64")
 
-    if "oday" in df.columns:
-        df["oday"] = pd.to_datetime(df["oday"], errors="coerce")
 
     clust_counts = df.drop_duplicates(
         subset=[
@@ -450,17 +448,14 @@ def calculate_cluster_features(df: pd.DataFrame, cluster_id_vars_on_2nd_level: l
 
     if "tst_median_ns" in median_vars.columns:
         median_vars["tst_median"] = pd.to_datetime(median_vars["tst_median_ns"], utc=True)
+        median_vars["tst_median"] = median_vars["tst_median"].dt.tz_convert("Europe/Helsinki")
         median_vars = median_vars.drop(columns=["tst_median_ns"])
 
     res = median_vars.merge(clust_counts, on=cluster_id_vars_on_2nd_level, how="outer")
     res = res.merge(clust_delay_feats, on=cluster_id_vars_on_2nd_level, how="outer")
 
-    if "oday" in df.columns:
-        res["oday_min"] = df["oday"].min()
-        res["oday_max"] = df["oday"].max()
-    else:
-        res["oday_min"] = pd.NaT
-        res["oday_max"] = pd.NaT
+    res["oday_min"] = df["oday"].min()
+    res["oday_max"] = df["oday"].max()
 
     return res
 
