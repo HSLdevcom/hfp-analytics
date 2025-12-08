@@ -53,8 +53,8 @@ def get_target_oday(offset=1):
     return start_date
 
 def get_season(month, seasons_and_months):
-    print(month)
-    print(seasons_and_months)
+    logger.debug(month)
+    logger.debug(seasons_and_months)
     if month is None:
         return None
 
