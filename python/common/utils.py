@@ -1,3 +1,4 @@
+import pandas as pd
 import logging as logger
 from datetime import date, datetime, timedelta, timezone
 from typing import Tuple
@@ -55,7 +56,7 @@ def get_target_oday(offset=1):
 def get_season(month, seasons_and_months):
     logger.debug(month)
     logger.debug(seasons_and_months)
-    if month is None:
+    if month is None or pd.isna(month):
         return None
 
     key = [key for key, val in seasons_and_months.items() if month in val][0]
