@@ -53,6 +53,11 @@ def get_target_oday(offset=1):
     return start_date
 
 def get_season(month, seasons_and_months):
+    print(month)
+    print(seasons_and_months)
+    if month is None:
+        return None
+
     key = [key for key, val in seasons_and_months.items() if month in val][0]
     return key.lower()
 

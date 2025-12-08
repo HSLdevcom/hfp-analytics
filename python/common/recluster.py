@@ -476,9 +476,10 @@ def ui_related_var_modifications(df: pd.DataFrame, seasons_and_months: dict, DEP
         pd.DataFrame: clusters with ui related variables
     """
     df["tst_median"] = pd.to_datetime(df["tst_median"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
+    print(df["tst_median"])
     df["year"] = df["tst_median"].dt.year
     df["season"] = df["tst_median"].dt.month.map(lambda x: get_season(x, seasons_and_months))
-
+    print(df["season"])
     for k, v in DCLASS_NAMES.items():
         df["dclass"] = df["dclass"].replace(k, v)
 
