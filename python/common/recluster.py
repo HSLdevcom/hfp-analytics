@@ -113,9 +113,6 @@ async def load_preprocess_files(
         compressed_data = r[0]  
         decompressed_csv = decompressor.decompress(compressed_data)
         df = pd.read_csv(io.BytesIO(decompressed_csv), sep=";")
-        df["tst_median"] = pd.to_datetime(df["tst_median"], format="ISO8601").dt.tz_convert(
-            "UTC"
-        )
         dfs.append(df)
 
     if not dfs:
@@ -416,8 +413,18 @@ def calculate_cluster_features(df: pd.DataFrame, cluster_id_vars_on_2nd_level: l
         pd.DataFrame: clusters with descriptive variables
     """
 
-    df["tst_median"] = pd.to_datetime(df["tst_median"], format="ISO8601")
-    df["oday"] = pd.to_datetime(df["oday"])
+    df = df.copy()
+
+    for col in ["lat_median", "long_median", "hdg_median", "weight"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    if "tst_median" in df.columns:
+        df["tst_median"] = pd.to_datetime(df["tst_median"], errors="coerce", utc=True)
+        df["tst_median_ns"] = df["tst_median"].astype("int64") 
+    else:
+        df["tst_median_ns"] = pd.Series(index=df.index, dtype="float64")
+
 
     clust_counts = df.drop_duplicates(
         subset=[
@@ -433,12 +440,23 @@ def calculate_cluster_features(df: pd.DataFrame, cluster_id_vars_on_2nd_level: l
     clust_delay_feats = df.groupby(cluster_id_vars_on_2nd_level, observed=False)["weight"].quantile([0.10, 0.25, 0.5, 0.75, 0.90]).unstack()
     clust_delay_feats.columns = [(int(x * 100)) for x in clust_delay_feats.columns]
     clust_delay_feats = clust_delay_feats.add_prefix("q_").reset_index()
-    median_vars = df.groupby(cluster_id_vars_on_2nd_level, observed=False)[["lat_median", "long_median", "tst_median", "hdg_median"]].median().reset_index()
+
+    median_cols = ["lat_median", "long_median", "hdg_median", "tst_median_ns"]
+    existing_median_cols = [c for c in median_cols if c in df.columns]
+
+    median_vars = (df.groupby(cluster_id_vars_on_2nd_level, observed=False)[existing_median_cols].median().reset_index())
+
+    if "tst_median_ns" in median_vars.columns:
+        median_vars["tst_median"] = pd.to_datetime(median_vars["tst_median_ns"], utc=True)
+        median_vars["tst_median"] = median_vars["tst_median"].dt.tz_convert("Europe/Helsinki")
+        median_vars = median_vars.drop(columns=["tst_median_ns"])
+
     res = median_vars.merge(clust_counts, on=cluster_id_vars_on_2nd_level, how="outer")
     res = res.merge(clust_delay_feats, on=cluster_id_vars_on_2nd_level, how="outer")
-    res["oday_min"] = df.oday.min()
-    res["oday_max"] = df.oday.max()
-    res["tst_median"] = res["tst_median"].dt.tz_convert("Europe/Helsinki")
+
+    res["oday_min"] = df["oday"].min()
+    res["oday_max"] = df["oday"].max()
+
     return res
 
 
@@ -455,7 +473,6 @@ def ui_related_var_modifications(df: pd.DataFrame, seasons_and_months: dict, DEP
     df["tst_median"] = pd.to_datetime(df["tst_median"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
     df["year"] = df["tst_median"].dt.year
     df["season"] = df["tst_median"].dt.month.map(lambda x: get_season(x, seasons_and_months))
-
     for k, v in DCLASS_NAMES.items():
         df["dclass"] = df["dclass"].replace(k, v)
 
