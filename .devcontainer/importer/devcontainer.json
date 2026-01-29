@@ -44,7 +44,7 @@
                 "ms-python.black-formatter",
                 "ms-python.isort",
                 "ms-python.debugpy",
-                "ms-azuretools.vscode-azurefunctions",
+                "ms-azuretools.vscode-azurefunctions@1.19.0",
                 "ms-azuretools.vscode-docker",
                 "mtxr.sqltools",
                 "mtxr.sqltools-driver-pg",
@@ -90,7 +90,8 @@
     "features": {
         "ghcr.io/devcontainers/features/git:1": {},
         "ghcr.io/devcontainers/features/github-cli:1": {},
-        "ghcr.io/devcontainers/features/azure-cli:1": {}
+        "ghcr.io/devcontainers/features/azure-cli:1": {},
+        //vscode azure function extentions must be 1.19.0
     },
 
     // Set environment variables

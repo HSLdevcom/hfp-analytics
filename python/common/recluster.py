@@ -12,13 +12,12 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import zstandard as zstd
-from sklearn.cluster import DBSCAN
-
 from common.container_client import FlowAnalyticsContainerClient
 from common.database import pool
 from common.enums import ReclusterStatus
 from common.logger_util import CustomDbLogHandler
 from common.utils import get_season
+from sklearn.cluster import DBSCAN
 
 logger = logging.getLogger("api")
 
@@ -109,13 +108,16 @@ async def load_preprocess_files(
 
     dfs = []
     decompressor = zstd.ZstdDecompressor()
+    
+    
     for r in results:
         compressed_data = r[0]  
         decompressed_csv = decompressor.decompress(compressed_data)
         df = pd.read_csv(io.BytesIO(decompressed_csv), sep=";")
-        df["tst_median"] = pd.to_datetime(df["tst_median"], format="ISO8601").dt.tz_convert(
-            "UTC"
-        )
+        if "tst_median" in df.columns:
+            df["tst_median"] = pd.to_datetime(df["tst_median"], format="ISO8601").dt.tz_convert(
+                "UTC"
+            )
         dfs.append(df)
 
     if not dfs:
