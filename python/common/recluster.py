@@ -119,10 +119,7 @@ async def load_preprocess_files(
                 df["tst_median"], format="ISO8601"
             ).dt.tz_convert("UTC")
         dfs.append(df)
-        if "tst_median" in df.columns:
-            df["tst_median"] = pd.to_datetime(df["tst_median"], format="ISO8601", utc=True).dt.tz_convert(
-                "UTC"
-            )
+
 
     if not dfs:
         return None
