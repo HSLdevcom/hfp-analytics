@@ -10,6 +10,12 @@ from psycopg2 import sql
 
 GRAPHQL_URL = "https://api.digitransit.fi/routing/v2/hsl/gtfs/v1"
 
+# The Digitransit hsl router combines several GTFS feeds. Stops of the HSL feed
+# have numeric ids, but the Uber feed (the HSL on-demand pilot) exposes its
+# GTFS-Flex service areas as stops with slug ids, e.g. "Uber:ita-pakila". Those
+# have no JORE stop id and do not fit the integer stop_id columns, so they are
+# left out of the import.
+
 
 def create_query(query_type):
     assert query_type in ("stops", "stations")
@@ -48,8 +54,20 @@ def get_query(query):
         raise Exception(f"{req} failed with status code {req.status_code}")
 
 
+def split_gtfs_id(gtfs_id):
+    """Split a "<feed>:<id>" GTFS id into the feed id and the feed-local id."""
+    feed_id, _, local_id = gtfs_id.partition(":")
+    return feed_id.strip(), local_id.strip()
+
+
+def has_numeric_stop_id(gtfs_id):
+    """True if the feed-local part of the GTFS id fits the integer stop_id columns."""
+    return split_gtfs_id(gtfs_id)[1].isdigit()
+
+
 def make_route_dir(pattern):
-    route = pattern["route"]["gtfsId"].split(":")[1].strip()
+    # NOTE: Route ids are not numeric, e.g. "2550A" and "1002H" are valid JORE routes.
+    route = split_gtfs_id(pattern["route"]["gtfsId"])[1]
     # NOTE: Digitransit uses 0/1 directions, while Jore uses 1/2 directions
     dir = str(pattern["directionId"] + 1)
     return f"{route}-{dir}"
@@ -58,15 +76,21 @@ def make_route_dir(pattern):
 def make_flat_row(gql_row):
     parent_station = None
     if gql_row["parentStation"] is not None:
-        parent_station = gql_row["parentStation"]["gtfsId"]
-        parent_station = int(parent_station.split(":")[1].strip())
+        parent_gtfs_id = gql_row["parentStation"]["gtfsId"]
+        if has_numeric_stop_id(parent_gtfs_id):
+            parent_station = int(split_gtfs_id(parent_gtfs_id)[1])
+        else:
+            print(
+                f'Ignoring non-numeric parent station "{parent_gtfs_id}" '
+                f'of stop "{gql_row["gtfsId"]}"'
+            )
     route_dirs_via_stop = None
     if gql_row["patterns"] is not None and len(gql_row["patterns"]) > 0:
         route_dirs_via_stop = list(map(make_route_dir, gql_row["patterns"]))
         route_dirs_via_stop = sorted(list(set(route_dirs_via_stop)))
         route_dirs_via_stop = "{" + ",".join(route_dirs_via_stop) + "}"
     return {
-        "stop_id": int(gql_row["gtfsId"].split(":")[1].strip()),
+        "stop_id": int(split_gtfs_id(gql_row["gtfsId"])[1]),
         "stop_code": gql_row["code"],
         "stop_name": gql_row["name"],
         "parent_station": parent_station,
@@ -81,7 +105,20 @@ def make_flat_row(gql_row):
 def flatten_result(res):
     assert len(res["data"].keys()) == 1
     rows = list(res["data"].values())[0]
-    filtered_rows = [row for row in rows if row["vehicleMode"] != "FERRY"]
+    filtered_rows = []
+    skipped_ids = []
+    for row in rows:
+        if row["vehicleMode"] == "FERRY":
+            continue
+        if not has_numeric_stop_id(row["gtfsId"]):
+            skipped_ids.append(row["gtfsId"])
+            continue
+        filtered_rows.append(row)
+    if skipped_ids:
+        print(
+            f"Skipped {len(skipped_ids)} row(s) without a numeric stop id, "
+            f"e.g. {sorted(set(skipped_ids))[:5]}"
+        )
     return list(map(make_flat_row, filtered_rows))
 
 
